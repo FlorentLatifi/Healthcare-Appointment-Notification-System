@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "r7YtUFfj/CY=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Healthcare.Application.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\flore\\.nuget\\packages\\fluentvalidation\\12.1.1\\fluentvalidation.12.1.1.nupkg.sha512"
+  ],
+  "logs": []
+}
