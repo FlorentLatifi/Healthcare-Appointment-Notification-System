@@ -4,27 +4,17 @@ using Healthcare.Domain.Events;
 namespace Healthcare.Application.EventHandlers;
 
 /// <summary>
-/// Event handler that logs when an appointment is confirmed.
+/// Event handler that logs when an appointment is completed.
 /// </summary>
-/// <remarks>
-/// Design Pattern: Observer Pattern
-/// 
-/// This demonstrates multiple handlers observing the same event.
-/// This handler focuses on logging/auditing, while SendConfirmationNotificationHandler
-/// focuses on notifications.
-/// 
-/// In production, this would write to a logging system (Serilog, ELK stack, etc.).
-/// </remarks>
-public sealed class LogAppointmentConfirmedHandler
-    : IDomainEventHandler<AppointmentConfirmedEvent>
+public sealed class LogAppointmentCompletedHandler
+    : IDomainEventHandler<AppointmentCompletedEvent>
 {
     public Task HandleAsync(
-        AppointmentConfirmedEvent domainEvent,
+        AppointmentCompletedEvent domainEvent,
         CancellationToken cancellationToken = default)
     {
-        // In production: Use structured logging (Serilog, etc.)
         Console.WriteLine("═══════════════════════════════════════════════");
-        Console.WriteLine("📋 APPOINTMENT CONFIRMED - AUDIT LOG");
+        Console.WriteLine("✅ APPOINTMENT COMPLETED - AUDIT LOG");
         Console.WriteLine("═══════════════════════════════════════════════");
         Console.WriteLine($"Event ID:        {domainEvent.EventId}");
         Console.WriteLine($"Occurred On:     {domainEvent.OccurredOn:yyyy-MM-dd HH:mm:ss} UTC");
