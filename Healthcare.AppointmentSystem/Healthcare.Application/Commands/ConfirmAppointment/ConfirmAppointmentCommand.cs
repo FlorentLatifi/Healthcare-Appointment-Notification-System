@@ -1,12 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Healthcare.Application.Common;
 
-namespace Healthcare.Application.Commands.ConfirmAppointment
+namespace Healthcare.Application.Commands.ConfirmAppointment;
+
+/// <summary>
+/// Command to confirm an appointment.
+/// </summary>
+public sealed class ConfirmAppointmentCommand : ICommand<Result>
 {
-    class ConfirmAppointmentCommand
-    {
-    }
+    /// <summary>
+    /// Gets or sets the appointment ID to confirm.
+    /// </summary>
+    public int AppointmentId { get; set; }
 }
