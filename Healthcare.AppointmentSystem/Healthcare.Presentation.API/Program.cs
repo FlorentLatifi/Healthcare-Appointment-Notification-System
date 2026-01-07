@@ -85,7 +85,12 @@ try
     // Choose one of these configurations:
 
     // OPTION 1: Development (Console notifications, In-Memory)
-    builder.Services.AddAdaptersWithInMemoryPersistence();
+    //builder.Services.AddAdaptersWithInMemoryPersistence();
+
+    // OPTION 2: Production with SQL Server (EF Core)
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    builder.Services.AddAdaptersWithEFCorePersistence(connectionString);
 
     // OPTION 2: Production with Email (configure appsettings.json first)
     // var emailSettings = builder.Configuration

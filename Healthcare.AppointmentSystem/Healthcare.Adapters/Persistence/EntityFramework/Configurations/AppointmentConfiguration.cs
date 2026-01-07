@@ -2,7 +2,7 @@
 using Healthcare.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Org.BouncyCastle.Asn1;
+
 
 namespace Healthcare.Adapters.Persistence.EntityFramework.Configurations;
 

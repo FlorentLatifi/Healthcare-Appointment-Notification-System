@@ -99,22 +99,23 @@ public sealed class EFCoreDoctorRepository : IDoctorRepository
         Specialty specialty,
         CancellationToken cancellationToken = default)
     {
-        var specialtyValue = (int)specialty;
-
-        // Query JSON column - this works in SQL Server 2016+
+        // Load all doctors and filter in memory
+        // This is acceptable for small-medium datasets
+        // For large datasets, consider storing specialties in separate table
         var doctors = await _context.Doctors
-            .Where(d => EF.Functions.JsonValue(
-                EF.Property<string>(d, "_specialtiesJson"),
-                "$") != null)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        // Filter in memory for specialty (since JSON query is complex)
-        var filtered = doctors.Where(d =>
+        // Load specialties and filter
+        var filtered = new List<Doctor>();
+        foreach (var doctor in doctors)
         {
-            LoadSpecialties(d);
-            return d.Specialties.Contains(specialty);
-        }).ToList();
+            LoadSpecialties(doctor);
+            if (doctor.Specialties.Contains(specialty))
+            {
+                filtered.Add(doctor);
+            }
+        }
 
         return filtered;
     }
@@ -188,9 +189,12 @@ public sealed class EFCoreDoctorRepository : IDoctorRepository
 
             if (field != null)
             {
-                var list = (List<Specialty>)field.GetValue(doctor)!;
-                list.Clear();
-                list.AddRange(specialties);
+                var list = field.GetValue(doctor) as List<Specialty>;
+                if (list != null)
+                {
+                    list.Clear();
+                    list.AddRange(specialties);
+                }
             }
         }
     }

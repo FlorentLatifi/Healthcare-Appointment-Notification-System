@@ -9,7 +9,9 @@ using Healthcare.Application.Ports.Notifications;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Events;
 using Microsoft.Extensions.DependencyInjection;
-
+using Healthcare.Adapters.Persistence.EntityFramework;
+using Healthcare.Adapters.Persistence.EntityFramework.Repositories;
+using Microsoft.EntityFrameworkCore;
 namespace Healthcare.Adapters;
 
 /// <summary>
@@ -220,6 +222,50 @@ public static class AdapterServiceExtensions
     /// - New instance per request
     /// - Proper disposal
     /// </remarks>
+    /// 
+    /// <summary>
+    /// Registers adapters with Entity Framework Core persistence.
+    /// </summary>
+    /// <remarks>
+    /// Use this for production with SQL Server database.
+    /// 
+    /// Configuration Required:
+    /// - Connection string in appsettings.json
+    /// - SQL Server instance running
+    /// - Database created (via migrations)
+    /// 
+    /// Usage in Program.cs:
+    /// builder.Services.AddAdaptersWithEFCorePersistence(
+    ///     builder.Configuration.GetConnectionString("DefaultConnection")!);
+    /// </remarks>
+    public static IServiceCollection AddAdaptersWithEFCorePersistence(
+        this IServiceCollection services,
+        string connectionString)
+    {
+        // Database Context
+        services.AddDbContext<HealthcareDbContext>(options =>
+            options.UseSqlServer(connectionString));
+
+        // Repositories (EF Core implementations)
+        services.AddScoped<IAppointmentRepository, EFCoreAppointmentRepository>();
+        services.AddScoped<IPatientRepository, EFCorePatientRepository>();
+        services.AddScoped<IDoctorRepository, EFCoreDoctorRepository>();
+        services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
+
+        // Notification Service (Console for development)
+        services.AddScoped<INotificationService, ConsoleNotificationAdapter>();
+
+        // Event Infrastructure
+        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+        RegisterEventHandlers(services);
+
+        // Time Provider
+        services.AddSingleton<ITimeProvider, SystemTimeProvider>();
+
+        return services;
+    }
+
+
     private static void RegisterEventHandlers(IServiceCollection services)
     {
         // AppointmentConfirmedEvent Handlers
@@ -307,4 +353,6 @@ public static class AdapterServiceExtensions
 
         return services;
     }
+
+
 }
