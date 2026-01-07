@@ -154,27 +154,3 @@ finally
 {
     Log.CloseAndFlush();
 }
-```
-
----
-
-## ? HEALTHCARE.PRESENTATION.API - 100% KOMPLETUAR!
-
-### ?? **STATISTIKA FINALE**
-```
-?? Healthcare.Presentation.API /
-??? Controllers / (3 files)  ? 100%
-?   ??? AppointmentsController.cs   (8 endpoints)
-?   ??? PatientsController.cs       (6 endpoints)
-?   ??? DoctorsController.cs        (6 endpoints)
-??? Requests/            (5 files)  ? 100%
-??? Responses/           (2 files)  ? 100%
-??? Validators/          (5 files)  ? 100%
-??? Middleware/          (1 file)   ? 100%
-??? Filters/             (1 file)   ? 100%
-??? Program.cs           (1 file)   ? 100%
-
-TOTAL: 18 Files
-REST ENDPOINTS: 20 endpoints
-HTTP VERBS: GET, POST, PUT, DELETE
-STATUS CODES: 200, 201, 204, 400, 404, 500

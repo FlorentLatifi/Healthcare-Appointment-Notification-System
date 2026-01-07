@@ -719,7 +719,9 @@
           "Healthcare.Application": "1.0.0",
           "Healthcare.Domain": "1.0.0",
           "MailKit": "4.14.1",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.0"
+          "Microsoft.Extensions.DependencyInjection": "8.0.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.0",
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.0"
         },
         "compile": {
           "bin/placeholder/Healthcare.Adapters.dll": {}

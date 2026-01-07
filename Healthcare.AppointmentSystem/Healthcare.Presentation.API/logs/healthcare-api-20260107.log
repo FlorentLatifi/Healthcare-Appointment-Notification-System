@@ -1,0 +1,26 @@
+2026-01-07 16:03:23.862 +01:00 [INF] Starting Healthcare API...
+2026-01-07 16:03:24.223 +01:00 [INF] Healthcare API started successfully
+2026-01-07 16:03:24.225 +01:00 [INF] Swagger UI available at: https://localhost:7039
+2026-01-07 16:03:24.227 +01:00 [INF] Using Adapters: In-Memory Persistence + Console Notifications
+2026-01-07 16:03:24.315 +01:00 [INF] Now listening on: http://localhost:5171
+2026-01-07 16:03:24.319 +01:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-01-07 16:03:24.320 +01:00 [INF] Hosting environment: Development
+2026-01-07 16:03:24.321 +01:00 [INF] Content root path: C:\Users\flore\OneDrive\Desktop\Health\Healthcare-Appointment-Notification-System\Healthcare.AppointmentSystem\Healthcare.Presentation.API
+2026-01-07 16:03:36.218 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5171/ - null null
+2026-01-07 16:03:36.256 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5171/ - 301 0 null 39.3702ms
+2026-01-07 16:03:36.265 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5171/index.html - null null
+2026-01-07 16:03:36.350 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5171/index.html - 200 null text/html;charset=utf-8 85.5766ms
+2026-01-07 16:03:36.376 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5171/swagger-ui-bundle.js - null null
+2026-01-07 16:03:36.376 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5171/swagger-ui.css - null null
+2026-01-07 16:03:36.377 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5171/swagger-ui-standalone-preset.js - null null
+2026-01-07 16:03:36.402 +01:00 [INF] Sending file. Request path: '/swagger-ui.css'. Physical path: 'N/A'
+2026-01-07 16:03:36.402 +01:00 [INF] Sending file. Request path: '/swagger-ui-standalone-preset.js'. Physical path: 'N/A'
+2026-01-07 16:03:36.406 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5171/swagger-ui.css - 200 152034 text/css 29.5381ms
+2026-01-07 16:03:36.406 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5171/swagger-ui-standalone-preset.js - 200 230280 text/javascript 28.5467ms
+2026-01-07 16:03:36.414 +01:00 [INF] Sending file. Request path: '/swagger-ui-bundle.js'. Physical path: 'N/A'
+2026-01-07 16:03:36.416 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5171/swagger-ui-bundle.js - 200 1456926 text/javascript 39.8518ms
+2026-01-07 16:03:36.556 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5171/swagger/v1/swagger.json - null null
+2026-01-07 16:03:36.576 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5171/favicon-32x32.png - null null
+2026-01-07 16:03:36.579 +01:00 [INF] Sending file. Request path: '/favicon-32x32.png'. Physical path: 'N/A'
+2026-01-07 16:03:36.581 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5171/favicon-32x32.png - 200 628 image/png 4.4929ms
+2026-01-07 16:03:36.658 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5171/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 101.6239ms
