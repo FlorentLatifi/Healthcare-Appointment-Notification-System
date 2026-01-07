@@ -1,25 +1,180 @@
-var builder = WebApplication.CreateBuilder(args);
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Healthcare.Adapters;
+using Healthcare.Adapters.Notifications;
+using Healthcare.Application.Commands.BookAppointment;
+using Healthcare.Application.Commands.CancelAppointment;
+using Healthcare.Application.Commands.ConfirmAppointment;
+using Healthcare.Application.Commands.CreatePatient;
+using Healthcare.Application.Common;
+using Healthcare.Presentation.API.Filters;
+using Healthcare.Presentation.API.Middleware;
+using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
-// Add services to the container.
+// ============================================
+// SERILOG CONFIGURATION
+// ============================================
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("logs/healthcare-api-.log", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
 
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+try
 {
+    Log.Information("Starting Healthcare API...");
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    // ============================================
+    // LOGGING
+    // ============================================
+    builder.Host.UseSerilog();
+
+    // ============================================
+    // CONTROLLERS & VALIDATION
+    // ============================================
+    builder.Services.AddControllers(options =>
+    {
+        // Add validation filter globally
+        options.Filters.Add<ValidationFilter>();
+    });
+
+    // FluentValidation
+    builder.Services.AddFluentValidationAutoValidation();
+    builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+    // ============================================
+    // SWAGGER/OPENAPI
+    // ============================================
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.SwaggerDoc("v1", new()
+        {
+            Title = "Healthcare Appointment API",
+            Version = "v1",
+            Description = "RESTful API for managing healthcare appointments, patients, and doctors",
+            Contact = new()
+            {
+                Name = "Healthcare Team",
+                Email = "support@healthcareclinic.com"
+            }
+        });
+
+        // Include XML comments for better documentation
+        var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+        var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+        if (File.Exists(xmlPath))
+        {
+            options.IncludeXmlComments(xmlPath);
+        }
+    });
+
+    // ============================================
+    // APPLICATION LAYER (COMMAND HANDLERS)
+    // ============================================
+    builder.Services.AddScoped<ICommandHandler<BookAppointmentCommand, Result<int>>, BookAppointmentHandler>();
+    builder.Services.AddScoped<ICommandHandler<ConfirmAppointmentCommand, Result>, ConfirmAppointmentHandler>();
+    builder.Services.AddScoped<ICommandHandler<CancelAppointmentCommand, Result>, CancelAppointmentHandler>();
+    builder.Services.AddScoped<ICommandHandler<CreatePatientCommand, Result<int>>, CreatePatientHandler>();
+
+    // ============================================
+    // ADAPTERS LAYER
+    // ============================================
+    // Choose one of these configurations:
+
+    // OPTION 1: Development (Console notifications, In-Memory)
+    builder.Services.AddAdaptersWithInMemoryPersistence();
+
+    // OPTION 2: Production with Email (configure appsettings.json first)
+    // var emailSettings = builder.Configuration
+    //     .GetSection("Email")
+    //     .Get<EmailSettings>();
+    // builder.Services.AddAdaptersWithEmail(emailSettings!);
+
+    // OPTION 3: Production with Email + Console
+    // builder.Services.AddAdaptersWithCompositeNotifications(emailSettings!);
+
+    // ============================================
+    // CORS (if needed for frontend)
+    // ============================================
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("AllowAll", policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        });
+    });
+
+    // ============================================
+    // BUILD APP
+    // ============================================
+    var app = builder.Build();
+
+    // ============================================
+    // MIDDLEWARE PIPELINE
+    // ============================================
+
+    // Global exception handling
+    app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+    // Swagger in all environments (for demo purposes)
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Healthcare API v1");
+        options.RoutePrefix = string.Empty; // Swagger at root
+    });
+
+    app.UseHttpsRedirection();
+
+    app.UseCors("AllowAll");
+
+    app.UseAuthorization();
+
+    app.MapControllers();
+
+    // ============================================
+    // STARTUP LOGGING
+    // ============================================
+    Log.Information("Healthcare API started successfully");
+    Log.Information("Swagger UI available at: {Url}", "https://localhost:7039");
+    Log.Information("Using Adapters: In-Memory Persistence + Console Notifications");
+
+    app.Run();
 }
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+```
 
-app.UseHttpsRedirection();
+---
 
-app.UseAuthorization();
+## ? HEALTHCARE.PRESENTATION.API - 100% KOMPLETUAR!
 
-app.MapControllers();
+### ?? **STATISTIKA FINALE**
+```
+?? Healthcare.Presentation.API /
+??? Controllers / (3 files)  ? 100%
+?   ??? AppointmentsController.cs   (8 endpoints)
+?   ??? PatientsController.cs       (6 endpoints)
+?   ??? DoctorsController.cs        (6 endpoints)
+??? Requests/            (5 files)  ? 100%
+??? Responses/           (2 files)  ? 100%
+??? Validators/          (5 files)  ? 100%
+??? Middleware/          (1 file)   ? 100%
+??? Filters/             (1 file)   ? 100%
+??? Program.cs           (1 file)   ? 100%
 
-app.Run();
+TOTAL: 18 Files
+REST ENDPOINTS: 20 endpoints
+HTTP VERBS: GET, POST, PUT, DELETE
+STATUS CODES: 200, 201, 204, 400, 404, 500
