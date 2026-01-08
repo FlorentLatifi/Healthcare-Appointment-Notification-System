@@ -2,7 +2,8 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Healthcare.Adapters;
-
+using Healthcare.Presentation.API.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Commands.CancelAppointment;
 using Healthcare.Application.Commands.ConfirmAppointment;
@@ -104,6 +105,19 @@ try
     builder.Services.AddScoped<ICommandHandler<CancelAppointmentCommand, Result>, CancelAppointmentHandler>();
     builder.Services.AddScoped<ICommandHandler<CreatePatientCommand, Result<int>>, CreatePatientHandler>();
 
+
+    // ============================================
+    // HEALTH CHECKS
+    // ============================================
+    builder.Services.AddHealthChecks()
+        .AddCheck<DatabaseHealthCheck>(
+            "database",
+            failureStatus: HealthStatus.Unhealthy,
+            tags: new[] { "db", "sql", "critical" })
+        .AddCheck<MemoryHealthCheck>(
+            "memory",
+            failureStatus: HealthStatus.Degraded,
+            tags: new[] { "memory", "performance" });
     // ============================================
     // ADAPTERS LAYER
     // ============================================
@@ -173,6 +187,55 @@ try
     Log.Information("Healthcare API started successfully");
     Log.Information("Swagger UI available at: {Url}", "https://localhost:7039");
     Log.Information("Using Adapters: In-Memory Persistence + Console Notifications");
+
+
+    // ============================================
+    // HEALTH CHECK ENDPOINTS
+    // ============================================
+
+    // Basic health check - returns 200 OK if healthy
+    app.MapHealthChecks("/health");
+
+    // Detailed health check with JSON response
+    app.MapHealthChecks("/health/details", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+
+            var result = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                status = report.Status.ToString(),
+                checks = report.Entries.Select(e => new
+                {
+                    name = e.Key,
+                    status = e.Value.Status.ToString(),
+                    description = e.Value.Description,
+                    duration = e.Value.Duration.TotalMilliseconds,
+                    data = e.Value.Data
+                }),
+                totalDuration = report.TotalDuration.TotalMilliseconds
+            }, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            await context.Response.WriteAsync(result);
+        }
+    });
+
+    // Ready check - for Kubernetes readiness probe
+    app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = check => check.Tags.Contains("critical")
+    });
+
+    // Live check - for Kubernetes liveness probe
+    app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = _ => false // Always healthy if API responds
+    });
+
 
     app.Run();
 }
