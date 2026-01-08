@@ -1,7 +1,8 @@
+﻿using Asp.Versioning;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Healthcare.Adapters;
-using Healthcare.Adapters.Notifications;
+
 using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Commands.CancelAppointment;
 using Healthcare.Application.Commands.ConfirmAppointment;
@@ -9,8 +10,9 @@ using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Common;
 using Healthcare.Presentation.API.Filters;
 using Healthcare.Presentation.API.Middleware;
-using Microsoft.AspNetCore.Mvc;
+
 using Serilog;
+
 
 // ============================================
 // SERILOG CONFIGURATION
@@ -40,27 +42,50 @@ try
         options.Filters.Add<ValidationFilter>();
     });
 
+
     // FluentValidation
     builder.Services.AddFluentValidationAutoValidation();
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
+
+    // ============================================
+    // API VERSIONING
+    // ============================================
+    builder.Services.AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.ReportApiVersions = true;
+    })
+    .AddMvc() // ← IMPORTANT: Shto këtë
+    .AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
+        options.SubstituteApiVersionInUrl = true;
+    });
+
+    
     // ============================================
     // SWAGGER/OPENAPI
     // ============================================
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
     {
+        // API v1 Documentation
         options.SwaggerDoc("v1", new()
         {
             Title = "Healthcare Appointment API",
-            Version = "v1",
-            Description = "RESTful API for managing healthcare appointments, patients, and doctors",
+            Version = "v1.0",
+            Description = "RESTful API for managing healthcare appointments, patients, and doctors - Version 1.0",
             Contact = new()
             {
                 Name = "Healthcare Team",
                 Email = "support@healthcareclinic.com"
             }
         });
+
+        // Future: Add v2 when ready
+        // options.SwaggerDoc("v2", new() { ... });
 
         // Include XML comments for better documentation
         var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";

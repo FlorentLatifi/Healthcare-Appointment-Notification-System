@@ -7,7 +7,7 @@ using Healthcare.Application.Ports.Repositories;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Mvc;
-
+using Asp.Versioning;
 namespace Healthcare.Presentation.API.Controllers;
 
 /// <summary>
@@ -33,8 +33,10 @@ namespace Healthcare.Presentation.API.Controllers;
 /// - PUT    /api/appointments/{id}/cancel  - Cancel appointment
 /// - DELETE /api/appointments/{id}     - Delete appointment
 /// </remarks>
+
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion("1.0")] 
+[Route("api/v{version:apiVersion}/[controller]")]
 [Produces("application/json")]
 public sealed class AppointmentsController : ControllerBase
 {

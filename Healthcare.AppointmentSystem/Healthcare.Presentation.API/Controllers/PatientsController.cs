@@ -1,10 +1,12 @@
-﻿using Healthcare.Application.Commands.CreatePatient;
+﻿using Asp.Versioning;
+using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Mvc;
+
 
 namespace Healthcare.Presentation.API.Controllers;
 
@@ -21,7 +23,8 @@ namespace Healthcare.Presentation.API.Controllers;
 /// - DELETE /api/patients/{id}     - Delete patient
 /// </remarks>
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion("1.0")] // ← SHTO KËTË
+[Route("api/v{version:apiVersion}/[controller]")] // ← NDRYSHO KËTË
 [Produces("application/json")]
 public sealed class PatientsController : ControllerBase
 {
@@ -121,18 +124,36 @@ public sealed class PatientsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of all patients.</returns>
     /// <response code="200">Patients retrieved successfully.</response>
+    /// <summary>
+    /// Gets paginated list of all patients.
+    /// </summary>
+    /// <param name="pageNumber">Page number (default: 1)</param>
+    /// <param name="pageSize">Items per page (default: 20, max: 100)</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Paginated list of patients.</returns>
+    /// <response code="200">Patients retrieved successfully.</response>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<PatientDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAllPatients(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<PatientDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAllPatients(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Retrieving all patients");
+        _logger.LogInformation("Retrieving patients - Page: {Page}, Size: {Size}", pageNumber, pageSize);
+
+        // Validate pagination
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
 
         var patients = await _unitOfWork.Patients.GetAllAsync(cancellationToken);
-        var dtos = patients.Select(MapToDto).ToList();
+        var dtos = patients.Select(MapToDto);
 
-        return Ok(ApiResponse<List<PatientDto>>.SuccessResponse(
-            dtos,
-            $"Retrieved {dtos.Count} patient(s)"));
+        var pagedResult = PagedResult<PatientDto>.Create(dtos, pageNumber, pageSize);
+
+        return Ok(ApiResponse<PagedResult<PatientDto>>.SuccessResponse(
+            pagedResult,
+            $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} items)"));
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
-﻿using Healthcare.Application.DTOs;
+﻿using Asp.Versioning;
+using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -22,7 +23,8 @@ namespace Healthcare.Presentation.API.Controllers;
 /// - DELETE /api/doctors/{id}     - Delete doctor
 /// </remarks>
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion("1.0")] 
+[Route("api/v{version:apiVersion}/[controller]")] // ← NDRYSHO KËTË
 [Produces("application/json")]
 public sealed class DoctorsController : ControllerBase
 {
