@@ -8,6 +8,7 @@ using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Mvc;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 namespace Healthcare.Presentation.API.Controllers;
 
 /// <summary>
@@ -70,8 +71,10 @@ public sealed class AppointmentsController : ControllerBase
     /// <response code="400">Invalid request data or business rule violation.</response>
     /// <response code="500">Internal server error.</response>
     [HttpPost]
+    [Authorize(Roles = "Patient")]
     [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> BookAppointment(
         [FromBody] BookAppointmentRequest request,
         CancellationToken cancellationToken)
@@ -214,6 +217,7 @@ public sealed class AppointmentsController : ControllerBase
     /// <response code="400">Invalid request or business rule violation.</response>
     /// <response code="404">Appointment not found.</response>
     [HttpPut("{id}/confirm")]
+    [Authorize(Roles = "Doctor,Admin")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -253,6 +257,7 @@ public sealed class AppointmentsController : ControllerBase
     /// <response code="400">Invalid request or business rule violation.</response>
     /// <response code="404">Appointment not found.</response>
     [HttpPut("{id}/cancel")]
+    [Authorize(Roles = "Patient,Doctor,Admin")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -296,6 +301,7 @@ public sealed class AppointmentsController : ControllerBase
     /// <response code="204">Appointment deleted successfully.</response>
     /// <response code="404">Appointment not found.</response>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteAppointment(int id, CancellationToken cancellationToken)
