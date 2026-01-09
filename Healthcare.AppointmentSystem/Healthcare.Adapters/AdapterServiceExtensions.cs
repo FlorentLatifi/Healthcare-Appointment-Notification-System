@@ -12,6 +12,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Healthcare.Adapters.Persistence.EntityFramework;
 using Healthcare.Adapters.Persistence.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Healthcare.Adapters.Authentication;
+using Healthcare.Application.Ports.Authentication;
+using Microsoft.Extensions.Configuration;
 namespace Healthcare.Adapters;
 
 /// <summary>
@@ -59,7 +62,23 @@ public static class AdapterServiceExtensions
         services.AddSingleton<IPatientRepository, InMemoryPatientRepository>();
         services.AddSingleton<IDoctorRepository, InMemoryDoctorRepository>();
         services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
+        services.AddSingleton<IUserRepository, InMemoryUserRepository>();
 
+        // Authentication Services
+        services.AddSingleton<JwtSettings>(provider =>
+        {
+            var config = provider.GetRequiredService<IConfiguration>();
+            return new JwtSettings
+            {
+                Secret = config["Jwt:Secret"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLong!",
+                Issuer = config["Jwt:Issuer"] ?? "HealthcareAPI",
+                Audience = config["Jwt:Audience"] ?? "HealthcareClients",
+                ExpirationInMinutes = int.Parse(config["Jwt:ExpirationInMinutes"] ?? "60")
+            };
+        });
+
+        services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddScoped<IAuthenticationService, JwtAuthenticationService>();
         // Notification Adapters (Console)
         // Scoped: New instance per request
         services.AddScoped<INotificationService, ConsoleNotificationAdapter>();

@@ -13,6 +13,10 @@ using Healthcare.Presentation.API.Filters;
 using Healthcare.Presentation.API.Middleware;
 
 using Serilog;
+using Healthcare.Adapters.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 
 // ============================================
@@ -153,6 +157,39 @@ try
         });
     });
 
+
+    // ============================================
+    // JWT AUTHENTICATION
+    // ============================================
+    var jwtSettings = new JwtSettings
+    {
+        Secret = builder.Configuration["Jwt:Secret"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLong!",
+        Issuer = builder.Configuration["Jwt:Issuer"] ?? "HealthcareAPI",
+        Audience = builder.Configuration["Jwt:Audience"] ?? "HealthcareClients",
+        ExpirationInMinutes = int.Parse(builder.Configuration["Jwt:ExpirationInMinutes"] ?? "60")
+    };
+
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtSettings.Secret))
+        };
+    });
+
+    builder.Services.AddAuthorization();
     // ============================================
     // BUILD APP
     // ============================================
@@ -177,7 +214,9 @@ try
 
     app.UseCors("AllowAll");
 
-    app.UseAuthorization();
+
+    app.UseAuthentication(); // ← SHTO KËTË
+    app.UseAuthorization();  // ← SHTO KËTË
 
     app.MapControllers();
 
