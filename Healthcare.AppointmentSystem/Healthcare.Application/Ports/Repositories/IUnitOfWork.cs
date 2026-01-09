@@ -16,6 +16,9 @@
 /// </remarks>
 public interface IUnitOfWork
 {
+
+
+
     /// <summary>
     /// Gets the appointment repository.
     /// </summary>
@@ -31,6 +34,11 @@ public interface IUnitOfWork
     /// </summary>
     IDoctorRepository Doctors { get; }
 
+
+    /// <summary>
+    /// Gets the user repository.
+    /// </summary>
+    IUserRepository Users { get; }
     /// <summary>
     /// Saves all changes made in this unit of work to the underlying data store.
     /// </summary>
