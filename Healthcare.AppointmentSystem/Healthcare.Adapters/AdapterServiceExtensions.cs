@@ -269,6 +269,7 @@ public static class AdapterServiceExtensions
         services.AddScoped<IAppointmentRepository, EFCoreAppointmentRepository>();
         services.AddScoped<IPatientRepository, EFCorePatientRepository>();
         services.AddScoped<IDoctorRepository, EFCoreDoctorRepository>();
+        services.AddScoped<IUserRepository, EFCoreUserRepository>();
         services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
 
         // Notification Service (Console for development)

@@ -329,6 +329,12 @@ public sealed class AppointmentsController : ControllerBase
     /// </summary>
     private static AppointmentDto MapToDto(Domain.Entities.Appointment appointment)
     {
+
+        if (appointment.Patient == null || appointment.Doctor == null)
+        {
+            throw new InvalidOperationException("Appointment must have Patient and Doctor loaded.");
+        }
+
         return new AppointmentDto
         {
             Id = appointment.Id,

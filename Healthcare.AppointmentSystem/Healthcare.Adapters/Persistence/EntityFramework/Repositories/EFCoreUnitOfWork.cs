@@ -1,4 +1,5 @@
 ﻿using Healthcare.Application.Ports.Repositories;
+using Healthcare.Domain.Entities;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Healthcare.Adapters.Persistence.EntityFramework.Repositories;
@@ -34,17 +35,20 @@ public sealed class EFCoreUnitOfWork : IUnitOfWork
         HealthcareDbContext context,
         IAppointmentRepository appointments,
         IPatientRepository patients,
-        IDoctorRepository doctors)
+        IDoctorRepository doctors,
+        IUserRepository users)
     {
         _context = context;
         Appointments = appointments;
         Patients = patients;
         Doctors = doctors;
+        Users = users;
     }
 
     public IAppointmentRepository Appointments { get; }
     public IPatientRepository Patients { get; }
     public IDoctorRepository Doctors { get; }
+    public IUserRepository Users { get; }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

@@ -13,16 +13,16 @@ public sealed class InMemoryUserRepository : InMemoryRepository<User>, IUserRepo
         return base.GetByIdAsync(id);
     }
 
-    public Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
+    public async Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
     {
-        return FindAsync(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase))
-            .ContinueWith(t => t.Result.FirstOrDefault(), cancellationToken);
+        var users = await FindAsync(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+        return users.FirstOrDefault();
     }
 
-    public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+    public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        return FindAsync(u => u.Email.Value.Equals(email, StringComparison.OrdinalIgnoreCase))
-            .ContinueWith(t => t.Result.FirstOrDefault(), cancellationToken);
+        var users = await FindAsync(u => u.Email.Value.Equals(email, StringComparison.OrdinalIgnoreCase));
+        return users.FirstOrDefault();
     }
 
     public Task<bool> ExistsAsync(string username, CancellationToken cancellationToken = default)

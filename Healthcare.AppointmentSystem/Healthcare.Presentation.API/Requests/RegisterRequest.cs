@@ -1,4 +1,4 @@
-﻿namespace Healthcare.Presentation.API.Requests.Authentication;
+﻿namespace Healthcare.Presentation.API.Requests;
 
 /// <summary>
 /// Request model for user registration.
