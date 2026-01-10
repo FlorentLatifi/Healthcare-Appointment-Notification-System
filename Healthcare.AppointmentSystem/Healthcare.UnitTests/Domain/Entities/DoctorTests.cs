@@ -628,7 +628,7 @@ public class DoctorTests
             CreateTestPhone(),
             "LIC-12345",
             CreateTestFee(),
-            10,,
+            10,
             Specialty.Cardiology);
 
         // Act & Assert
