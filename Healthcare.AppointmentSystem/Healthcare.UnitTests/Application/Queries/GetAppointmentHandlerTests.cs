@@ -390,7 +390,7 @@ public class GetAppointmentHandlerTests
         var appointment = await CreateAndSaveAppointmentAsync();
 
         // Force ID to 1 (edge case - first ID)
-        var idProperty = typeof(Domain.Entities.Appointment)
+        var idProperty = typeof(Domain.Entities.AppointmentTests)
             .GetProperty("Id");
         idProperty!.SetValue(appointment, 1);
 
