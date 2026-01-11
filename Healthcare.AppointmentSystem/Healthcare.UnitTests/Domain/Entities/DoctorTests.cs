@@ -162,11 +162,9 @@ public class DoctorTests
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
     [InlineData("LIC")]
     [InlineData("1234")]
-    public void Create_WithInvalidLicenseNumber_ShouldThrowArgumentException(string license)
+    public void Create_WithTooShortLicenseNumber_ShouldThrowArgumentException(string license)
     {
         // Act
         Action act = () => Doctor.Create(
@@ -182,6 +180,28 @@ public class DoctorTests
         // Assert
         act.Should().Throw<ArgumentException>()
             .WithMessage("*at least 5 characters*");
+    }
+
+    // ✅ SHTO këtë test të ri për null/whitespace:
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Create_WithNullOrWhitespaceLicenseNumber_ShouldThrowArgumentException(string license)
+    {
+        // Act
+        Action act = () => Doctor.Create(
+            "Jane",
+            "Smith",
+            CreateTestEmail(),
+            CreateTestPhone(),
+            license,
+            CreateTestFee(),
+            10,
+            Specialty.Cardiology);
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*cannot be null or whitespace*");
     }
 
     #endregion

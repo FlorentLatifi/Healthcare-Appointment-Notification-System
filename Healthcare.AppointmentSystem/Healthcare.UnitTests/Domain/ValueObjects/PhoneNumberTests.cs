@@ -76,11 +76,10 @@ public class PhoneNumberTests
 
     [Theory]
     [InlineData("123456789")]         // Missing country code (+)
-    [InlineData("+1")]                // Too short (needs at least 6 digits after country)
+    [InlineData("+1")]                // Too short
     [InlineData("+12345")]            // Too short
     [InlineData("+abc123456789")]     // Contains letters
     [InlineData("383491234567")]      // Missing +
-    [InlineData("+1234567890123456")] // Too long (more than 3+14 digits)
     public void Create_WithInvalidFormat_ShouldThrowInvalidPhoneNumberException(string invalidPhone)
     {
         // Act
@@ -89,6 +88,21 @@ public class PhoneNumberTests
         // Assert
         act.Should().Throw<InvalidPhoneNumberException>()
             .WithMessage($"*{invalidPhone}*");
+    }
+
+    // ✅ SHTO këtë test të ri për max length:
+    [Fact]
+    public void Create_WithTooLongPhoneNumber_ShouldThrowInvalidPhoneNumberException()
+    {
+        // Arrange - 18 digits total (3 country + 15 number = TOO LONG)
+        var tooLongPhone = "+1234567890123456";
+
+        // Act
+        Action act = () => PhoneNumber.Create(tooLongPhone);
+
+        // Assert
+        act.Should().Throw<InvalidPhoneNumberException>()
+            .WithMessage($"*{tooLongPhone}*");
     }
 
     #endregion

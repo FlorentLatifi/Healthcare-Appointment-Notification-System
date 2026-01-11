@@ -78,8 +78,16 @@ public class GetAppointmentHandlerTests
 
     private static AppointmentTime CreateFutureAppointmentTime()
     {
-        var futureDate = DateTime.Now.AddDays(7).Date.AddHours(10);
-        return AppointmentTime.Create(futureDate);
+        var futureDate = DateTime.Now.AddDays(7).Date;
+
+  
+        while (futureDate.DayOfWeek == DayOfWeek.Saturday ||
+               futureDate.DayOfWeek == DayOfWeek.Sunday)
+        {
+            futureDate = futureDate.AddDays(1);
+        }
+
+        return AppointmentTime.Create(futureDate.AddHours(10));
     }
 
     private async Task<Appointment> CreateAndSaveAppointmentAsync(AppointmentStatus status = AppointmentStatus.Pending)

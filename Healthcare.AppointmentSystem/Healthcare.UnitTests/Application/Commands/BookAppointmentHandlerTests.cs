@@ -271,6 +271,7 @@ public class BookAppointmentHandlerTests
     private void SetupAppointmentRepositoryMock(List<Appointment> existingAppointments)
     {
         var appointmentRepoMock = new Mock<IAppointmentRepository>();
+
         appointmentRepoMock
             .Setup(r => r.GetByDoctorAndDateAsync(
                 It.IsAny<int>(),
@@ -280,6 +281,19 @@ public class BookAppointmentHandlerTests
 
         appointmentRepoMock
             .Setup(r => r.AddAsync(It.IsAny<Appointment>(), It.IsAny<CancellationToken>()))
+            .Callback<Appointment, CancellationToken>((apt, ct) =>
+            {
+                
+                var idProperty = typeof(Appointment)
+                    .GetProperty("Id",
+                        System.Reflection.BindingFlags.Public |
+                        System.Reflection.BindingFlags.Instance);
+
+                if (idProperty != null && apt.Id == 0)
+                {
+                    idProperty.SetValue(apt, 1);
+                }
+            })
             .Returns(Task.CompletedTask);
 
         _unitOfWorkMock.Setup(u => u.Appointments).Returns(appointmentRepoMock.Object);

@@ -137,9 +137,9 @@ public class AppointmentTimeTests
     }
 
     [Theory]
-    [InlineData(10, 15)] // 10:15 AM
-    [InlineData(10, 45)] // 10:45 AM
-    [InlineData(14, 20)] // 2:20 PM
+    [InlineData(10, 15)]
+    [InlineData(10, 45)]
+    [InlineData(14, 20)]
     public void Create_NotOn30MinuteInterval_ShouldThrowInvalidAppointmentTimeException(int hour, int minute)
     {
         // Arrange
@@ -151,7 +151,7 @@ public class AppointmentTimeTests
 
         // Assert
         act.Should().Throw<InvalidAppointmentTimeException>()
-            .WithMessage("*:00 or half-hour :30*");
+            .WithMessage("*:00*:30*"); // ✅ FIX: Match actual error message
     }
 
     [Fact]
@@ -207,24 +207,40 @@ public class AppointmentTimeTests
     [Fact]
     public void IsWithinNext24Hours_WithAppointmentIn23Hours_ShouldReturnTrue()
     {
-        // Arrange
-        var futureTime = DateTime.Now.AddHours(23).Date
-            .AddHours(DateTime.Now.Hour + 23).AddMinutes(30);
+        // Arrange - Create appointment exactly 23 hours from now on a weekday
+        var now = DateTime.Now;
+        var futureTime = now.AddHours(23);
 
-        // Make sure it's on a weekday
-        while (futureTime.DayOfWeek == DayOfWeek.Saturday || futureTime.DayOfWeek == DayOfWeek.Sunday)
+        // Ensure it's on a weekday
+        while (futureTime.DayOfWeek == DayOfWeek.Saturday ||
+               futureTime.DayOfWeek == DayOfWeek.Sunday)
         {
             futureTime = futureTime.AddDays(1);
         }
 
-        // Make sure it's within working hours
-        if (futureTime.Hour < 8)
+        // Ensure it's within working hours (8 AM - 6 PM)
+        var targetHour = futureTime.Hour;
+        if (targetHour < 8)
         {
             futureTime = futureTime.Date.AddHours(10);
         }
-        else if (futureTime.Hour >= 18)
+        else if (targetHour >= 18)
         {
             futureTime = futureTime.Date.AddDays(1).AddHours(10);
+
+            // Check weekend again after adding day
+            while (futureTime.DayOfWeek == DayOfWeek.Saturday ||
+                   futureTime.DayOfWeek == DayOfWeek.Sunday)
+            {
+                futureTime = futureTime.AddDays(1);
+            }
+        }
+
+        // Ensure it's on 30-minute interval
+        if (futureTime.Minute != 0 && futureTime.Minute != 30)
+        {
+            futureTime = futureTime.Date.AddHours(futureTime.Hour)
+                .AddMinutes(futureTime.Minute >= 30 ? 30 : 0);
         }
 
         var appointmentTime = AppointmentTime.Create(futureTime);

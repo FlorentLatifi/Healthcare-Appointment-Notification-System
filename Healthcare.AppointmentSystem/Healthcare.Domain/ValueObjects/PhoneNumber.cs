@@ -19,9 +19,8 @@ public sealed class PhoneNumber : ValueObject
 {
     // Simplified international format: +[1-3 digits country code][6-14 digits number]
     private static readonly Regex PhoneRegex = new(
-        @"^\+\d{1,3}\d{6,14}$",
-        RegexOptions.Compiled);
-
+    @"^\+\d{1,3}\d{6,14}$", // ✅ Total: 1 + (1-3) + (6-14) = 8 to 18 chars
+    RegexOptions.Compiled);
     /// <summary>
     /// Gets the phone number value in international format.
     /// </summary>
@@ -47,6 +46,11 @@ public sealed class PhoneNumber : ValueObject
 
         // Remove all whitespace and common separators
         var normalized = Regex.Replace(phoneNumber, @"[\s\-\(\)]", "");
+
+        if (normalized.Length > 18) // +XXX (3) + 14 digits = max 18
+        {
+            throw new InvalidPhoneNumberException(phoneNumber);
+        }
 
         if (!PhoneRegex.IsMatch(normalized))
         {
