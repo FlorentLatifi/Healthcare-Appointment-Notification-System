@@ -114,14 +114,18 @@ try
     // HEALTH CHECKS
     // ============================================
     builder.Services.AddHealthChecks()
-        .AddCheck<DatabaseHealthCheck>(
-            "database",
-            failureStatus: HealthStatus.Unhealthy,
-            tags: new[] { "db", "sql", "critical" })
-        .AddCheck<MemoryHealthCheck>(
-            "memory",
-            failureStatus: HealthStatus.Degraded,
-            tags: new[] { "memory", "performance" });
+    .AddCheck<DatabaseHealthCheck>(
+        "database",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "db", "sql", "critical" })
+    .AddCheck<RedisHealthCheck>( 
+        "redis",
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "cache", "redis", "locking" })
+    .AddCheck<MemoryHealthCheck>(
+        "memory",
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "memory", "performance" });
     // ============================================
     // ADAPTERS LAYER
     // ============================================
@@ -132,9 +136,10 @@ try
 
     // OPTION 2: Production with SQL Server (EF Core)
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-    builder.Services.AddAdaptersWithEFCorePersistence(connectionString);
-
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    builder.Services.AddAdaptersWithEFCorePersistence(
+        connectionString,
+        builder.Configuration);
     // OPTION 2: Production with Email (configure appsettings.json first)
     // var emailSettings = builder.Configuration
     //     .GetSection("Email")

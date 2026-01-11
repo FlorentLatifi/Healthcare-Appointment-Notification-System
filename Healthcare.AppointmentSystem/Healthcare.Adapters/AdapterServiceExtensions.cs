@@ -15,8 +15,12 @@ using Microsoft.EntityFrameworkCore;
 using Healthcare.Adapters.Authentication;
 using Healthcare.Application.Ports.Authentication;
 using Microsoft.Extensions.Configuration;
-namespace Healthcare.Adapters;
+using System.Net.NetworkInformation;
 
+using Healthcare.Adapters.Locking;
+using Healthcare.Application.Ports.Locking;
+using StackExchange.Redis;
+namespace Healthcare.Adapters;
 /// <summary>
 /// Extension methods for registering Adapter layer services.
 /// </summary>
@@ -38,6 +42,57 @@ namespace Healthcare.Adapters;
 /// </remarks>
 public static class AdapterServiceExtensions
 {
+
+    // ✅ NEW: Redis Registration Method
+    /// <summary>
+    /// Registers Redis distributed locking service.
+    /// </summary>
+    /// <remarks>
+    /// Design Pattern: Adapter Pattern + Dependency Injection
+    /// 
+    /// Redis Connection Pooling:
+    /// - Uses IConnectionMultiplexer (singleton) for connection pooling
+    /// - Thread-safe and multiplexed (multiple concurrent operations)
+    /// - Auto-reconnects on failures
+    /// 
+    /// Configuration:
+    /// - Reads from appsettings.json → Redis section
+    /// - Connection string format: "host:port,abortConnect=false"
+    /// 
+    /// Usage in Program.cs:
+    /// <code>
+    /// builder.Services.AddRedisDistributedLocking(builder.Configuration);
+    /// </code>
+    /// </remarks>
+    public static IServiceCollection AddRedisDistributedLocking(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        // Bind settings from configuration
+        var redisSettings = configuration
+            .GetSection("Redis")
+            .Get<RedisSettings>() ?? new RedisSettings();
+
+        services.AddSingleton(redisSettings);
+
+        // Register Redis connection (singleton - connection pooling)
+        services.AddSingleton<IConnectionMultiplexer>(provider =>
+        {
+            var settings = provider.GetRequiredService<RedisSettings>();
+
+            var configOptions = ConfigurationOptions.Parse(settings.ConnectionString);
+            configOptions.AbortOnConnectFail = false; // Retry on connection failure
+            configOptions.ConnectTimeout = 5000; // 5 seconds
+            configOptions.SyncTimeout = 5000;
+
+            return ConnectionMultiplexer.Connect(configOptions);
+        });
+
+        // Register distributed lock service
+        services.AddScoped<IDistributedLockService, RedisDistributedLockService>();
+
+        return services;
+    }
     /// <summary>
     /// Registers ALL adapters with in-memory persistence and console notifications.
     /// </summary>
@@ -259,7 +314,8 @@ public static class AdapterServiceExtensions
     /// </remarks>
     public static IServiceCollection AddAdaptersWithEFCorePersistence(
         this IServiceCollection services,
-        string connectionString)
+        string connectionString,
+        IConfiguration configuration)
     {
         // Database Context
         services.AddDbContext<HealthcareDbContext>(options =>
@@ -281,6 +337,9 @@ public static class AdapterServiceExtensions
 
         // Time Provider
         services.AddSingleton<ITimeProvider, SystemTimeProvider>();
+
+        //  Redis Distributed Locking
+        services.AddRedisDistributedLocking(configuration);
 
         return services;
     }
