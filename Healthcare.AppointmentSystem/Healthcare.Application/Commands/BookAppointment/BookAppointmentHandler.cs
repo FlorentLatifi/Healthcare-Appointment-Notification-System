@@ -1,5 +1,6 @@
 ﻿using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Events;
+using Healthcare.Application.Ports.Locking;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.ValueObjects;
@@ -22,13 +23,16 @@ public sealed class BookAppointmentHandler : ICommandHandler<BookAppointmentComm
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDomainEventDispatcher _eventDispatcher;
+    private readonly IDistributedLockService _lockService;
 
     public BookAppointmentHandler(
         IUnitOfWork unitOfWork,
-        IDomainEventDispatcher eventDispatcher)
+        IDomainEventDispatcher eventDispatcher,
+        IDistributedLockService lockService)
     {
         _unitOfWork = unitOfWork;
         _eventDispatcher = eventDispatcher;
+        _lockService = lockService;
     }
 
     public async Task<Result<int>> HandleAsync(
@@ -51,7 +55,7 @@ public sealed class BookAppointmentHandler : ICommandHandler<BookAppointmentComm
                 return Result<int>.Failure($"Doctor with ID {command.DoctorId} not found.");
             }
 
-            // 3. Create appointment time value object (validates business rules)
+            // 3.1 Create appointment time value object (validates business rules)
             AppointmentTime scheduledTime;
             try
             {
@@ -60,6 +64,19 @@ public sealed class BookAppointmentHandler : ICommandHandler<BookAppointmentComm
             catch (Exception ex)
             {
                 return Result<int>.Failure($"Invalid appointment time: {ex.Message}");
+            }
+
+            var lockKey = $"appointment:doctor:{doctor.Id}:time:{scheduledTime.Value:yyyyMMddHHmm}";
+
+            await using var lockHandle = await _lockService.AcquireLockAsync(
+                lockKey,
+                TimeSpan.FromSeconds(30), // Hold lock for max 30 seconds
+                cancellationToken);
+
+            if (lockHandle == null)
+            {
+                return Result<int>.Failure(
+                    "Another booking is in progress for this time slot. Please try again in a moment.");
             }
 
             // 4. Check doctor availability

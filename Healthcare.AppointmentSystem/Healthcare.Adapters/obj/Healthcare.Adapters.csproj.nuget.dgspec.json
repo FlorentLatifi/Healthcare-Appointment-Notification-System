@@ -94,6 +94,18 @@
             "Microsoft.Extensions.Logging.Abstractions": {
               "target": "Package",
               "version": "[8.0.0, )"
+            },
+            "StackExchange.Redis": {
+              "target": "Package",
+              "version": "[2.10.1, )"
+            },
+            "StackExchange.Redis.Extensions.Core": {
+              "target": "Package",
+              "version": "[11.0.0, )"
+            },
+            "StackExchange.Redis.Extensions.Newtonsoft": {
+              "target": "Package",
+              "version": "[11.0.0, )"
             }
           },
           "imports": [

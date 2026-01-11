@@ -574,8 +574,7 @@
               "RelativeToolTip": "Healthcare.UnitTests\\Application\\Commands\\BookAppointmentHandlerTests.cs",
               "ViewState": "AgIAABQBAAAAAAAAAAAQwB0BAAAQAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-07T22:23:15.715Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-01-07T22:23:15.715Z"
             },
             {
               "$type": "Document",
@@ -587,8 +586,7 @@
               "RelativeToolTip": "Healthcare.UnitTests\\Domain\\Entities\\PatientTests.cs",
               "ViewState": "AgIAAG4CAAAAAAAAAAAIwIYCAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-07T22:21:05.156Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-01-07T22:21:05.156Z"
             },
             {
               "$type": "Document",
@@ -600,8 +598,7 @@
               "RelativeToolTip": "Healthcare.UnitTests\\Domain\\Entities\\DoctorTests.cs",
               "ViewState": "AgIAANMAAAAAAAAAAIA5wLgAAAAEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-07T22:21:18.075Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-01-07T22:21:18.075Z"
             },
             {
               "$type": "Document",
@@ -613,8 +610,7 @@
               "RelativeToolTip": "Healthcare.UnitTests\\Domain\\ValueObjects\\AppointmentTimeTests.cs",
               "ViewState": "AgIAAMQAAAAAAAAAAAAhwNQAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-07T22:22:17.947Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-01-07T22:22:17.947Z"
             },
             {
               "$type": "Document",
@@ -626,8 +622,7 @@
               "RelativeToolTip": "Healthcare.UnitTests\\Domain\\ValueObjects\\PhoneNumberTests.cs",
               "ViewState": "AgIAAFcAAAAAAAAAAAAhwGIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-07T22:22:07.881Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-01-07T22:22:07.881Z"
             },
             {
               "$type": "Document",
@@ -643,10 +638,6 @@
               "EditorCaption": ""
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
-            },
-            {
               "$type": "Document",
               "DocumentIndex": 6,
               "Title": "GetAppointmentHandlerTests.cs",
@@ -656,8 +647,7 @@
               "RelativeToolTip": "Healthcare.UnitTests\\Application\\Queries\\GetAppointmentHandlerTests.cs",
               "ViewState": "AgIAAEIAAAAAAAAAAAAAwE0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-07T22:24:02.123Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-01-07T22:24:02.123Z"
             },
             {
               "$type": "Document",
@@ -669,8 +659,7 @@
               "RelativeToolTip": "Healthcare.UnitTests\\Application\\Commands\\CancelAppointmentHandlerTests.cs",
               "ViewState": "AgIAAFIAAAAAAAAAAAAAwGIAAAAHAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-07T22:23:38.503Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-01-07T22:23:38.503Z"
             },
             {
               "$type": "Document",
@@ -682,8 +671,7 @@
               "RelativeToolTip": "Healthcare.UnitTests\\Domain\\Entities\\AppointmentTests.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAEIAAAA/AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-07T22:20:53.385Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-01-07T22:20:53.385Z"
             },
             {
               "$type": "Document",
@@ -2231,6 +2219,10 @@
               "ViewState": "AgIAAEgAAAAAAAAAAAAwwGEAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-01-04T21:51:48.081Z"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
             }
           ]
         }
