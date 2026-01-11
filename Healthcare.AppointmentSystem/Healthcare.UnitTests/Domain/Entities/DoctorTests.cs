@@ -182,7 +182,7 @@ public class DoctorTests
             .WithMessage("*at least 5 characters*");
     }
 
-    // ✅ SHTO këtë test të ri për null/whitespace:
+    
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
