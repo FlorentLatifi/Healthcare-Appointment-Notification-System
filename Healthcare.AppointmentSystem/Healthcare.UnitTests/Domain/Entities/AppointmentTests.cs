@@ -9,23 +9,13 @@ using Xunit;
 namespace Healthcare.UnitTests.Domain.Entities;
 
 /// <summary>
-/// Unit tests for Appointment entity (Aggregate Root).
+/// Unit tests for Appointment entity (Aggregate Root) - FIXED VERSION
 /// </summary>
-/// <remarks>
-/// Testing Strategy: Domain-Driven Design + State Pattern
-/// 
-/// What we test:
-/// - Factory method creation
-/// - State transitions (Pending → Confirmed → Completed)
-/// - Business rules enforcement
-/// - Domain events raising
-/// - Invalid state transitions
-/// </remarks>
 public class AppointmentTests
 {
     #region Test Data Helpers
 
-    private const string ValidReason = "Annual checkup and consultation"; // 10+ characters
+    private const string ValidReason = "Annual checkup and consultation";
 
     private static Patient CreateTestPatient()
     {
@@ -60,12 +50,21 @@ public class AppointmentTests
             Specialty.GeneralPractice);
     }
 
+    /// <summary>
+    /// Creates a valid future appointment time (ALWAYS on a weekday).
+    /// </summary>
     private static AppointmentTime CreateFutureAppointmentTime()
     {
-        var futureDate = DateTime.Now.AddDays(7).Date
-            .AddHours(10); // 10:00 AM
+        var futureDate = DateTime.Now.AddDays(7).Date;
 
-        return AppointmentTime.Create(futureDate);
+        // ✅ CRITICAL FIX: Skip weekends
+        while (futureDate.DayOfWeek == DayOfWeek.Saturday ||
+               futureDate.DayOfWeek == DayOfWeek.Sunday)
+        {
+            futureDate = futureDate.AddDays(1);
+        }
+
+        return AppointmentTime.Create(futureDate.AddHours(10));
     }
 
     #endregion
@@ -109,11 +108,7 @@ public class AppointmentTests
         appointment.DomainEvents.First().Should().BeOfType<AppointmentCreatedEvent>();
 
         var createdEvent = appointment.DomainEvents.First() as AppointmentCreatedEvent;
-
-        // Null check
         createdEvent.Should().NotBeNull();
-
-        // Now safe to use with ! operator
         createdEvent!.AppointmentId.Should().Be(appointment.Id);
         createdEvent.PatientId.Should().Be(patient.Id);
         createdEvent.DoctorId.Should().Be(doctor.Id);
@@ -124,7 +119,7 @@ public class AppointmentTests
     {
         // Arrange
         var patient = CreateTestPatient();
-        patient.Deactivate(); // Make patient inactive
+        patient.Deactivate();
 
         var doctor = CreateTestDoctor();
         var scheduledTime = CreateFutureAppointmentTime();
@@ -143,7 +138,7 @@ public class AppointmentTests
         // Arrange
         var patient = CreateTestPatient();
         var doctor = CreateTestDoctor();
-        doctor.Deactivate(); // Make doctor inactive
+        doctor.Deactivate();
 
         var scheduledTime = CreateFutureAppointmentTime();
 
@@ -174,8 +169,8 @@ public class AppointmentTests
     }
 
     [Theory]
-    [InlineData("Short")] // Less than 10 characters
-    [InlineData("123456789")] // Exactly 9 characters
+    [InlineData("Short")]
+    [InlineData("123456789")]
     public void Create_WithTooShortReason_ShouldThrowArgumentException(string shortReason)
     {
         // Arrange
@@ -205,7 +200,7 @@ public class AppointmentTests
             CreateFutureAppointmentTime(),
             ValidReason);
 
-        appointment.ClearDomainEvents(); // Clear creation event
+        appointment.ClearDomainEvents();
 
         // Act
         appointment.Confirm();
@@ -242,7 +237,7 @@ public class AppointmentTests
     [InlineData(AppointmentStatus.Cancelled)]
     [InlineData(AppointmentStatus.NoShow)]
     public void Confirm_FromNonPendingStatus_ShouldThrowInvalidAppointmentStateException(
-    AppointmentStatus invalidStatus)
+        AppointmentStatus invalidStatus)
     {
         // Arrange
         var appointment = Appointment.Create(
@@ -251,9 +246,8 @@ public class AppointmentTests
             CreateFutureAppointmentTime(),
             ValidReason);
 
-        // Force appointment to invalid status using reflection
         var statusProperty = typeof(Appointment).GetProperty("Status");
-        statusProperty.Should().NotBeNull(); // ← SHTO KËTË
+        statusProperty.Should().NotBeNull();
         statusProperty!.SetValue(appointment, invalidStatus);
 
         // Act
@@ -344,8 +338,8 @@ public class AppointmentTests
     }
 
     [Theory]
-    [InlineData("Short")] // Too short
-    [InlineData("123456789")] // 9 characters
+    [InlineData("Short")]
+    [InlineData("123456789")]
     public void Cancel_WithTooShortReason_ShouldThrowArgumentException(string shortReason)
     {
         // Arrange
@@ -438,8 +432,8 @@ public class AppointmentTests
     }
 
     [Theory]
-    [InlineData("Short notes")] // Less than 20 characters
-    [InlineData("1234567890123456789")] // Exactly 19 characters
+    [InlineData("Short notes")]
+    [InlineData("1234567890123456789")]
     public void Complete_WithTooShortNotes_ShouldThrowArgumentException(string shortNotes)
     {
         // Arrange

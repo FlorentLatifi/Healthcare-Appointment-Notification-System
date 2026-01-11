@@ -86,3 +86,85 @@ System.IO.InvalidDataException: Failed to load configuration from file 'C:\Users
 2026-01-10 23:11:05.016 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5171/swagger-ui-bundle.js - 200 1456926 text/javascript 33.4475ms
 2026-01-10 23:11:05.151 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5171/swagger/v1/swagger.json - null null
 2026-01-10 23:11:05.305 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5171/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 153.7767ms
+2026-01-10 23:17:40.182 +01:00 [INF] Application is shutting down...
+2026-01-10 23:17:52.349 +01:00 [INF] Starting Healthcare API...
+2026-01-10 23:17:52.665 +01:00 [INF] Healthcare API started successfully
+2026-01-10 23:17:52.666 +01:00 [INF] Swagger UI available at: https://localhost:7039
+2026-01-10 23:17:52.668 +01:00 [INF] Using Adapters: In-Memory Persistence + Console Notifications
+2026-01-10 23:17:52.695 +01:00 [INF] User profile is available. Using 'C:\Users\flore\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-01-10 23:17:52.753 +01:00 [INF] Now listening on: http://localhost:5171
+2026-01-10 23:17:52.756 +01:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-01-10 23:17:52.757 +01:00 [INF] Hosting environment: Development
+2026-01-10 23:17:52.758 +01:00 [INF] Content root path: C:\Users\flore\OneDrive\Desktop\Health\Healthcare-Appointment-Notification-System\Healthcare.AppointmentSystem\Healthcare.Presentation.API
+2026-01-10 23:18:07.628 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5171/index.html - null null
+2026-01-10 23:18:07.789 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5171/index.html - 200 null text/html;charset=utf-8 161.7702ms
+2026-01-10 23:18:07.970 +01:00 [INF] Request starting HTTP/1.1 GET http://localhost:5171/swagger/v1/swagger.json - null null
+2026-01-10 23:18:08.101 +01:00 [INF] Request finished HTTP/1.1 GET http://localhost:5171/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 131.0823ms
+2026-01-10 23:19:21.997 +01:00 [INF] Request starting HTTP/1.1 POST http://localhost:5171/api/v1/Auth/register - application/json 119
+2026-01-10 23:19:22.079 +01:00 [WRN] Failed to determine the https port for redirect.
+2026-01-10 23:19:22.081 +01:00 [INF] CORS policy execution successful.
+2026-01-10 23:19:22.122 +01:00 [INF] Executing endpoint 'Healthcare.Presentation.API.Controllers.AuthController.Register (Healthcare.Presentation.API)'
+2026-01-10 23:19:22.148 +01:00 [INF] Route matched with {action = "Register", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Register(Healthcare.Presentation.API.Requests.RegisterRequest, System.Threading.CancellationToken) on controller Healthcare.Presentation.API.Controllers.AuthController (Healthcare.Presentation.API).
+2026-01-10 23:19:22.156 +01:00 [INF] Executed action Healthcare.Presentation.API.Controllers.AuthController.Register (Healthcare.Presentation.API) in 2.2879ms
+2026-01-10 23:19:22.158 +01:00 [INF] Executed endpoint 'Healthcare.Presentation.API.Controllers.AuthController.Register (Healthcare.Presentation.API)'
+2026-01-10 23:19:22.159 +01:00 [ERR] Unhandled exception occurred. Path: /api/v1/Auth/register, Method: POST
+System.InvalidOperationException: Unable to resolve service for type 'Healthcare.Application.Ports.Authentication.IAuthenticationService' while attempting to activate 'Healthcare.Presentation.API.Controllers.AuthController'.
+   at Microsoft.Extensions.DependencyInjection.ActivatorUtilities.ThrowHelperUnableToResolveService(Type type, Type requiredBy)
+   at lambda_method11(Closure, IServiceProvider, Object[])
+   at Microsoft.AspNetCore.Mvc.Controllers.ControllerFactoryProvider.<>c__DisplayClass6_0.<CreateControllerFactory>g__CreateController|0(ControllerContext controllerContext)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.InvokeInnerFilterAsync()
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Logged|17_1(ResourceInvoker invoker)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Logged|17_1(ResourceInvoker invoker)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.<Invoke>g__AwaitRequestTask|7_0(Endpoint endpoint, Task requestTask, ILogger logger)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Healthcare.Presentation.API.Middleware.ExceptionHandlingMiddleware.InvokeAsync(HttpContext context) in C:\Users\flore\OneDrive\Desktop\Health\Healthcare-Appointment-Notification-System\Healthcare.AppointmentSystem\Healthcare.Presentation.API\Middleware\ExceptionHandlingMiddleware.cs:line 48
+2026-01-10 23:19:22.195 +01:00 [INF] Request finished HTTP/1.1 POST http://localhost:5171/api/v1/Auth/register - 400 null application/json 197.8829ms
+2026-01-10 23:19:59.181 +01:00 [INF] Request starting HTTP/1.1 POST http://localhost:5171/api/v1/Auth/register - application/json 120
+2026-01-10 23:19:59.187 +01:00 [INF] CORS policy execution successful.
+2026-01-10 23:19:59.189 +01:00 [INF] Executing endpoint 'Healthcare.Presentation.API.Controllers.AuthController.Register (Healthcare.Presentation.API)'
+2026-01-10 23:19:59.191 +01:00 [INF] Route matched with {action = "Register", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Register(Healthcare.Presentation.API.Requests.RegisterRequest, System.Threading.CancellationToken) on controller Healthcare.Presentation.API.Controllers.AuthController (Healthcare.Presentation.API).
+2026-01-10 23:19:59.193 +01:00 [INF] Executed action Healthcare.Presentation.API.Controllers.AuthController.Register (Healthcare.Presentation.API) in 0.3168ms
+2026-01-10 23:19:59.195 +01:00 [INF] Executed endpoint 'Healthcare.Presentation.API.Controllers.AuthController.Register (Healthcare.Presentation.API)'
+2026-01-10 23:19:59.196 +01:00 [ERR] Unhandled exception occurred. Path: /api/v1/Auth/register, Method: POST
+System.InvalidOperationException: Unable to resolve service for type 'Healthcare.Application.Ports.Authentication.IAuthenticationService' while attempting to activate 'Healthcare.Presentation.API.Controllers.AuthController'.
+   at Microsoft.Extensions.DependencyInjection.ActivatorUtilities.ThrowHelperUnableToResolveService(Type type, Type requiredBy)
+   at lambda_method11(Closure, IServiceProvider, Object[])
+   at Microsoft.AspNetCore.Mvc.Controllers.ControllerFactoryProvider.<>c__DisplayClass6_0.<CreateControllerFactory>g__CreateController|0(ControllerContext controllerContext)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.InvokeInnerFilterAsync()
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Logged|17_1(ResourceInvoker invoker)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Logged|17_1(ResourceInvoker invoker)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.<Invoke>g__AwaitRequestTask|7_0(Endpoint endpoint, Task requestTask, ILogger logger)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Healthcare.Presentation.API.Middleware.ExceptionHandlingMiddleware.InvokeAsync(HttpContext context) in C:\Users\flore\OneDrive\Desktop\Health\Healthcare-Appointment-Notification-System\Healthcare.AppointmentSystem\Healthcare.Presentation.API\Middleware\ExceptionHandlingMiddleware.cs:line 48
+2026-01-10 23:19:59.204 +01:00 [INF] Request finished HTTP/1.1 POST http://localhost:5171/api/v1/Auth/register - 400 null application/json 23.5052ms
+2026-01-10 23:21:55.100 +01:00 [INF] Request starting HTTP/1.1 POST http://localhost:5171/api/v1/Patients - application/json 301
+2026-01-10 23:21:55.104 +01:00 [INF] CORS policy execution successful.
+2026-01-10 23:21:55.107 +01:00 [INF] Executing endpoint 'Healthcare.Presentation.API.Controllers.PatientsController.CreatePatient (Healthcare.Presentation.API)'
+2026-01-10 23:21:55.112 +01:00 [INF] Route matched with {action = "CreatePatient", controller = "Patients"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] CreatePatient(Healthcare.Presentation.API.Requests.CreatePatientRequest, System.Threading.CancellationToken) on controller Healthcare.Presentation.API.Controllers.PatientsController (Healthcare.Presentation.API).
+2026-01-10 23:21:55.308 +01:00 [INF] Executing BadRequestObjectResult, writing value of type 'Microsoft.AspNetCore.Mvc.ValidationProblemDetails'.
+2026-01-10 23:21:55.332 +01:00 [INF] Executed action Healthcare.Presentation.API.Controllers.PatientsController.CreatePatient (Healthcare.Presentation.API) in 217.3327ms
+2026-01-10 23:21:55.334 +01:00 [INF] Executed endpoint 'Healthcare.Presentation.API.Controllers.PatientsController.CreatePatient (Healthcare.Presentation.API)'
+2026-01-10 23:21:55.337 +01:00 [INF] Request finished HTTP/1.1 POST http://localhost:5171/api/v1/Patients - 400 null application/json; charset=utf-8 236.3645ms
+2026-01-10 23:22:31.803 +01:00 [INF] Request starting HTTP/1.1 POST http://localhost:5171/api/v1/Patients - application/json 301
+2026-01-10 23:22:31.805 +01:00 [INF] CORS policy execution successful.
+2026-01-10 23:22:31.807 +01:00 [INF] Executing endpoint 'Healthcare.Presentation.API.Controllers.PatientsController.CreatePatient (Healthcare.Presentation.API)'
+2026-01-10 23:22:31.809 +01:00 [INF] Route matched with {action = "CreatePatient", controller = "Patients"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] CreatePatient(Healthcare.Presentation.API.Requests.CreatePatientRequest, System.Threading.CancellationToken) on controller Healthcare.Presentation.API.Controllers.PatientsController (Healthcare.Presentation.API).
+2026-01-10 23:22:31.823 +01:00 [INF] Creating patient: florentlatifi@gmail.com
+2026-01-10 23:22:32.859 +01:00 [WRN] Failed to create patient: An unexpected error occurred: The LINQ expression 'DbSet<Patient>()
+    .Where(p => p.Email.Value == __email_0)' could not be translated. Either rewrite the query in a form that can be translated, or switch to client evaluation explicitly by inserting a call to 'AsEnumerable', 'AsAsyncEnumerable', 'ToList', or 'ToListAsync'. See https://go.microsoft.com/fwlink/?linkid=2101038 for more information.
+2026-01-10 23:22:32.861 +01:00 [INF] Executing BadRequestObjectResult, writing value of type 'Healthcare.Presentation.API.Responses.ApiResponse`1[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]'.
+2026-01-10 23:22:32.870 +01:00 [INF] Executed action Healthcare.Presentation.API.Controllers.PatientsController.CreatePatient (Healthcare.Presentation.API) in 1058.8458ms
+2026-01-10 23:22:32.871 +01:00 [INF] Executed endpoint 'Healthcare.Presentation.API.Controllers.PatientsController.CreatePatient (Healthcare.Presentation.API)'
+2026-01-10 23:22:32.876 +01:00 [INF] Request finished HTTP/1.1 POST http://localhost:5171/api/v1/Patients - 400 null application/json; charset=utf-8 1073.7523ms
