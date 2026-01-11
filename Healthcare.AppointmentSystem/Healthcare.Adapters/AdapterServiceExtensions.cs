@@ -16,10 +16,11 @@ using Healthcare.Adapters.Authentication;
 using Healthcare.Application.Ports.Authentication;
 using Microsoft.Extensions.Configuration;
 using System.Net.NetworkInformation;
-
 using Healthcare.Adapters.Locking;
 using Healthcare.Application.Ports.Locking;
 using StackExchange.Redis;
+using Microsoft.Extensions.Configuration.Binder;
+
 namespace Healthcare.Adapters;
 /// <summary>
 /// Extension methods for registering Adapter layer services.
@@ -68,10 +69,21 @@ public static class AdapterServiceExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+
+        // ✅ BIND SETTINGS ME NULL-SAFE CODE
+        var redisSection = configuration.GetSection("Redis");
+        var redisSettings = redisSection.Get<RedisSettings>();
         // Bind settings from configuration
-        var redisSettings = configuration
-            .GetSection("Redis")
-            .Get<RedisSettings>() ?? new RedisSettings();
+        if (redisSettings == null)
+        {
+            // Fallback to default settings if not configured
+            redisSettings = new RedisSettings
+            {
+                ConnectionString = "localhost:6379",
+                InstanceName = "HealthcareApp:",
+                DefaultLockExpirationSeconds = 30
+            };
+        }
 
         services.AddSingleton(redisSettings);
 
@@ -328,6 +340,18 @@ public static class AdapterServiceExtensions
         services.AddScoped<IUserRepository, EFCoreUserRepository>();
         services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
 
+
+        // Authentication Services
+        services.AddSingleton<JwtSettings>(provider =>
+        {
+            return new JwtSettings
+            {
+                Secret = configuration["Jwt:Secret"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLong!",
+                Issuer = configuration["Jwt:Issuer"] ?? "HealthcareAPI",
+                Audience = configuration["Jwt:Audience"] ?? "HealthcareClients",
+                ExpirationInMinutes = int.Parse(configuration["Jwt:ExpirationInMinutes"] ?? "60")
+            };
+        });
         // Notification Service (Console for development)
         services.AddScoped<INotificationService, ConsoleNotificationAdapter>();
 
