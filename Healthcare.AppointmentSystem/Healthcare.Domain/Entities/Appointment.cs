@@ -86,6 +86,24 @@ public sealed class Appointment : Entity
     /// </summary>
     public Money ConsultationFee { get; private set; } = null!;
 
+    /// <summary>
+    /// Row version for optimistic concurrency control.
+    /// </summary>
+    /// <remarks>
+    /// This is a timestamp/rowversion column in SQL Server.
+    /// EF Core automatically increments this on every update.
+    /// 
+    /// If two users try to update the same appointment:
+    /// 1. User A reads appointment (RowVersion = 1)
+    /// 2. User B reads appointment (RowVersion = 1)
+    /// 3. User A saves (RowVersion becomes 2)
+    /// 4. User B tries to save (RowVersion mismatch!) → DbUpdateConcurrencyException
+    /// 
+    /// This prevents lost updates in distributed scenarios.
+    /// </remarks>
+    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
+
+
     // Private parameterless constructor for EF Core
     private Appointment() { }
 

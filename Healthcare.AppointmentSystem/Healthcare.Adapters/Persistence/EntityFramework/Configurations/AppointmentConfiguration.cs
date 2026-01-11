@@ -68,6 +68,9 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
         builder.Property(a => a.ModifiedAt)
             .IsRequired(false);
 
+        builder.Property(a => a.RowVersion)
+       .IsRowVersion() // SQL Server timestamp column
+       .IsConcurrencyToken(); // EF Core concurrency token
         // Value Object: Money (ConsultationFee)
         builder.OwnsOne(a => a.ConsultationFee, money =>
         {
