@@ -19,7 +19,7 @@ using System.Net.NetworkInformation;
 using Healthcare.Adapters.Locking;
 using Healthcare.Application.Ports.Locking;
 using StackExchange.Redis;
-using Microsoft.Extensions.Configuration.Binder;
+
 
 namespace Healthcare.Adapters;
 /// <summary>
@@ -65,25 +65,24 @@ public static class AdapterServiceExtensions
     /// builder.Services.AddRedisDistributedLocking(builder.Configuration);
     /// </code>
     /// </remarks>
+    /// <summary>
+    /// Registers Redis distributed locking service.
+    /// </summary>
     public static IServiceCollection AddRedisDistributedLocking(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-
-        // ✅ BIND SETTINGS ME NULL-SAFE CODE
+        // ✅ MANUAL BINDING - No Microsoft.Extensions.Configuration.Binder needed
         var redisSection = configuration.GetSection("Redis");
-        var redisSettings = redisSection.Get<RedisSettings>();
-        // Bind settings from configuration
-        if (redisSettings == null)
+
+        var redisSettings = new RedisSettings
         {
-            // Fallback to default settings if not configured
-            redisSettings = new RedisSettings
-            {
-                ConnectionString = "localhost:6379",
-                InstanceName = "HealthcareApp:",
-                DefaultLockExpirationSeconds = 30
-            };
-        }
+            ConnectionString = redisSection["ConnectionString"] ?? "localhost:6379",
+            InstanceName = redisSection["InstanceName"] ?? "HealthcareApp:",
+            DefaultLockExpirationSeconds = int.TryParse(
+                redisSection["DefaultLockExpirationSeconds"],
+                out var seconds) ? seconds : 30
+        };
 
         services.AddSingleton(redisSettings);
 
@@ -325,9 +324,9 @@ public static class AdapterServiceExtensions
     ///     builder.Configuration.GetConnectionString("DefaultConnection")!);
     /// </remarks>
     public static IServiceCollection AddAdaptersWithEFCorePersistence(
-        this IServiceCollection services,
-        string connectionString,
-        IConfiguration configuration)
+    this IServiceCollection services,
+    string connectionString,
+    IConfiguration configuration)
     {
         // Database Context
         services.AddDbContext<HealthcareDbContext>(options =>
@@ -340,18 +339,20 @@ public static class AdapterServiceExtensions
         services.AddScoped<IUserRepository, EFCoreUserRepository>();
         services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
 
-
-        // Authentication Services
-        services.AddSingleton<JwtSettings>(provider =>
+        // ✅ AUTHENTICATION SERVICES - MANUAL BINDING
+        var jwtSection = configuration.GetSection("Jwt");
+        var jwtSettings = new JwtSettings
         {
-            return new JwtSettings
-            {
-                Secret = configuration["Jwt:Secret"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLong!",
-                Issuer = configuration["Jwt:Issuer"] ?? "HealthcareAPI",
-                Audience = configuration["Jwt:Audience"] ?? "HealthcareClients",
-                ExpirationInMinutes = int.Parse(configuration["Jwt:ExpirationInMinutes"] ?? "60")
-            };
-        });
+            Secret = jwtSection["Secret"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLong!",
+            Issuer = jwtSection["Issuer"] ?? "HealthcareAPI",
+            Audience = jwtSection["Audience"] ?? "HealthcareClients",
+            ExpirationInMinutes = int.TryParse(jwtSection["ExpirationInMinutes"], out var minutes) ? minutes : 60
+        };
+
+        services.AddSingleton(jwtSettings);
+        services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddScoped<IAuthenticationService, JwtAuthenticationService>();
+
         // Notification Service (Console for development)
         services.AddScoped<INotificationService, ConsoleNotificationAdapter>();
 
@@ -362,7 +363,7 @@ public static class AdapterServiceExtensions
         // Time Provider
         services.AddSingleton<ITimeProvider, SystemTimeProvider>();
 
-        //  Redis Distributed Locking
+        // Redis Distributed Locking
         services.AddRedisDistributedLocking(configuration);
 
         return services;

@@ -3,16 +3,20 @@
   "WorkspaceRootPath": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{EF3624F3-2D95-45F2-8671-F78282BF4D6F}|Healthcare.Adapters\\Healthcare.Adapters.csproj|c:\\users\\flore\\onedrive\\desktop\\health\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.adapters\\adapterserviceextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EF3624F3-2D95-45F2-8671-F78282BF4D6F}|Healthcare.Adapters\\Healthcare.Adapters.csproj|solutionrelative:healthcare.adapters\\adapterserviceextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EF3624F3-2D95-45F2-8671-F78282BF4D6F}|Healthcare.Adapters\\Healthcare.Adapters.csproj|c:\\users\\flore\\onedrive\\desktop\\health\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.adapters\\healthcare.adapters.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{EF3624F3-2D95-45F2-8671-F78282BF4D6F}|Healthcare.Adapters\\Healthcare.Adapters.csproj|solutionrelative:healthcare.adapters\\healthcare.adapters.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|c:\\users\\flore\\onedrive\\desktop\\health\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.presentation.api\\healthchecks\\redishealthcheck.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|solutionrelative:healthcare.presentation.api\\healthchecks\\redishealthcheck.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|c:\\users\\flore\\onedrive\\desktop\\health\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.presentation.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|solutionrelative:healthcare.presentation.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{EF3624F3-2D95-45F2-8671-F78282BF4D6F}|Healthcare.Adapters\\Healthcare.Adapters.csproj|c:\\users\\flore\\onedrive\\desktop\\health\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.adapters\\adapterserviceextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{EF3624F3-2D95-45F2-8671-F78282BF4D6F}|Healthcare.Adapters\\Healthcare.Adapters.csproj|solutionrelative:healthcare.adapters\\adapterserviceextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{EF3624F3-2D95-45F2-8671-F78282BF4D6F}|Healthcare.Adapters\\Healthcare.Adapters.csproj|c:\\users\\flore\\onedrive\\desktop\\health\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.adapters\\persistence\\entityframework\\configurations\\appointmentconfiguration.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -41,10 +45,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|c:\\users\\flore\\onedrive\\desktop\\health\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.application\\healthcare.application.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|solutionrelative:healthcare.application\\healthcare.application.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{EF3624F3-2D95-45F2-8671-F78282BF4D6F}|Healthcare.Adapters\\Healthcare.Adapters.csproj|c:\\users\\flore\\onedrive\\desktop\\health\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.adapters\\healthcare.adapters.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{EF3624F3-2D95-45F2-8671-F78282BF4D6F}|Healthcare.Adapters\\Healthcare.Adapters.csproj|solutionrelative:healthcare.adapters\\healthcare.adapters.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
     {
       "AbsoluteMoniker": "D:0:0:{EB1EFAC3-37CB-4911-882C-496DC05E8B92}|Healthcare.Domain\\Healthcare.Domain.csproj|c:\\users\\flore\\onedrive\\desktop\\health\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.domain\\valueobjects\\phonenumber.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -578,37 +578,36 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
+              "Title": "Healthcare.Adapters.csproj",
+              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Healthcare.Adapters.csproj",
+              "RelativeDocumentMoniker": "Healthcare.Adapters\\Healthcare.Adapters.csproj",
+              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Healthcare.Adapters.csproj",
+              "RelativeToolTip": "Healthcare.Adapters\\Healthcare.Adapters.csproj",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAAABsAAABOAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-01-07T15:00:43.415Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
               "Title": "AdapterServiceExtensions.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\AdapterServiceExtensions.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\AdapterServiceExtensions.cs",
               "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\AdapterServiceExtensions.cs",
               "RelativeToolTip": "Healthcare.Adapters\\AdapterServiceExtensions.cs",
-              "ViewState": "AgIAAFUAAAAAAAAAAAAwwGEAAAApAAAAAAAAAA==",
+              "ViewState": "AgIAAFgBAAAAAAAAAAAQwGMBAAA5AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-01-07T13:32:20.859Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Program.cs",
-              "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Program.cs",
-              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Program.cs",
-              "RelativeToolTip": "Healthcare.Presentation.API\\Program.cs",
-              "ViewState": "AgIAAL8AAAAAAAAAAAAwwNgAAAAbAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-07T14:42:35.448Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "RedisHealthCheck.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\HealthChecks\\RedisHealthCheck.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\HealthChecks\\RedisHealthCheck.cs",
@@ -616,16 +615,23 @@
               "RelativeToolTip": "Healthcare.Presentation.API\\HealthChecks\\RedisHealthCheck.cs",
               "ViewState": "AgIAACMAAAAAAAAAAAAwwDIAAAAjAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-11T16:51:15.868Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+              "WhenOpened": "2026-01-11T16:51:15.868Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 3,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Program.cs",
+              "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Program.cs",
+              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Program.cs",
+              "RelativeToolTip": "Healthcare.Presentation.API\\Program.cs",
+              "ViewState": "AgIAAL8AAAAAAAAAAAAwwNgAAAAbAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T14:42:35.448Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
               "Title": "AppointmentConfiguration.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\EntityFramework\\Configurations\\AppointmentConfiguration.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\EntityFramework\\Configurations\\AppointmentConfiguration.cs",
@@ -637,7 +643,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "Appointment.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Entities\\Appointment.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Entities\\Appointment.cs",
@@ -649,7 +655,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "RedisSettings.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Locking\\RedisSettings.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Locking\\RedisSettings.cs",
@@ -661,7 +667,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "appsettings.Development.json",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\appsettings.Development.json",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\appsettings.Development.json",
@@ -673,7 +679,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "Healthcare.Presentation.API.http",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Healthcare.Presentation.API.http",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Healthcare.Presentation.API.http",
@@ -685,7 +691,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 10,
               "Title": "Healthcare.Application.csproj",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Healthcare.Application.csproj",
               "RelativeDocumentMoniker": "Healthcare.Application\\Healthcare.Application.csproj",
@@ -697,7 +703,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\appsettings.json",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\appsettings.json",
@@ -766,18 +772,6 @@
               "ViewState": "AgIAAEIAAAAAAAAAAAAAwE0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-01-07T22:24:02.123Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "Healthcare.Adapters.csproj",
-              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Healthcare.Adapters.csproj",
-              "RelativeDocumentMoniker": "Healthcare.Adapters\\Healthcare.Adapters.csproj",
-              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Health\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Healthcare.Adapters.csproj",
-              "RelativeToolTip": "Healthcare.Adapters\\Healthcare.Adapters.csproj",
-              "ViewState": "AgIAAAgAAAAAAAAAAAAQwCMAAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-01-07T15:00:43.415Z"
             },
             {
               "$type": "Document",
@@ -2289,6 +2283,10 @@
               "ViewState": "AgIAAEgAAAAAAAAAAAAwwGEAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-01-04T21:51:48.081Z"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
             }
           ]
         }
