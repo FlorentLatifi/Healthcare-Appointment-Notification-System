@@ -17,6 +17,7 @@ using Healthcare.Adapters.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Healthcare.Application.Ports.Locking;
 
 
 // ============================================
@@ -290,6 +291,16 @@ try
         Predicate = _ => false // Always healthy if API responds
     });
 
+    // ✅ Verify DI Registration (for debugging)
+    using (var scope = app.Services.CreateScope())
+    {
+        var lockService = scope.ServiceProvider.GetService<IDistributedLockService>();
+        if (lockService == null)
+        {
+            throw new InvalidOperationException("❌ IDistributedLockService not registered!");
+        }
+        Log.Information("✅ Lock Service Type: {Type}", lockService.GetType().Name);
+    }
 
     app.Run();
 }

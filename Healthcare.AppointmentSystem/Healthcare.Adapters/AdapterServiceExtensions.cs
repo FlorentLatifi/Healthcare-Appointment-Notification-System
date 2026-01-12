@@ -158,6 +158,8 @@ public static class AdapterServiceExtensions
         // Time Provider (System)
         services.AddSingleton<ITimeProvider, SystemTimeProvider>();
 
+        services.AddSingleton<IDistributedLockService, InMemoryLockService>();
+
         return services;
     }
 
@@ -288,6 +290,8 @@ public static class AdapterServiceExtensions
         // Fake Time Provider for testing
         var timeProvider = fakeTimeProvider ?? new FakeTimeProvider();
         services.AddSingleton<ITimeProvider>(timeProvider);
+
+        services.AddSingleton<IDistributedLockService, InMemoryLockService>();
 
         return services;
     }
