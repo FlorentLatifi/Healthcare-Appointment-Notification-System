@@ -1,6 +1,7 @@
 ﻿using FluentAssertions;
 using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Ports.Events;
+using Healthcare.Application.Ports.Locking;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -17,13 +18,15 @@ public class BookAppointmentHandlerTests
 {
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IDomainEventDispatcher> _eventDispatcherMock;
+    private readonly Mock<IDistributedLockService> _lockServiceMock;
     private readonly BookAppointmentHandler _handler;
 
     public BookAppointmentHandlerTests()
     {
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _eventDispatcherMock = new Mock<IDomainEventDispatcher>();
-        _handler = new BookAppointmentHandler(_unitOfWorkMock.Object, _eventDispatcherMock.Object);
+        _lockServiceMock = new Mock<IDistributedLockService>();
+        _handler = new BookAppointmentHandler(_unitOfWorkMock.Object, _eventDispatcherMock.Object, _lockServiceMock.Object);
     }
 
     #region Success Tests
