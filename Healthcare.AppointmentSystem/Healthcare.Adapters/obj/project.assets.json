@@ -932,7 +932,7 @@
       "Microsoft.Win32.SystemEvents/6.0.0": {
         "type": "package",
         "compile": {
-          "lib/net6.0/_._": {
+          "lib/net6.0/Microsoft.Win32.SystemEvents.dll": {
             "related": ".xml"
           }
         },
@@ -1050,6 +1050,23 @@
         },
         "runtime": {
           "lib/net8.0/StackExchange.Redis.Extensions.Newtonsoft.dll": {}
+        }
+      },
+      "Stripe.net/46.0.0": {
+        "type": "package",
+        "dependencies": {
+          "Newtonsoft.Json": "13.0.3",
+          "System.Configuration.ConfigurationManager": "6.0.0"
+        },
+        "compile": {
+          "lib/net6.0/Stripe.net.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net6.0/Stripe.net.dll": {
+            "related": ".xml"
+          }
         }
       },
       "System.CodeDom/4.4.0": {
@@ -1193,7 +1210,7 @@
           "System.Security.Permissions": "6.0.0"
         },
         "compile": {
-          "lib/net6.0/_._": {
+          "lib/net6.0/System.Configuration.ConfigurationManager.dll": {
             "related": ".xml"
           }
         },
@@ -1231,7 +1248,7 @@
           "Microsoft.Win32.SystemEvents": "6.0.0"
         },
         "compile": {
-          "lib/net6.0/_._": {
+          "lib/net6.0/System.Drawing.Common.dll": {
             "related": ".xml"
           }
         },
@@ -1429,7 +1446,7 @@
       "System.Security.AccessControl/6.0.0": {
         "type": "package",
         "compile": {
-          "lib/net6.0/_._": {
+          "lib/net6.0/System.Security.AccessControl.dll": {
             "related": ".xml"
           }
         },
@@ -1521,7 +1538,7 @@
           "System.Windows.Extensions": "6.0.0"
         },
         "compile": {
-          "lib/net6.0/_._": {
+          "lib/net6.0/System.Security.Permissions.dll": {
             "related": ".xml"
           }
         },
@@ -1667,7 +1684,7 @@
           "System.Drawing.Common": "6.0.0"
         },
         "compile": {
-          "lib/net6.0/_._": {
+          "lib/net6.0/System.Windows.Extensions.dll": {
             "related": ".xml"
           }
         },
@@ -3402,6 +3419,30 @@
         "stackexchange.redis.extensions.newtonsoft.nuspec"
       ]
     },
+    "Stripe.net/46.0.0": {
+      "sha512": "4Lf6HtG0RyJ2mIYhS3f1CmMKNpU/vPci11ZSQq8mR+i/zhtVH3wnwvIS8yRAJSNA5J/k1yEByBfclzrI2qoXIQ==",
+      "type": "package",
+      "path": "stripe.net/46.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE",
+        "README.md",
+        "icon.png",
+        "lib/net461/Stripe.net.dll",
+        "lib/net461/Stripe.net.xml",
+        "lib/net5.0/Stripe.net.dll",
+        "lib/net5.0/Stripe.net.xml",
+        "lib/net6.0/Stripe.net.dll",
+        "lib/net6.0/Stripe.net.xml",
+        "lib/netcoreapp3.1/Stripe.net.dll",
+        "lib/netcoreapp3.1/Stripe.net.xml",
+        "lib/netstandard2.0/Stripe.net.dll",
+        "lib/netstandard2.0/Stripe.net.xml",
+        "stripe.net.46.0.0.nupkg.sha512",
+        "stripe.net.nuspec"
+      ]
+    },
     "System.CodeDom/4.4.0": {
       "sha512": "2sCCb7doXEwtYAbqzbF/8UAeDRMNmPaQbU2q50Psg1J9KzumyVVCgKQY8s53WIPTufNT0DpSe9QRvVjOzfDWBA==",
       "type": "package",
@@ -4630,7 +4671,8 @@
       "Microsoft.Extensions.Logging.Abstractions >= 8.0.0",
       "StackExchange.Redis >= 2.10.1",
       "StackExchange.Redis.Extensions.Core >= 11.0.0",
-      "StackExchange.Redis.Extensions.Newtonsoft >= 11.0.0"
+      "StackExchange.Redis.Extensions.Newtonsoft >= 11.0.0",
+      "Stripe.net >= 45.31.0"
     ]
   },
   "packageFolders": {
@@ -4743,6 +4785,10 @@
           "StackExchange.Redis.Extensions.Newtonsoft": {
             "target": "Package",
             "version": "[11.0.0, )"
+          },
+          "Stripe.net": {
+            "target": "Package",
+            "version": "[45.31.0, )"
           }
         },
         "imports": [
@@ -4764,5 +4810,17 @@
         "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.201/PortableRuntimeIdentifierGraph.json"
       }
     }
-  }
+  },
+  "logs": [
+    {
+      "code": "NU1603",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Healthcare.Adapters depends on Stripe.net (>= 45.31.0) but Stripe.net 45.31.0 was not found. Stripe.net 46.0.0 was resolved instead.",
+      "libraryId": "Stripe.net",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    }
+  ]
 }

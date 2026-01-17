@@ -21,7 +21,6 @@
 		<PackageReference Include="StackExchange.Redis" Version="2.10.1" />
 		<PackageReference Include="StackExchange.Redis.Extensions.Core" Version="11.0.0" />
 		<PackageReference Include="StackExchange.Redis.Extensions.Newtonsoft" Version="11.0.0" />
-		<PackageReference Include="Stripe.net" Version="45.31.0" />
 	</ItemGroup>
 
 	<ItemGroup>

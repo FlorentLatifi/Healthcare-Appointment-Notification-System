@@ -110,6 +110,10 @@
             "StackExchange.Redis.Extensions.Newtonsoft": {
               "target": "Package",
               "version": "[11.0.0, )"
+            },
+            "Stripe.net": {
+              "target": "Package",
+              "version": "[45.31.0, )"
             }
           },
           "imports": [
