@@ -39,6 +39,11 @@ public interface IUnitOfWork
     /// Gets the user repository.
     /// </summary>
     IUserRepository Users { get; }
+
+    /// <summary>
+    /// Gets the payment repository.
+    /// </summary>
+    IPaymentRepository Payments { get; }
     /// <summary>
     /// Saves all changes made in this unit of work to the underlying data store.
     /// </summary>
