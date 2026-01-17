@@ -4,9 +4,9 @@ using Healthcare.Domain.ValueObjects;
 namespace Healthcare.Domain.Events;
 
 /// <summary>
-/// Domain event raised when a payment succeeds.
+/// Domain event raised when a payment is refunded.
 /// </summary>
-public sealed class PaymentSucceededEvent : IDomainEvent
+public sealed class PaymentRefundedEvent : IDomainEvent
 {
     public Guid EventId { get; }
     public DateTime OccurredOn { get; }
@@ -14,19 +14,19 @@ public sealed class PaymentSucceededEvent : IDomainEvent
     public int PaymentId { get; }
     public int AppointmentId { get; }
     public Money Amount { get; }
-    public TransactionId TransactionId { get; }
+    public TransactionId RefundTransactionId { get; }
 
-    public PaymentSucceededEvent(
+    public PaymentRefundedEvent(
         int paymentId,
         int appointmentId,
         Money amount,
-        TransactionId transactionId)
+        TransactionId refundTransactionId)
     {
         EventId = Guid.NewGuid();
         OccurredOn = DateTime.UtcNow;
         PaymentId = paymentId;
         AppointmentId = appointmentId;
         Amount = amount;
-        TransactionId = transactionId;
+        RefundTransactionId = refundTransactionId;
     }
 }
