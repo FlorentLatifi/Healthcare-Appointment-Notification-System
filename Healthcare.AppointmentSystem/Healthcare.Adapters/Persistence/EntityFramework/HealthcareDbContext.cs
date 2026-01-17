@@ -32,6 +32,7 @@ public class HealthcareDbContext : DbContext
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<Doctor> Doctors => Set<Doctor>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Payment> Payments => Set<Payment>(); 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

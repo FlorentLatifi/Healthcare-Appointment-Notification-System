@@ -32,6 +32,7 @@ public sealed class InMemoryUnitOfWork : IUnitOfWork
     public IDoctorRepository Doctors { get; }
 
     public IUserRepository Users { get; }
+    public IPaymentRepository Payments { get; } 
 
     /// <summary>
     /// Initializes a new instance with shared repository instances.
@@ -44,12 +45,14 @@ public sealed class InMemoryUnitOfWork : IUnitOfWork
         IAppointmentRepository appointments,
         IPatientRepository patients,
         IDoctorRepository doctors,
-        IUserRepository users)
+        IUserRepository users,
+        IPaymentRepository payments)
     {
         Appointments = appointments;
         Patients = patients;
         Doctors = doctors;
         Users = users;
+        Payments = payments; 
     }
 
     /// <summary>
