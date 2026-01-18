@@ -19,6 +19,8 @@ using System.Net.NetworkInformation;
 using Healthcare.Adapters.Locking;
 using Healthcare.Application.Ports.Locking;
 using StackExchange.Redis;
+using Healthcare.Adapters.Payments;
+using Healthcare.Application.Ports.Payments;
 
 
 namespace Healthcare.Adapters;
@@ -296,6 +298,58 @@ public static class AdapterServiceExtensions
         return services;
     }
 
+    // ADD THIS METHOD to AdapterServiceExtensions.cs
+
+    /// <summary>
+    /// Registers Stripe payment gateway.
+    /// </summary>
+    /// <remarks>
+    /// Design Pattern: Adapter Pattern + Dependency Injection
+    /// 
+    /// Configuration:
+    /// - Reads from appsettings.json → Stripe section
+    /// - Registers IPaymentGateway PORT with StripePaymentGateway ADAPTER
+    /// 
+    /// Usage in Program.cs:
+    /// <code>
+    /// builder.Services.AddStripePaymentGateway(builder.Configuration);
+    /// </code>
+    /// 
+    /// Security:
+    /// - Never commit real Stripe keys to source control
+    /// - Use User Secrets in development
+    /// - Use Azure Key Vault / AWS Secrets Manager in production
+    /// </remarks>
+    public static IServiceCollection AddStripePaymentGateway(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        // Manual binding - no Microsoft.Extensions.Configuration.Binder needed
+        var stripeSection = configuration.GetSection("Stripe");
+
+        var stripeSettings = new StripeSettings
+        {
+            SecretKey = stripeSection["SecretKey"] ?? throw new InvalidOperationException("Stripe:SecretKey not configured"),
+            PublishableKey = stripeSection["PublishableKey"] ?? throw new InvalidOperationException("Stripe:PublishableKey not configured"),
+            WebhookSecret = stripeSection["WebhookSecret"] ?? "",
+            DefaultCurrency = stripeSection["DefaultCurrency"] ?? "USD"
+        };
+
+        // Validate Stripe configuration
+        if (stripeSettings.SecretKey.Contains("REPLACE"))
+        {
+            throw new InvalidOperationException(
+                "Stripe SecretKey not configured. Please update appsettings.json with your actual Stripe keys.");
+        }
+
+        services.AddSingleton(stripeSettings);
+
+        // Register payment gateway
+        services.AddScoped<IPaymentGateway, StripePaymentGateway>();
+
+        return services;
+    }
+
     /// <summary>
     /// Registers all domain event handlers.
     /// </summary>
@@ -341,6 +395,7 @@ public static class AdapterServiceExtensions
         services.AddScoped<IPatientRepository, EFCorePatientRepository>();
         services.AddScoped<IDoctorRepository, EFCoreDoctorRepository>();
         services.AddScoped<IUserRepository, EFCoreUserRepository>();
+        services.AddScoped<IPaymentRepository, EFCorePaymentRepository>();
         services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
 
         // ✅ AUTHENTICATION SERVICES - MANUAL BINDING
@@ -356,6 +411,10 @@ public static class AdapterServiceExtensions
         services.AddSingleton(jwtSettings);
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<IAuthenticationService, JwtAuthenticationService>();
+
+
+        // ⭐ PAYMENT GATEWAY
+        services.AddStripePaymentGateway(configuration);
 
         // Notification Service (Console for development)
         services.AddScoped<INotificationService, ConsoleNotificationAdapter>();
@@ -391,6 +450,14 @@ public static class AdapterServiceExtensions
         // AppointmentCreatedEvent Handlers
         services.AddScoped<IDomainEventHandler<AppointmentCreatedEvent>,
             LogAppointmentCreatedHandler>();
+
+        // ⭐ Payment Event Handlers (NEW)
+        services.AddScoped<IDomainEventHandler<PaymentSucceededEvent>,
+            LogPaymentSucceededHandler>();
+        services.AddScoped<IDomainEventHandler<PaymentFailedEvent>,
+            LogPaymentFailedHandler>();
+        services.AddScoped<IDomainEventHandler<PaymentRefundedEvent>,
+            LogPaymentRefundedHandler>();
 
         // TODO: Add more handlers as needed:
         // services.AddScoped<IDomainEventHandler<AppointmentCompletedEvent>, ...>();
