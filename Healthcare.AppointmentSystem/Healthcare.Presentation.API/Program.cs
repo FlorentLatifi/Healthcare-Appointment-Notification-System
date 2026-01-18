@@ -173,14 +173,15 @@ try
     // ============================================
     // JWT AUTHENTICATION
     // ============================================
-    /*var jwtSettings = new JwtSettings
+    var jwtSettings = new JwtSettings
     {
-        Secret = builder.Configuration["Jwt:Secret"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLong!",
+        Secret = builder.Configuration["Jwt:Secret"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLongForHS256!",
         Issuer = builder.Configuration["Jwt:Issuer"] ?? "HealthcareAPI",
         Audience = builder.Configuration["Jwt:Audience"] ?? "HealthcareClients",
         ExpirationInMinutes = int.Parse(builder.Configuration["Jwt:ExpirationInMinutes"] ?? "60")
     };
-    */
+    builder.Services.AddSingleton(jwtSettings);
+
     builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -188,16 +189,7 @@ try
     })
 .AddJwtBearer(options =>
 {
-    var jwtSettings = builder.Configuration
-        .GetSection("Jwt")
-        .Get<JwtSettings>() ?? new JwtSettings
-        {
-            Secret = "YourSuperSecretKeyThatIsAtLeast32CharactersLong!",
-            Issuer = "HealthcareAPI",
-            Audience = "HealthcareClients",
-            ExpirationInMinutes = 60
-        };
-
+   
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
