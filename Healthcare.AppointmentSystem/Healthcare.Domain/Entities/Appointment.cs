@@ -316,6 +316,31 @@ public sealed class Appointment : Entity
         MarkAsModified();
     }
 
+
+    /// <summary>
+    /// Applies a final price calculated by a pricing strategy.
+    /// </summary>
+    /// <remarks>
+    /// Design Pattern: Strategy Pattern — result application.
+    /// 
+    /// Called by BookAppointmentHandler after PricingContext
+    /// calculates the final price based on AppointmentType.
+    /// 
+    /// Example:
+    ///   Base fee   = $100 (from Doctor)
+    ///   Strategy   = InsurancePricingStrategy (30% discount)
+    ///   Final price = $70  ← stored here
+    /// </remarks>
+    public void ApplyPricingStrategy(decimal finalPrice, string currency)
+    {
+        if (finalPrice < 0)
+            throw new ArgumentException(
+                "Price cannot be negative.", nameof(finalPrice));
+
+        ConsultationFee = Money.Create(finalPrice, currency);
+        MarkAsModified();
+    }
+
     /// <summary>
     /// Checks if the appointment needs a reminder (within 24 hours).
     /// </summary>
