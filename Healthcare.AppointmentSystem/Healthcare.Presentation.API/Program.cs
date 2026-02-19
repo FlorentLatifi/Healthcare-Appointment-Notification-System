@@ -18,6 +18,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Healthcare.Application.Commands.ProcessPayment;
 using Healthcare.Application.Commands.RefundPayment;
+using Healthcare.Adapters.Factories;
+using Healthcare.Application.Ports.Factories;
 
 // ============================================
 // SERILOG CONFIGURATION
@@ -148,7 +150,11 @@ try
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
     builder.Services.AddAdaptersWithEFCorePersistence(connectionString, builder.Configuration);
-
+    // ── ABSTRACT FACTORY (Creational Pattern) ───────────────
+    // Registers which factory family to use.
+    // Switch to EFCoreRepositoryFactory for production.
+    builder.Services.AddSingleton<IHealthcareRepositoryFactory,
+        InMemoryRepositoryFactory>();
     // ============================================
     // CORS
     // ============================================
