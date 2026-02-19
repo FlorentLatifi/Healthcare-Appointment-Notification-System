@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Healthcare.Application.Builders;
+using Healthcare.Application.Ports.Facades;
 namespace Healthcare.Presentation.API.Controllers;
 
 /// <summary>
@@ -47,19 +48,21 @@ public sealed class AppointmentsController : ControllerBase
     private readonly ICommandHandler<CancelAppointmentCommand, Result> _cancelAppointmentHandler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AppointmentsController> _logger;
-
+    private readonly IAppointmentFacade _facade;
     public AppointmentsController(
         ICommandHandler<BookAppointmentCommand, Result<int>> bookAppointmentHandler,
         ICommandHandler<ConfirmAppointmentCommand, Result> confirmAppointmentHandler,
         ICommandHandler<CancelAppointmentCommand, Result> cancelAppointmentHandler,
         IUnitOfWork unitOfWork,
-        ILogger<AppointmentsController> logger)
+        ILogger<AppointmentsController> logger,
+        IAppointmentFacade facade)
     {
         _bookAppointmentHandler = bookAppointmentHandler;
         _confirmAppointmentHandler = confirmAppointmentHandler;
         _cancelAppointmentHandler = cancelAppointmentHandler;
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _facade = facade;
     }
 
     /// <summary>
@@ -73,62 +76,40 @@ public sealed class AppointmentsController : ControllerBase
     /// <response code="500">Internal server error.</response>
     [HttpPost]
     [Authorize(Roles = "Patient")]
-    [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentDto>),
+    StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> BookAppointment(
-     [FromBody] BookAppointmentRequest request,
-     CancellationToken cancellationToken)
+    [FromBody] BookAppointmentRequest request,
+    CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Booking appointment for Patient {PatientId} with Doctor {DoctorId}",
+            "Booking appointment Patient:{PatientId} Doctor:{DoctorId}",
             request.PatientId, request.DoctorId);
 
-        // ── BUILDER PATTERN ─────────────────────────────────
-        // Constructs the command step by step.
-        // Each method call is readable and validates its input.
-        // Build() throws if any required field is missing.
-        BookAppointmentCommand command;
-        try
-        {
-            var builder = new BookAppointmentCommandBuilder()
-                .ForPatient(request.PatientId)
-                .WithDoctor(request.DoctorId)
-                .At(request.ScheduledTime)
-                .BecauseOf(request.Reason);
-
-            // Apply pricing type if provided
-            command = request.AppointmentType switch
-            {
-                "Insurance" => builder.WithInsurance().Build(),
-                "Emergency" => builder.AsEmergency().Build(),
-                "Vip" => builder.AsVip().Build(),
-                _ => builder.AsStandard().Build()
-            };
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(
-                ApiResponse<int>.ErrorResponse(
-                    ex.Message, "Invalid appointment request"));
-        }
-        // ── END BUILDER ──────────────────────────────────────
-
-        var result = await _bookAppointmentHandler
-            .HandleAsync(command, cancellationToken);
+        // ── FACADE PATTERN ───────────────────────────────────
+        // One call hides: Builder + Command + Strategy + Observer
+        var result = await _facade.BookAppointmentAsync(
+            patientId: request.PatientId,
+            doctorId: request.DoctorId,
+            scheduledTime: request.ScheduledTime,
+            reason: request.Reason,
+            appointmentType: request.AppointmentType,
+            cancellationToken: cancellationToken);
+        // ── END FACADE ───────────────────────────────────────
 
         if (result.IsFailure)
         {
-            _logger.LogWarning(
-                "Failed to book appointment: {Error}", result.Error);
+            _logger.LogWarning("Booking failed: {Error}", result.Error);
             return BadRequest(
-                ApiResponse<int>.ErrorResponse(
+                ApiResponse<AppointmentDto>.ErrorResponse(
                     result.Error, "Failed to book appointment"));
         }
 
         return CreatedAtAction(
             nameof(GetAppointmentById),
-            new { id = result.Value },
-            ApiResponse<int>.SuccessResponse(
+            new { id = result.Value!.Id },
+            ApiResponse<AppointmentDto>.SuccessResponse(
                 result.Value, "Appointment booked successfully"));
     }
 

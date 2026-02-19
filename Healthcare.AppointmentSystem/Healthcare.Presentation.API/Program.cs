@@ -20,6 +20,8 @@ using Healthcare.Application.Commands.ProcessPayment;
 using Healthcare.Application.Commands.RefundPayment;
 using Healthcare.Adapters.Factories;
 using Healthcare.Application.Ports.Factories;
+using Healthcare.Application.Ports.Facades;
+using Healthcare.Application.Services;
 
 // ============================================
 // SERILOG CONFIGURATION
@@ -102,7 +104,9 @@ try
     builder.Services.AddScoped<ICommandHandler<CreatePatientCommand, Result<int>>, CreatePatientHandler>();
     builder.Services.AddScoped<ICommandHandler<ProcessPaymentCommand, Result<int>>, ProcessPaymentHandler>();
     builder.Services.AddScoped<ICommandHandler<RefundPaymentCommand, Result>, RefundPaymentHandler>();
-
+    // ── FACADE PATTERN (Structural) ──────────────────────────
+    builder.Services.AddScoped<IAppointmentFacade, AppointmentFacade>();
+    // ─────────────────────────────────────────────────────────
     // ============================================
     // HEALTH CHECKS
     // ============================================

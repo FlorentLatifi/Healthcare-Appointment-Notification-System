@@ -84,4 +84,9 @@ public sealed class AppointmentDto
     /// Gets or sets when the appointment was created.
     /// </summary>
     public DateTime CreatedAt { get; set; }
+    /// <summary>Gets the consultation fee amount.</summary>
+    public decimal ConsultationFee { get; set; }
+
+    /// <summary>Gets the currency of the consultation fee.</summary>
+    public string Currency { get; set; } = string.Empty;
 }
