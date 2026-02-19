@@ -9,6 +9,7 @@ using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Mvc;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Healthcare.Application.Builders;
 namespace Healthcare.Presentation.API.Controllers;
 
 /// <summary>
@@ -74,38 +75,61 @@ public sealed class AppointmentsController : ControllerBase
     [Authorize(Roles = "Patient")]
     [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> BookAppointment(
-        [FromBody] BookAppointmentRequest request,
-        CancellationToken cancellationToken)
+     [FromBody] BookAppointmentRequest request,
+     CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Booking appointment for Patient {PatientId} with Doctor {DoctorId} at {Time}",
-            request.PatientId,
-            request.DoctorId,
-            request.ScheduledTime);
+            "Booking appointment for Patient {PatientId} with Doctor {DoctorId}",
+            request.PatientId, request.DoctorId);
 
-        var command = new BookAppointmentCommand
+        // ── BUILDER PATTERN ─────────────────────────────────
+        // Constructs the command step by step.
+        // Each method call is readable and validates its input.
+        // Build() throws if any required field is missing.
+        BookAppointmentCommand command;
+        try
         {
-            PatientId = request.PatientId,
-            DoctorId = request.DoctorId,
-            ScheduledTime = request.ScheduledTime,
-            Reason = request.Reason
-        };
+            var builder = new BookAppointmentCommandBuilder()
+                .ForPatient(request.PatientId)
+                .WithDoctor(request.DoctorId)
+                .At(request.ScheduledTime)
+                .BecauseOf(request.Reason);
 
-        var result = await _bookAppointmentHandler.HandleAsync(command, cancellationToken);
+            // Apply pricing type if provided
+            command = request.AppointmentType switch
+            {
+                "Insurance" => builder.WithInsurance().Build(),
+                "Emergency" => builder.AsEmergency().Build(),
+                "Vip" => builder.AsVip().Build(),
+                _ => builder.AsStandard().Build()
+            };
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(
+                ApiResponse<int>.ErrorResponse(
+                    ex.Message, "Invalid appointment request"));
+        }
+        // ── END BUILDER ──────────────────────────────────────
+
+        var result = await _bookAppointmentHandler
+            .HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {
-            _logger.LogWarning("Failed to book appointment: {Error}", result.Error);
-            return BadRequest(ApiResponse<int>.ErrorResponse(result.Error, "Failed to book appointment"));
+            _logger.LogWarning(
+                "Failed to book appointment: {Error}", result.Error);
+            return BadRequest(
+                ApiResponse<int>.ErrorResponse(
+                    result.Error, "Failed to book appointment"));
         }
 
-        _logger.LogInformation("Appointment {AppointmentId} booked successfully", result.Value);
         return CreatedAtAction(
             nameof(GetAppointmentById),
             new { id = result.Value },
-            ApiResponse<int>.SuccessResponse(result.Value, "Appointment booked successfully"));
+            ApiResponse<int>.SuccessResponse(
+                result.Value, "Appointment booked successfully"));
     }
 
     /// <summary>

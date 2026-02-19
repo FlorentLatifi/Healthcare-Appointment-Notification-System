@@ -37,4 +37,10 @@ public sealed class BookAppointmentRequest
     /// </summary>
     /// <example>Annual checkup and blood pressure monitoring</example>
     public string Reason { get; set; } = string.Empty;
+
+  ///   <summary>
+/// The type of appointment for pricing purposes.
+/// Values: "Standard", "Insurance", "Emergency", "Vip"
+/// </summary>
+public string AppointmentType { get; set; } = "Standard";
 }
