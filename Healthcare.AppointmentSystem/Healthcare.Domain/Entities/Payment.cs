@@ -210,4 +210,3 @@ public sealed class Payment : Entity
         Status == PaymentStatus.Failed ||
         Status == PaymentStatus.Refunded;
 }
-}

@@ -4672,7 +4672,7 @@
       "StackExchange.Redis >= 2.10.1",
       "StackExchange.Redis.Extensions.Core >= 11.0.0",
       "StackExchange.Redis.Extensions.Newtonsoft >= 11.0.0",
-      "Stripe.net >= 45.31.0"
+      "Stripe.net >= 46.0.0"
     ]
   },
   "packageFolders": {
@@ -4788,7 +4788,7 @@
           },
           "Stripe.net": {
             "target": "Package",
-            "version": "[45.31.0, )"
+            "version": "[46.0.0, )"
           }
         },
         "imports": [
@@ -4810,17 +4810,5 @@
         "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.201/PortableRuntimeIdentifierGraph.json"
       }
     }
-  },
-  "logs": [
-    {
-      "code": "NU1603",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "Healthcare.Adapters depends on Stripe.net (>= 45.31.0) but Stripe.net 45.31.0 was not found. Stripe.net 46.0.0 was resolved instead.",
-      "libraryId": "Stripe.net",
-      "targetGraphs": [
-        "net8.0"
-      ]
-    }
-  ]
+  }
 }

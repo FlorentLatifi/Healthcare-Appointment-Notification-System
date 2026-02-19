@@ -398,25 +398,14 @@ public static class AdapterServiceExtensions
         services.AddScoped<IPaymentRepository, EFCorePaymentRepository>();
         services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
 
-        // ✅ AUTHENTICATION SERVICES - MANUAL BINDING
-        var jwtSection = configuration.GetSection("Jwt");
-        var jwtSettings = new JwtSettings
-        {
-            Secret = jwtSection["Secret"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLong!",
-            Issuer = jwtSection["Issuer"] ?? "HealthcareAPI",
-            Audience = jwtSection["Audience"] ?? "HealthcareClients",
-            ExpirationInMinutes = int.TryParse(jwtSection["ExpirationInMinutes"], out var minutes) ? minutes : 60
-        };
-
-        services.AddSingleton(jwtSettings);
+        // ✅ AUTHENTICATION SERVICES (Simplified - JWT registered in Program.cs)
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<IAuthenticationService, JwtAuthenticationService>();
 
-
-        // ⭐ PAYMENT GATEWAY
+        // PAYMENT GATEWAY
         services.AddStripePaymentGateway(configuration);
 
-        // Notification Service (Console for development)
+        // Notification Service
         services.AddScoped<INotificationService, ConsoleNotificationAdapter>();
 
         // Event Infrastructure
