@@ -1,4 +1,6 @@
-﻿using FluentAssertions;
+<<<<<<< Current (Your changes)
+=======
+using FluentAssertions;
 using Healthcare.Adapters.Events;
 using Healthcare.Adapters.Persistence.InMemory;
 using Healthcare.Application.Commands.CancelAppointment;
@@ -399,3 +401,4 @@ public class CancelAppointmentHandlerTests
 
     #endregion
 }
+>>>>>>> Incoming (Background Agent changes)
