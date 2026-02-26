@@ -4,6 +4,7 @@ using Healthcare.Application.Ports.Locking;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Strategies.Pricing;
 using Healthcare.Domain.Entities;
+using Healthcare.Domain.Services;
 using Healthcare.Domain.ValueObjects;
 
 namespace Healthcare.Application.Commands.BookAppointment;
@@ -14,15 +15,17 @@ public sealed class BookAppointmentHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDomainEventDispatcher _eventDispatcher;
     private readonly IDistributedLockService _lockService;
-
+    private readonly IAppointmentCodeGenerator _codeGenerator;
     public BookAppointmentHandler(
         IUnitOfWork unitOfWork,
         IDomainEventDispatcher eventDispatcher,
-        IDistributedLockService lockService)
+        IDistributedLockService lockService,
+        IAppointmentCodeGenerator codeGenerator)
     {
         _unitOfWork = unitOfWork;
         _eventDispatcher = eventDispatcher;
         _lockService = lockService;
+        _codeGenerator = codeGenerator;
     }
 
     public async Task<Result<int>> HandleAsync(
@@ -86,8 +89,11 @@ public sealed class BookAppointmentHandler
                     $"at {scheduledTime.ToDisplayString()}.");
 
             // 6. Create appointment entity
-            var appointment = Appointment.Create(
-                patient, doctor, scheduledTime, command.Reason);
+            // ── SINGLETON PATTERN ──────────────────────────────────────────────────
+               // _codeGenerator is backed by AppointmentCodeGenerator.Instance (Singleton)
+              // ONE instance serves ALL requests — unique codes guaranteed application-wide.
+               var appointment = Appointment.Create(
+                  patient, doctor, scheduledTime, command.Reason, _codeGenerator);
 
             // ── STRATEGY PATTERN ────────────────────────────────
             // Select strategy based on appointment type

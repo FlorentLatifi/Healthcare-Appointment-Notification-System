@@ -37,6 +37,7 @@ public sealed class GetAppointmentHandler : IQueryHandler<GetAppointmentQuery, R
                 Patient = new PatientDto
                 {
                     Id = appointment.Patient.Id,
+                    ReferenceCode = appointment.ReferenceCode,
                     FirstName = appointment.Patient.FirstName,
                     LastName = appointment.Patient.LastName,
                     FullName = appointment.Patient.FullName,

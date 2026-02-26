@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Healthcare.Adapters.Authentication;
 using Healthcare.Application.Ports.Authentication;
 using Microsoft.Extensions.Configuration;
+using Healthcare.Domain.Services;
 using System.Net.NetworkInformation;
 using Healthcare.Adapters.Locking;
 using Healthcare.Application.Ports.Locking;
@@ -161,6 +162,12 @@ public static class AdapterServiceExtensions
         services.AddSingleton<ITimeProvider, SystemTimeProvider>();
 
         services.AddSingleton<IDistributedLockService, InMemoryLockService>();
+
+        // DESIGN PATTERN: Singleton (Creational)
+       
+           services.AddSingleton<IAppointmentCodeGenerator>(
+               _ => AppointmentCodeGenerator.Instance);
+
 
         return services;
     }
