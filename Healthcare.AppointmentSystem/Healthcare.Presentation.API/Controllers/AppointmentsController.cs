@@ -43,7 +43,6 @@ public sealed class AppointmentsController : ControllerBase
         _facade = facade;
     }
 
-    /// <summary>Books a new appointment.</summary>
     [HttpPost]
     [Authorize(Roles = "Patient")]
     [ProducesResponseType(typeof(ApiResponse<AppointmentDto>), StatusCodes.Status201Created)]
@@ -52,11 +51,9 @@ public sealed class AppointmentsController : ControllerBase
         [FromBody] BookAppointmentRequest request,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation(
-            "Booking appointment Patient:{PatientId} Doctor:{DoctorId}",
+        _logger.LogInformation("Booking appointment Patient:{PatientId} Doctor:{DoctorId}",
             request.PatientId, request.DoctorId);
 
-        // FACADE PATTERN: hides Builder + Command + Strategy + Observer
         var result = await _facade.BookAppointmentAsync(
             patientId: request.PatientId,
             doctorId: request.DoctorId,
@@ -79,7 +76,6 @@ public sealed class AppointmentsController : ControllerBase
                 result.Value, "Appointment booked successfully"));
     }
 
-    /// <summary>Gets an appointment by ID.</summary>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(ApiResponse<AppointmentDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -99,7 +95,6 @@ public sealed class AppointmentsController : ControllerBase
         return Ok(ApiResponse<AppointmentDto>.SuccessResponse(MapToDto(appointment)));
     }
 
-    /// <summary>Gets all appointments.</summary>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<AppointmentDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAllAppointments(CancellationToken cancellationToken)
@@ -107,13 +102,12 @@ public sealed class AppointmentsController : ControllerBase
         _logger.LogInformation("Retrieving all appointments");
 
         var appointments = await _unitOfWork.Appointments.GetAllAsync(cancellationToken);
-        var dtos = appointments.Select(MapToDto).ToList();
+        var mappedList = appointments.Select(MapToDto).ToList();
 
         return Ok(ApiResponse<List<AppointmentDto>>.SuccessResponse(
-            dtos, $"Retrieved {dtos.Count} appointment(s)"));
+            mappedList, $"Retrieved {mappedList.Count} appointment(s)"));
     }
 
-    /// <summary>Gets appointments for a specific patient.</summary>
     [HttpGet("patient/{patientId}")]
     [ProducesResponseType(typeof(ApiResponse<List<AppointmentDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAppointmentsByPatient(
@@ -123,13 +117,12 @@ public sealed class AppointmentsController : ControllerBase
 
         var appointments = await _unitOfWork.Appointments
             .GetByPatientIdAsync(patientId, cancellationToken);
-        var dtos = appointments.Select(MapToDto).ToList();
+        var mappedList = appointments.Select(MapToDto).ToList();
 
         return Ok(ApiResponse<List<AppointmentDto>>.SuccessResponse(
-            dtos, $"Retrieved {dtos.Count} appointment(s) for patient"));
+            mappedList, $"Retrieved {mappedList.Count} appointment(s) for patient"));
     }
 
-    /// <summary>Gets appointments for a specific doctor.</summary>
     [HttpGet("doctor/{doctorId}")]
     [ProducesResponseType(typeof(ApiResponse<List<AppointmentDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAppointmentsByDoctor(
@@ -139,13 +132,12 @@ public sealed class AppointmentsController : ControllerBase
 
         var appointments = await _unitOfWork.Appointments
             .GetByDoctorIdAsync(doctorId, cancellationToken);
-        var dtos = appointments.Select(MapToDto).ToList();
+        var mappedList = appointments.Select(MapToDto).ToList();
 
         return Ok(ApiResponse<List<AppointmentDto>>.SuccessResponse(
-            dtos, $"Retrieved {dtos.Count} appointment(s) for doctor"));
+            mappedList, $"Retrieved {mappedList.Count} appointment(s) for doctor"));
     }
 
-    /// <summary>Confirms an appointment.</summary>
     [HttpPut("{id}/confirm")]
     [Authorize(Roles = "Doctor,Admin")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
@@ -166,14 +158,14 @@ public sealed class AppointmentsController : ControllerBase
             if (result.Error.Contains("not found"))
                 return NotFound(ApiResponse.ErrorResponse(result.Error, "Appointment not found"));
 
-            return BadRequest(ApiResponse.ErrorResponse(result.Error, "Failed to confirm appointment"));
+            return BadRequest(ApiResponse.ErrorResponse(
+                result.Error, "Failed to confirm appointment"));
         }
 
         _logger.LogInformation("Appointment {AppointmentId} confirmed successfully", id);
         return Ok(ApiResponse.SuccessResponse("Appointment confirmed successfully"));
     }
 
-    /// <summary>Cancels an appointment.</summary>
     [HttpPut("{id}/cancel")]
     [Authorize(Roles = "Patient,Doctor,Admin")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
@@ -189,16 +181,15 @@ public sealed class AppointmentsController : ControllerBase
         var command = new CancelAppointmentCommand
         {
             AppointmentId = id,
-            // *** CORRECT: CancelAppointmentRequest has CancellationReason (not Reason) ***
-            CancellationReason = request.CancellationReason
+            CancellationReason = request.CancellationReason  // correct property name
         };
 
         var result = await _cancelAppointmentHandler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {
-            _logger.LogWarning(
-                "Failed to cancel appointment {AppointmentId}: {Error}", id, result.Error);
+            _logger.LogWarning("Failed to cancel appointment {AppointmentId}: {Error}",
+                id, result.Error);
 
             if (result.Error.Contains("not found"))
                 return NotFound(ApiResponse.ErrorResponse(result.Error, "Appointment not found"));
@@ -211,7 +202,6 @@ public sealed class AppointmentsController : ControllerBase
         return Ok(ApiResponse.SuccessResponse("Appointment cancelled successfully"));
     }
 
-    /// <summary>Deletes an appointment (Admin only).</summary>
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -236,10 +226,6 @@ public sealed class AppointmentsController : ControllerBase
         return NoContent();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // PRIVATE HELPER
-    // Single source of truth for mapping Appointment entity → AppointmentDto
-    // ─────────────────────────────────────────────────────────────────────────
     private static AppointmentDto MapToDto(Domain.Entities.Appointment appointment)
     {
         if (appointment.Patient == null || appointment.Doctor == null)
@@ -249,14 +235,9 @@ public sealed class AppointmentsController : ControllerBase
         return new AppointmentDto
         {
             Id = appointment.Id,
-
-            // SINGLETON PATTERN: ReferenceCode generated by
-            // AppointmentCodeGenerator.Instance at booking time.
             ReferenceCode = appointment.ReferenceCode,
-
             PatientId = appointment.PatientId,
             DoctorId = appointment.DoctorId,
-
             Patient = new PatientDto
             {
                 Id = appointment.Patient.Id,

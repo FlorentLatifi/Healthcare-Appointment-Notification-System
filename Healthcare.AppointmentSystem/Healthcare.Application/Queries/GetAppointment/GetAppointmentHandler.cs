@@ -4,9 +4,6 @@ using Healthcare.Application.Ports.Repositories;
 
 namespace Healthcare.Application.Queries.GetAppointment;
 
-/// <summary>
-/// Handler for GetAppointmentQuery.
-/// </summary>
 public sealed class GetAppointmentHandler : IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>>
 {
     private readonly IAppointmentRepository _appointmentRepository;
@@ -26,22 +23,15 @@ public sealed class GetAppointmentHandler : IQueryHandler<GetAppointmentQuery, R
                 .GetByIdAsync(query.AppointmentId, cancellationToken);
 
             if (appointment is null)
-            {
                 return Result<AppointmentDto>.Failure(
                     $"Appointment with ID {query.AppointmentId} not found.");
-            }
 
             var dto = new AppointmentDto
             {
                 Id = appointment.Id,
-
-                // SINGLETON PATTERN: generated at booking time by
-                // AppointmentCodeGenerator.Instance — read back here.
-                ReferenceCode = appointment.ReferenceCode,
-
+                ReferenceCode = appointment.ReferenceCode,  // Singleton pattern
                 PatientId = appointment.PatientId,
                 DoctorId = appointment.DoctorId,
-
                 Patient = new PatientDto
                 {
                     Id = appointment.Patient.Id,

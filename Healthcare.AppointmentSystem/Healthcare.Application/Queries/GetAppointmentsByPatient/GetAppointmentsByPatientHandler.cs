@@ -4,9 +4,6 @@ using Healthcare.Application.Ports.Repositories;
 
 namespace Healthcare.Application.Queries.GetAppointmentsByPatient;
 
-/// <summary>
-/// Handler for GetAppointmentsByPatientQuery.
-/// </summary>
 public sealed class GetAppointmentsByPatientHandler
     : IQueryHandler<GetAppointmentsByPatientQuery, Result<IEnumerable<AppointmentDto>>>
 {
@@ -27,28 +24,22 @@ public sealed class GetAppointmentsByPatientHandler
     {
         try
         {
-            // 1. Verify patient exists
-            var patient = await _patientRepository.GetByIdAsync(query.PatientId, cancellationToken);
+            var patient = await _patientRepository
+                .GetByIdAsync(query.PatientId, cancellationToken);
+
             if (patient is null)
-            {
                 return Result<IEnumerable<AppointmentDto>>.Failure(
                     $"Patient with ID {query.PatientId} not found.");
-            }
 
-            // 2. Fetch appointments
             var appointments = await _appointmentRepository
                 .GetByPatientIdAsync(query.PatientId, cancellationToken);
 
-            // 3. Map to DTOs
-            var dtos = appointments.Select(appointment => new AppointmentDto
+            var result = appointments.Select(appointment => new AppointmentDto
             {
                 Id = appointment.Id,
-
-                // SINGLETON PATTERN: ReferenceCode was generated at booking time
-                // by AppointmentCodeGenerator.Instance (Singleton).
-                // We simply read it back from the persisted entity here.
-                ReferenceCode = appointment.ReferenceCode,
-
+                ReferenceCode = appointment.ReferenceCode,  // Singleton pattern
+                PatientId = appointment.PatientId,
+                DoctorId = appointment.DoctorId,
                 Patient = new PatientDto
                 {
                     Id = appointment.Patient.Id,
@@ -73,7 +64,8 @@ public sealed class GetAppointmentsByPatientHandler
                     Email = appointment.Doctor.Email.Value,
                     PhoneNumber = appointment.Doctor.PhoneNumber.Value,
                     LicenseNumber = appointment.Doctor.LicenseNumber,
-                    Specialties = appointment.Doctor.Specialties.Select(s => s.ToString()).ToList(),
+                    Specialties = appointment.Doctor.Specialties
+                        .Select(s => s.ToString()).ToList(),
                     ConsultationFeeAmount = appointment.Doctor.ConsultationFee.Amount,
                     ConsultationFeeCurrency = appointment.Doctor.ConsultationFee.Currency,
                     IsAcceptingPatients = appointment.Doctor.IsAcceptingPatients,
@@ -96,7 +88,7 @@ public sealed class GetAppointmentsByPatientHandler
                 CreatedAt = appointment.CreatedAt
             }).ToList();
 
-            return Result<IEnumerable<AppointmentDto>>.Success(dtos);
+            return Result<IEnumerable<AppointmentDto>>.Success(result);
         }
         catch (Exception ex)
         {
