@@ -5,6 +5,7 @@ using Healthcare.Application.Ports.Locking;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
+using Healthcare.Domain.Services;
 using Healthcare.UnitTests.Helpers;
 using Moq;
 using Xunit;
@@ -19,6 +20,14 @@ public class BookAppointmentHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IDomainEventDispatcher> _eventDispatcherMock;
     private readonly Mock<IDistributedLockService> _lockServiceMock;
+
+    // ── SINGLETON PATTERN ──────────────────────────────────────────────────
+    // We use the REAL Singleton instance in tests (not a mock).
+    // This proves the Singleton works in a test environment too.
+    // Alternatively, we could mock IAppointmentCodeGenerator for isolation.
+    // ── ────────────────────────────────────────────────────────────────────
+    private readonly IAppointmentCodeGenerator _codeGenerator;
+
     private readonly BookAppointmentHandler _handler;
 
     public BookAppointmentHandlerTests()
@@ -26,7 +35,16 @@ public class BookAppointmentHandlerTests
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _eventDispatcherMock = new Mock<IDomainEventDispatcher>();
         _lockServiceMock = new Mock<IDistributedLockService>();
-        _handler = new BookAppointmentHandler(_unitOfWorkMock.Object, _eventDispatcherMock.Object, _lockServiceMock.Object);
+
+        // Use the real Singleton instance — proves it works end-to-end
+        _codeGenerator = AppointmentCodeGenerator.Instance;
+
+        // Pass all 4 required constructor arguments
+        _handler = new BookAppointmentHandler(
+            _unitOfWorkMock.Object,
+            _eventDispatcherMock.Object,
+            _lockServiceMock.Object,
+            _codeGenerator);
     }
 
     #region Success Tests
@@ -162,7 +180,6 @@ public class BookAppointmentHandlerTests
         var doctor = TestDataBuilder.ADoctor().Build();
         var scheduledTime = GetFutureWeekdayTime();
 
-        // Create conflicting appointment at same time
         var existingAppointment = TestDataBuilder.AnAppointment()
             .WithDoctor(doctor)
             .WithScheduledTime(scheduledTime)
@@ -286,7 +303,6 @@ public class BookAppointmentHandlerTests
             .Setup(r => r.AddAsync(It.IsAny<Appointment>(), It.IsAny<CancellationToken>()))
             .Callback<Appointment, CancellationToken>((apt, ct) =>
             {
-                
                 var idProperty = typeof(Appointment)
                     .GetProperty("Id",
                         System.Reflection.BindingFlags.Public |

@@ -22,22 +22,29 @@ public sealed class GetAppointmentHandler : IQueryHandler<GetAppointmentQuery, R
     {
         try
         {
-            // 1. Fetch appointment
-            var appointment = await _appointmentRepository.GetByIdAsync(query.AppointmentId, cancellationToken);
+            var appointment = await _appointmentRepository
+                .GetByIdAsync(query.AppointmentId, cancellationToken);
 
             if (appointment is null)
             {
-                return Result<AppointmentDto>.Failure($"Appointment with ID {query.AppointmentId} not found.");
+                return Result<AppointmentDto>.Failure(
+                    $"Appointment with ID {query.AppointmentId} not found.");
             }
 
-            // 2. Map to DTO
             var dto = new AppointmentDto
             {
                 Id = appointment.Id,
+
+                // SINGLETON PATTERN: generated at booking time by
+                // AppointmentCodeGenerator.Instance — read back here.
+                ReferenceCode = appointment.ReferenceCode,
+
+                PatientId = appointment.PatientId,
+                DoctorId = appointment.DoctorId,
+
                 Patient = new PatientDto
                 {
                     Id = appointment.Patient.Id,
-                    ReferenceCode = appointment.ReferenceCode,
                     FirstName = appointment.Patient.FirstName,
                     LastName = appointment.Patient.LastName,
                     FullName = appointment.Patient.FullName,
@@ -59,7 +66,8 @@ public sealed class GetAppointmentHandler : IQueryHandler<GetAppointmentQuery, R
                     Email = appointment.Doctor.Email.Value,
                     PhoneNumber = appointment.Doctor.PhoneNumber.Value,
                     LicenseNumber = appointment.Doctor.LicenseNumber,
-                    Specialties = appointment.Doctor.Specialties.Select(s => s.ToString()).ToList(),
+                    Specialties = appointment.Doctor.Specialties
+                        .Select(s => s.ToString()).ToList(),
                     ConsultationFeeAmount = appointment.Doctor.ConsultationFee.Amount,
                     ConsultationFeeCurrency = appointment.Doctor.ConsultationFee.Currency,
                     IsAcceptingPatients = appointment.Doctor.IsAcceptingPatients,
@@ -86,7 +94,8 @@ public sealed class GetAppointmentHandler : IQueryHandler<GetAppointmentQuery, R
         }
         catch (Exception ex)
         {
-            return Result<AppointmentDto>.Failure($"An unexpected error occurred: {ex.Message}");
+            return Result<AppointmentDto>.Failure(
+                $"An unexpected error occurred: {ex.Message}");
         }
     }
 }

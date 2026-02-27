@@ -43,6 +43,12 @@ public sealed class GetAppointmentsByPatientHandler
             var dtos = appointments.Select(appointment => new AppointmentDto
             {
                 Id = appointment.Id,
+
+                // SINGLETON PATTERN: ReferenceCode was generated at booking time
+                // by AppointmentCodeGenerator.Instance (Singleton).
+                // We simply read it back from the persisted entity here.
+                ReferenceCode = appointment.ReferenceCode,
+
                 Patient = new PatientDto
                 {
                     Id = appointment.Patient.Id,
@@ -88,9 +94,7 @@ public sealed class GetAppointmentsByPatientHandler
                 CompletedAt = appointment.CompletedAt,
                 CancelledAt = appointment.CancelledAt,
                 CreatedAt = appointment.CreatedAt
-            })
-            .OrderByDescending(a => a.ScheduledTime) // Most recent first
-            .ToList();
+            }).ToList();
 
             return Result<IEnumerable<AppointmentDto>>.Success(dtos);
         }

@@ -83,7 +83,7 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
            // Add a unique index to enforce uniqueness at database level too
            builder.HasIndex(a => a.ReferenceCode)
                .IsUnique()
-               .HasDatabaseName("IX_Appointments_ReferenceCode");\\\
+               .HasDatabaseName("IX_Appointments_ReferenceCode");
         builder.OwnsOne(a => a.ConsultationFee, money =>
         {
             money.Property(m => m.Amount)
