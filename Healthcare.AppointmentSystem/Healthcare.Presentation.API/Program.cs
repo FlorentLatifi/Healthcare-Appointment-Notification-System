@@ -118,13 +118,7 @@ try
     // ============================================
     // JWT AUTHENTICATION
     // ============================================
-    var jwtSettings = new JwtSettings
-    {
-        Secret = builder.Configuration["Jwt:Secret"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLongForHS256!",
-        Issuer = builder.Configuration["Jwt:Issuer"] ?? "HealthcareAPI",
-        Audience = builder.Configuration["Jwt:Audience"] ?? "HealthcareClients",
-        ExpirationInMinutes = int.Parse(builder.Configuration["Jwt:ExpirationInMinutes"] ?? "60")
-    };
+    var jwtSettings = JwtSettings.FromConfiguration(builder.Configuration);
     builder.Services.AddSingleton(jwtSettings);
 
     builder.Services.AddAuthentication(options =>
@@ -162,11 +156,37 @@ try
     // ============================================
     // CORS
     // ============================================
+    var allowedOrigins = builder.Configuration
+        .GetSection("AllowedOrigins")
+        .Get<string[]>() ?? Array.Empty<string>();
+
+    if (builder.Environment.IsDevelopment())
+    {
+        var devOrigins = new List<string>(allowedOrigins);
+        foreach (var origin in new[] { "http://localhost:5173", "https://localhost:5173" })
+        {
+            if (!devOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+            {
+                devOrigins.Add(origin);
+            }
+        }
+
+        allowedOrigins = devOrigins.ToArray();
+    }
+    else if (allowedOrigins.Length == 0)
+    {
+        throw new InvalidOperationException(
+            "No CORS origins configured. Set 'AllowedOrigins' in appsettings.json or environment variables for Production.");
+    }
+
     builder.Services.AddCors(options =>
     {
-        options.AddPolicy("AllowAll", policy =>
+        options.AddPolicy("ConfiguredOrigins", policy =>
         {
-            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+            policy.WithOrigins(allowedOrigins)
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
         });
     });
 
@@ -188,7 +208,7 @@ try
     });
 
     app.UseHttpsRedirection();
-    app.UseCors("AllowAll");
+    app.UseCors("ConfiguredOrigins");
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();

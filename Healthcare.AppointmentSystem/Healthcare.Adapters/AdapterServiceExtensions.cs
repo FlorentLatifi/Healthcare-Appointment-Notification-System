@@ -137,13 +137,7 @@ public static class AdapterServiceExtensions
         services.AddSingleton<JwtSettings>(provider =>
         {
             var config = provider.GetRequiredService<IConfiguration>();
-            return new JwtSettings
-            {
-                Secret = config["Jwt:Secret"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLong!",
-                Issuer = config["Jwt:Issuer"] ?? "HealthcareAPI",
-                Audience = config["Jwt:Audience"] ?? "HealthcareClients",
-                ExpirationInMinutes = int.Parse(config["Jwt:ExpirationInMinutes"] ?? "60")
-            };
+            return JwtSettings.FromConfiguration(config);
         });
 
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
@@ -334,20 +328,29 @@ public static class AdapterServiceExtensions
         // Manual binding - no Microsoft.Extensions.Configuration.Binder needed
         var stripeSection = configuration.GetSection("Stripe");
 
+        var secretKey = stripeSection["SecretKey"];
+        if (string.IsNullOrWhiteSpace(secretKey))
+        {
+            throw new InvalidOperationException(
+                "Stripe secret key is not configured. Set 'Stripe:SecretKey' via environment variables, " +
+                "dotnet user-secrets (development), or a secure configuration provider.");
+        }
+
+        var publishableKey = stripeSection["PublishableKey"];
+        if (string.IsNullOrWhiteSpace(publishableKey))
+        {
+            throw new InvalidOperationException(
+                "Stripe publishable key is not configured. Set 'Stripe:PublishableKey' via environment variables, " +
+                "dotnet user-secrets (development), or a secure configuration provider.");
+        }
+
         var stripeSettings = new StripeSettings
         {
-            SecretKey = stripeSection["SecretKey"] ?? throw new InvalidOperationException("Stripe:SecretKey not configured"),
-            PublishableKey = stripeSection["PublishableKey"] ?? throw new InvalidOperationException("Stripe:PublishableKey not configured"),
+            SecretKey = secretKey,
+            PublishableKey = publishableKey,
             WebhookSecret = stripeSection["WebhookSecret"] ?? "",
             DefaultCurrency = stripeSection["DefaultCurrency"] ?? "USD"
         };
-
-        // Validate Stripe configuration
-        if (stripeSettings.SecretKey.Contains("REPLACE"))
-        {
-            throw new InvalidOperationException(
-                "Stripe SecretKey not configured. Please update appsettings.json with your actual Stripe keys.");
-        }
 
         services.AddSingleton(stripeSettings);
 
