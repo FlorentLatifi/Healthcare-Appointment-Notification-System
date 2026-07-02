@@ -7,8 +7,9 @@ using Healthcare.Domain.ValueObjects;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Mvc;
-
+using Healthcare.Application.Common;
 namespace Healthcare.Presentation.API.Controllers;
+
 
 /// <summary>
 /// Controller for managing doctors.
@@ -141,65 +142,11 @@ public sealed class DoctorsController : ControllerBase
         return Ok(ApiResponse<DoctorDto>.SuccessResponse(dto));
     }
 
-    /// <summary>
-    /// Gets all doctors.
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>List of all doctors.</returns>
-    /// <response code="200">Doctors retrieved successfully.</response>
-    [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<DoctorDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAllDoctors(CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Retrieving all doctors");
+  
 
-        var doctors = await _unitOfWork.Doctors.GetAllAsync(cancellationToken);
-        var dtos = doctors.Select(MapToDto).ToList();
+    
 
-        return Ok(ApiResponse<List<DoctorDto>>.SuccessResponse(
-            dtos,
-            $"Retrieved {dtos.Count} doctor(s)"));
-    }
-
-    /// <summary>
-    /// Gets all active doctors.
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>List of active doctors.</returns>
-    /// <response code="200">Active doctors retrieved successfully.</response>
-    [HttpGet("active")]
-    [ProducesResponseType(typeof(ApiResponse<List<DoctorDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetActiveDoctors(CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Retrieving active doctors");
-
-        var doctors = await _unitOfWork.Doctors.GetActiveAsync(cancellationToken);
-        var dtos = doctors.Select(MapToDto).ToList();
-
-        return Ok(ApiResponse<List<DoctorDto>>.SuccessResponse(
-            dtos,
-            $"Retrieved {dtos.Count} active doctor(s)"));
-    }
-
-    /// <summary>
-    /// Gets doctors accepting new patients.
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>List of doctors accepting patients.</returns>
-    /// <response code="200">Doctors retrieved successfully.</response>
-    [HttpGet("accepting-patients")]
-    [ProducesResponseType(typeof(ApiResponse<List<DoctorDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetDoctorsAcceptingPatients(CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Retrieving doctors accepting patients");
-
-        var doctors = await _unitOfWork.Doctors.GetAcceptingPatientsAsync(cancellationToken);
-        var dtos = doctors.Select(MapToDto).ToList();
-
-        return Ok(ApiResponse<List<DoctorDto>>.SuccessResponse(
-            dtos,
-            $"Retrieved {dtos.Count} doctor(s) accepting patients"));
-    }
+   
 
     /// <summary>
     /// Deletes a doctor.
@@ -232,6 +179,89 @@ public sealed class DoctorsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Gets paginated list of all doctors.
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAllDoctors(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Retrieving doctors - Page: {Page}, Size: {Size}", pageNumber, pageSize);
+
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        // TODO: Paginimi aktualisht bëhet in-memory (Skip/Take mbi IEnumerable<Doctor>
+        // të kthyer nga GetAllAsync). Kur repository-t të kalojnë në IQueryable,
+        // duhet të lëvizë Skip/Take në query-n e DB-së para ToListAsync(), për
+        // të shmangur ngarkimin e gjithë tabelës në memorje.
+        var doctors = await _unitOfWork.Doctors.GetAllAsync(cancellationToken);
+        var dtos = doctors.Select(MapToDto);
+
+        var pagedResult = PagedResult<DoctorDto>.Create(dtos, pageNumber, pageSize);
+
+        return Ok(ApiResponse<PagedResult<DoctorDto>>.SuccessResponse(
+            pagedResult,
+            $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} items)"));
+    }
+
+    /// <summary>
+    /// Gets paginated list of active doctors.
+    /// </summary>
+    [HttpGet("active")]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetActiveDoctors(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Retrieving active doctors - Page: {Page}, Size: {Size}", pageNumber, pageSize);
+
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        // TODO: shih koment mbi paginimin in-memory te GetAllDoctors — të njëjtin duhet migruar në DB-level.
+        var doctors = await _unitOfWork.Doctors.GetActiveAsync(cancellationToken);
+        var dtos = doctors.Select(MapToDto);
+
+        var pagedResult = PagedResult<DoctorDto>.Create(dtos, pageNumber, pageSize);
+
+        return Ok(ApiResponse<PagedResult<DoctorDto>>.SuccessResponse(
+            pagedResult,
+            $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} active doctor(s))"));
+    }
+
+    /// <summary>
+    /// Gets paginated list of doctors accepting new patients.
+    /// </summary>
+    [HttpGet("accepting-patients")]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDoctorsAcceptingPatients(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Retrieving doctors accepting patients - Page: {Page}, Size: {Size}", pageNumber, pageSize);
+
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        // TODO: shih koment mbi paginimin in-memory te GetAllDoctors — të njëjtin duhet migruar në DB-level.
+        var doctors = await _unitOfWork.Doctors.GetAcceptingPatientsAsync(cancellationToken);
+        var dtos = doctors.Select(MapToDto);
+
+        var pagedResult = PagedResult<DoctorDto>.Create(dtos, pageNumber, pageSize);
+
+        return Ok(ApiResponse<PagedResult<DoctorDto>>.SuccessResponse(
+            pagedResult,
+            $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} doctor(s) accepting patients)"));
+    }
     /// <summary>
     /// Maps Doctor entity to DoctorDto.
     /// </summary>

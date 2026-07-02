@@ -3,6 +3,14 @@
   "WorkspaceRootPath": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.presentation.api\\controllers\\doctorscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|solutionrelative:healthcare.presentation.api\\controllers\\doctorscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.presentation.api\\healthcare.presentation.api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|solutionrelative:healthcare.presentation.api\\healthcare.presentation.api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}|Solution Items{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}|C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}|Solution Items{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}|solutionrelative:.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
@@ -279,10 +287,6 @@
       "RelativeMoniker": "D:0:0:{EF3624F3-2D95-45F2-8671-F78282BF4D6F}|Healthcare.Adapters\\Healthcare.Adapters.csproj|solutionrelative:healthcare.adapters\\migrations\\20260107215054_initialcreate.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.application\\eventhandlers\\logappointmentcancelledhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|solutionrelative:healthcare.application\\eventhandlers\\logappointmentcancelledhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.application\\dtos\\doctordto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|solutionrelative:healthcare.application\\dtos\\doctordto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -379,10 +383,6 @@
       "RelativeMoniker": "D:0:0:{C1919F0A-2312-478B-AB2E-6C1812E3BCF2}|Healthcare.UnitTests\\Healthcare.UnitTests.csproj|solutionrelative:healthcare.unittests\\domain\\valueobjects\\addresstests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.presentation.api\\healthcare.presentation.api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|solutionrelative:healthcare.presentation.api\\healthcare.presentation.api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{EF3624F3-2D95-45F2-8671-F78282BF4D6F}|Healthcare.Adapters\\Healthcare.Adapters.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.adapters\\authentication\\jwtauthenticationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{EF3624F3-2D95-45F2-8671-F78282BF4D6F}|Healthcare.Adapters\\Healthcare.Adapters.csproj|solutionrelative:healthcare.adapters\\authentication\\jwtauthenticationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -473,10 +473,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.presentation.api\\controllers\\patientscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|solutionrelative:healthcare.presentation.api\\controllers\\patientscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.presentation.api\\controllers\\doctorscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{BBE22A36-088E-4AAB-8CCA-E9FCBE4D0FCD}|Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj|solutionrelative:healthcare.presentation.api\\controllers\\doctorscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{C1919F0A-2312-478B-AB2E-6C1812E3BCF2}|Healthcare.UnitTests\\Healthcare.UnitTests.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.unittests\\domain\\valueobjects\\moneytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -695,14 +691,6 @@
       "RelativeMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|solutionrelative:healthcare.application\\eventhandlers\\logappointmentcompletedhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.application\\eventhandlers\\logappointmentconfirmedhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|solutionrelative:healthcare.application\\eventhandlers\\logappointmentconfirmedhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.application\\eventhandlers\\sendconfirmationnotificationhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|solutionrelative:healthcare.application\\eventhandlers\\sendconfirmationnotificationhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.application\\queries\\getappointmentsbypatient\\getappointmentsbypatientquery.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{80C3E746-D929-4392-BD66-DDCDDF70EEC5}|Healthcare.Application\\Healthcare.Application.csproj|solutionrelative:healthcare.application\\queries\\getappointmentsbypatient\\getappointmentsbypatientquery.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -765,6 +753,18 @@
     {
       "AbsoluteMoniker": "D:0:0:{EB1EFAC3-37CB-4911-882C-496DC05E8B92}|Healthcare.Domain\\Healthcare.Domain.csproj|c:\\users\\flore\\onedrive\\desktop\\healthcare\\healthcare-appointment-notification-system\\healthcare.appointmentsystem\\healthcare.domain\\valueobjects\\address.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{EB1EFAC3-37CB-4911-882C-496DC05E8B92}|Healthcare.Domain\\Healthcare.Domain.csproj|solutionrelative:healthcare.domain\\valueobjects\\address.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\EventHandlers\\LogAppointmentCancelledHandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Healthcare.Application\\EventHandlers\\LogAppointmentCancelledHandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\EventHandlers\\SendConfirmationNotificationHandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Healthcare.Application\\EventHandlers\\SendConfirmationNotificationHandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\EventHandlers\\LogAppointmentConfirmedHandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Healthcare.Application\\EventHandlers\\LogAppointmentConfirmedHandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -774,51 +774,28 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 6,
+          "SelectedChildIndex": 1,
           "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "AppointmentsController.cs",
-              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Controllers\\AppointmentsController.cs",
-              "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Controllers\\AppointmentsController.cs",
-              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Controllers\\AppointmentsController.cs",
-              "RelativeToolTip": "Healthcare.Presentation.API\\Controllers\\AppointmentsController.cs",
-              "ViewState": "AgIAABAAAAAAAAAAAAAjwCABAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-07T14:36:02.472Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "GetAppointmentHandler.cs",
-              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Queries\\GetAppointment\\GetAppointmentHandler.cs",
-              "RelativeDocumentMoniker": "Healthcare.Application\\Queries\\GetAppointment\\GetAppointmentHandler.cs",
-              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Queries\\GetAppointment\\GetAppointmentHandler.cs",
-              "RelativeToolTip": "Healthcare.Application\\Queries\\GetAppointment\\GetAppointmentHandler.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFoAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-05T16:15:03.53Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "AppointmentDto.cs",
-              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\DTOs\\AppointmentDto.cs",
-              "RelativeDocumentMoniker": "Healthcare.Application\\DTOs\\AppointmentDto.cs",
-              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\DTOs\\AppointmentDto.cs",
-              "RelativeToolTip": "Healthcare.Application\\DTOs\\AppointmentDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAADAAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-05T16:12:28.657Z"
-            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 0,
+              "Title": "DoctorsController.cs",
+              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Controllers\\DoctorsController.cs",
+              "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Controllers\\DoctorsController.cs",
+              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Controllers\\DoctorsController.cs",
+              "RelativeToolTip": "Healthcare.Presentation.API\\Controllers\\DoctorsController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T14:36:20.711Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
               "Title": "GetAppointmentsByPatientHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Queries\\GetAppointmentsByPatient\\GetAppointmentsByPatientHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Queries\\GetAppointmentsByPatient\\GetAppointmentsByPatientHandler.cs",
@@ -830,7 +807,19 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 7,
+              "Title": "AppointmentDto.cs",
+              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\DTOs\\AppointmentDto.cs",
+              "RelativeDocumentMoniker": "Healthcare.Application\\DTOs\\AppointmentDto.cs",
+              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\DTOs\\AppointmentDto.cs",
+              "RelativeToolTip": "Healthcare.Application\\DTOs\\AppointmentDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADAAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-05T16:12:28.657Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
               "Title": "AppointmentFacade.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Services\\AppointmentFacade.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Services\\AppointmentFacade.cs",
@@ -838,25 +827,61 @@
               "RelativeToolTip": "Healthcare.Application\\Services\\AppointmentFacade.cs",
               "ViewState": "AgIAAGoAAAAAAAAAAAAkwHEAAAASAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-19T14:15:43.317Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-19T14:15:43.317Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": ".gitignore",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\.gitignore",
               "RelativeDocumentMoniker": ".gitignore",
               "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\.gitignore",
               "RelativeToolTip": ".gitignore",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAdAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAqwCMAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
               "WhenOpened": "2026-01-04T22:23:09.186Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Healthcare.Presentation.API.csproj",
+              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj",
+              "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj",
+              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj",
+              "RelativeToolTip": "Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAjAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-01-07T21:49:55.031Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 6,
+              "Title": "GetAppointmentHandler.cs",
+              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Queries\\GetAppointment\\GetAppointmentHandler.cs",
+              "RelativeDocumentMoniker": "Healthcare.Application\\Queries\\GetAppointment\\GetAppointmentHandler.cs",
+              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Queries\\GetAppointment\\GetAppointmentHandler.cs",
+              "RelativeToolTip": "Healthcare.Application\\Queries\\GetAppointment\\GetAppointmentHandler.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-05T16:15:03.53Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "AppointmentsController.cs",
+              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Controllers\\AppointmentsController.cs",
+              "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Controllers\\AppointmentsController.cs",
+              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Controllers\\AppointmentsController.cs",
+              "RelativeToolTip": "Healthcare.Presentation.API\\Controllers\\AppointmentsController.cs",
+              "ViewState": "AgIAABAAAAAAAAAAAAAjwCABAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T14:36:02.472Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
               "Title": "BookAppointmentHandlerTests.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Application\\Commands\\BookAppointmentHandlerTests.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Application\\Commands\\BookAppointmentHandlerTests.cs",
@@ -868,7 +893,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 9,
               "Title": "AppointmentConfiguration.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\EntityFramework\\Configurations\\AppointmentConfiguration.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\EntityFramework\\Configurations\\AppointmentConfiguration.cs",
@@ -880,7 +905,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 10,
               "Title": "AdapterServiceExtensions.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\AdapterServiceExtensions.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\AdapterServiceExtensions.cs",
@@ -892,7 +917,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 11,
               "Title": "BookAppointmentHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Commands\\BookAppointment\\BookAppointmentHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Commands\\BookAppointment\\BookAppointmentHandler.cs",
@@ -904,7 +929,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 12,
               "Title": "Appointment.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Entities\\Appointment.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Entities\\Appointment.cs",
@@ -916,7 +941,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 13,
               "Title": "AppointmentCodeGenerator.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Services\\AppointmentCodeGenerator.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Services\\AppointmentCodeGenerator.cs",
@@ -928,7 +953,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 14,
               "Title": "IAppointmentCodeGenerator.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Services\\IAppointmentCodeGenerator.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Services\\IAppointmentCodeGenerator.cs",
@@ -940,7 +965,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 15,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Program.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Program.cs",
@@ -952,7 +977,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 16,
               "Title": "IAppointmentFacade.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Ports\\Facades\\IAppointmentFacade.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Ports\\Facades\\IAppointmentFacade.cs",
@@ -964,7 +989,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 17,
               "Title": "BookAppointmentRequest.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Requests\\BookAppointmentRequest.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Requests\\BookAppointmentRequest.cs",
@@ -976,7 +1001,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 18,
               "Title": "AppointmentNotificationBuilder.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Builders\\AppointmentNotificationBuilder.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Builders\\AppointmentNotificationBuilder.cs",
@@ -988,7 +1013,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 19,
               "Title": "BookAppointmentCommandBuilder.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Builders\\BookAppointmentCommandBuilder.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Builders\\BookAppointmentCommandBuilder.cs",
@@ -1000,7 +1025,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 20,
               "Title": "EFCoreRepositoryFactory.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Factories\\EFCoreRepositoryFactory.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Factories\\EFCoreRepositoryFactory.cs",
@@ -1012,7 +1037,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 21,
               "Title": "InMemoryRepositoryFactory.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Factories\\InMemoryRepositoryFactory.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Factories\\InMemoryRepositoryFactory.cs",
@@ -1024,7 +1049,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 22,
               "Title": "IHealthcareRepositoryFactory.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Ports\\Factories\\IHealthcareRepositoryFactory.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Ports\\Factories\\IHealthcareRepositoryFactory.cs",
@@ -1036,7 +1061,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 23,
               "Title": "BookAppointmentCommand.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Commands\\BookAppointment\\BookAppointmentCommand.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Commands\\BookAppointment\\BookAppointmentCommand.cs",
@@ -1048,7 +1073,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 24,
               "Title": "PricingStrategySelector.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Strategies\\Pricing\\PricingStrategySelector.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Strategies\\Pricing\\PricingStrategySelector.cs",
@@ -1060,7 +1085,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 25,
               "Title": "AppointmentType.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Enums\\AppointmentType.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Enums\\AppointmentType.cs",
@@ -1072,7 +1097,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 26,
               "Title": "PricingContext.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Strategies\\Pricing\\PricingContext.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Strategies\\Pricing\\PricingContext.cs",
@@ -1084,7 +1109,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 27,
               "Title": "VipPricingStrategy.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Strategies\\Pricing\\VipPricingStrategy.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Strategies\\Pricing\\VipPricingStrategy.cs",
@@ -1096,7 +1121,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 29,
               "Title": "InsurancePricingStrategy.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Strategies\\Pricing\\InsurancePricingStrategy.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Strategies\\Pricing\\InsurancePricingStrategy.cs",
@@ -1108,7 +1133,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 28,
               "Title": "EmergencyPricingStrategy.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Strategies\\Pricing\\EmergencyPricingStrategy.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Strategies\\Pricing\\EmergencyPricingStrategy.cs",
@@ -1120,7 +1145,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 28,
+              "DocumentIndex": 30,
               "Title": "StandardPricingStrategy.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Strategies\\Pricing\\StandardPricingStrategy.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Strategies\\Pricing\\StandardPricingStrategy.cs",
@@ -1132,7 +1157,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 29,
+              "DocumentIndex": 31,
               "Title": "IAppointmentPricingStrategy.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Ports\\Pricing\\IAppointmentPricingStrategy.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Ports\\Pricing\\IAppointmentPricingStrategy.cs",
@@ -1144,7 +1169,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 30,
+              "DocumentIndex": 32,
               "Title": "Healthcare.Adapters.csproj",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Healthcare.Adapters.csproj",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Healthcare.Adapters.csproj",
@@ -1152,11 +1177,12 @@
               "RelativeToolTip": "Healthcare.Adapters\\Healthcare.Adapters.csproj",
               "ViewState": "AgIAAAcAAAAAAAAAAAAAABcAAAA2AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-01-07T15:00:43.415Z"
+              "WhenOpened": "2026-01-07T15:00:43.415Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 33,
+              "DocumentIndex": 35,
               "Title": "LogPaymentFailedHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Events\\Handlers\\LogPaymentFailedHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Events\\Handlers\\LogPaymentFailedHandler.cs",
@@ -1168,7 +1194,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 34,
+              "DocumentIndex": 36,
               "Title": "LogPaymentSucceededHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Events\\Handlers\\LogPaymentSucceededHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Events\\Handlers\\LogPaymentSucceededHandler.cs",
@@ -1180,7 +1206,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 37,
+              "DocumentIndex": 39,
               "Title": "RefundPaymentRequestValidator.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Validators\\RefundPaymentRequestValidator.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Validators\\RefundPaymentRequestValidator.cs",
@@ -1192,7 +1218,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 32,
+              "DocumentIndex": 34,
               "Title": "LogPaymentRefundedHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Events\\Handlers\\LogPaymentRefundedHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Events\\Handlers\\LogPaymentRefundedHandler.cs",
@@ -1204,7 +1230,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 31,
+              "DocumentIndex": 33,
               "Title": "Healthcare.UnitTests.csproj",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Healthcare.UnitTests.csproj",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Healthcare.UnitTests.csproj",
@@ -1212,11 +1238,12 @@
               "RelativeToolTip": "Healthcare.UnitTests\\Healthcare.UnitTests.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-01-18T16:38:36.992Z"
+              "WhenOpened": "2026-01-18T16:38:36.992Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 38,
+              "DocumentIndex": 40,
               "Title": "ProcessPaymentRequestValidator.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Validators\\ProcessPaymentRequestValidator.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Validators\\ProcessPaymentRequestValidator.cs",
@@ -1228,7 +1255,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 39,
+              "DocumentIndex": 41,
               "Title": "CreatePaymentIntentRequestValidator.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Validators\\CreatePaymentIntentRequestValidator.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Validators\\CreatePaymentIntentRequestValidator.cs",
@@ -1240,7 +1267,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 36,
+              "DocumentIndex": 38,
               "Title": "PaymentsController.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Controllers\\PaymentsController.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Controllers\\PaymentsController.cs",
@@ -1252,7 +1279,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 35,
+              "DocumentIndex": 37,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\appsettings.json",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\appsettings.json",
@@ -1264,7 +1291,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 40,
+              "DocumentIndex": 42,
               "Title": "RefundPaymentRequest.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Requests\\RefundPaymentRequest.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Requests\\RefundPaymentRequest.cs",
@@ -1276,7 +1303,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 41,
+              "DocumentIndex": 43,
               "Title": "ProcessPaymentRequest.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Requests\\ProcessPaymentRequest.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Requests\\ProcessPaymentRequest.cs",
@@ -1288,7 +1315,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 42,
+              "DocumentIndex": 44,
               "Title": "CreatePaymentIntentRequest.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Requests\\CreatePaymentIntentRequest.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Requests\\CreatePaymentIntentRequest.cs",
@@ -1300,7 +1327,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 44,
+              "DocumentIndex": 46,
               "Title": "HealthcareDbContext.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\EntityFramework\\HealthcareDbContext.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\EntityFramework\\HealthcareDbContext.cs",
@@ -1312,7 +1339,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 43,
+              "DocumentIndex": 45,
               "Title": "EFCoreUnitOfWork.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\EntityFramework\\Repositories\\EFCoreUnitOfWork.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\EntityFramework\\Repositories\\EFCoreUnitOfWork.cs",
@@ -1324,7 +1351,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 45,
+              "DocumentIndex": 47,
               "Title": "EFCorePaymentRepository.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\EntityFramework\\Repositories\\EFCorePaymentRepository.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\EntityFramework\\Repositories\\EFCorePaymentRepository.cs",
@@ -1336,7 +1363,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 46,
+              "DocumentIndex": 48,
               "Title": "PaymentConfiguration.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\EntityFramework\\Configurations\\PaymentConfiguration.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\EntityFramework\\Configurations\\PaymentConfiguration.cs",
@@ -1348,7 +1375,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 47,
+              "DocumentIndex": 49,
               "Title": "InMemoryUnitOfWork.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\InMemory\\InMemoryUnitOfWork.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\InMemory\\InMemoryUnitOfWork.cs",
@@ -1360,7 +1387,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 48,
+              "DocumentIndex": 50,
               "Title": "InMemoryPaymentRepository.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\InMemory\\InMemoryPaymentRepository.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\InMemory\\InMemoryPaymentRepository.cs",
@@ -1372,7 +1399,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 49,
+              "DocumentIndex": 51,
               "Title": "StripePaymentGateway.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Payments\\StripePaymentGateway.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Payments\\StripePaymentGateway.cs",
@@ -1384,7 +1411,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 50,
+              "DocumentIndex": 52,
               "Title": "StripeSettings.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Payments\\StripeSettings.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Payments\\StripeSettings.cs",
@@ -1396,7 +1423,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 51,
+              "DocumentIndex": 53,
               "Title": "RefundPaymentHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Commands\\RefundPayment\\RefundPaymentHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Commands\\RefundPayment\\RefundPaymentHandler.cs",
@@ -1408,7 +1435,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 52,
+              "DocumentIndex": 54,
               "Title": "RefundPaymentCommand.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Commands\\RefundPayment\\RefundPaymentCommand.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Commands\\RefundPayment\\RefundPaymentCommand.cs",
@@ -1420,7 +1447,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 53,
+              "DocumentIndex": 55,
               "Title": "ProcessPaymentHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Commands\\ProcessPayment\\ProcessPaymentHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Commands\\ProcessPayment\\ProcessPaymentHandler.cs",
@@ -1432,7 +1459,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 54,
+              "DocumentIndex": 56,
               "Title": "ProcessPaymentCommand.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Commands\\ProcessPayment\\ProcessPaymentCommand.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Commands\\ProcessPayment\\ProcessPaymentCommand.cs",
@@ -1444,7 +1471,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 55,
+              "DocumentIndex": 57,
               "Title": "PaymentDto.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\DTOs\\PaymentDto.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\DTOs\\PaymentDto.cs",
@@ -1456,7 +1483,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 56,
+              "DocumentIndex": 58,
               "Title": "IPaymentGateway.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Ports\\Payments\\IPaymentGateway.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Ports\\Payments\\IPaymentGateway.cs",
@@ -1468,7 +1495,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 57,
+              "DocumentIndex": 59,
               "Title": "IUnitOfWork.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Ports\\Repositories\\IUnitOfWork.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Ports\\Repositories\\IUnitOfWork.cs",
@@ -1480,7 +1507,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 58,
+              "DocumentIndex": 60,
               "Title": "IPaymentRepository.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Ports\\Repositories\\IPaymentRepository.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Ports\\Repositories\\IPaymentRepository.cs",
@@ -1492,7 +1519,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 59,
+              "DocumentIndex": 61,
               "Title": "PaymentRefundedEvent.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Events\\PaymentRefundedEvent.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Events\\PaymentRefundedEvent.cs",
@@ -1504,7 +1531,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 61,
+              "DocumentIndex": 63,
               "Title": "PaymentSucceededEvent.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Events\\PaymentSucceededEvent.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Events\\PaymentSucceededEvent.cs",
@@ -1516,7 +1543,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 60,
+              "DocumentIndex": 62,
               "Title": "PaymentFailedEvent.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Events\\PaymentFailedEvent.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Events\\PaymentFailedEvent.cs",
@@ -1528,7 +1555,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 62,
+              "DocumentIndex": 64,
               "Title": "Payment.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Entities\\Payment.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Entities\\Payment.cs",
@@ -1540,7 +1567,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 63,
+              "DocumentIndex": 65,
               "Title": "TransactionId.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\ValueObjects\\TransactionId.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\ValueObjects\\TransactionId.cs",
@@ -1552,7 +1579,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 64,
+              "DocumentIndex": 66,
               "Title": "PaymentStatus.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Enums\\PaymentStatus.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Enums\\PaymentStatus.cs",
@@ -1564,7 +1591,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 69,
+              "DocumentIndex": 188,
               "Title": "LogAppointmentCancelledHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\EventHandlers\\LogAppointmentCancelledHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\EventHandlers\\LogAppointmentCancelledHandler.cs",
@@ -1576,7 +1603,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 68,
+              "DocumentIndex": 70,
               "Title": "20260107215054_InitialCreate.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Migrations\\20260107215054_InitialCreate.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Migrations\\20260107215054_InitialCreate.cs",
@@ -1588,7 +1615,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 70,
+              "DocumentIndex": 71,
               "Title": "DoctorDto.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\DTOs\\DoctorDto.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\DTOs\\DoctorDto.cs",
@@ -1600,7 +1627,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 65,
+              "DocumentIndex": 67,
               "Title": "InMemoryLockService.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Locking\\InMemoryLockService.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Locking\\InMemoryLockService.cs",
@@ -1612,7 +1639,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 66,
+              "DocumentIndex": 68,
               "Title": "RedisDistributedLockService.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Locking\\RedisDistributedLockService.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Locking\\RedisDistributedLockService.cs",
@@ -1624,7 +1651,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 71,
+              "DocumentIndex": 72,
               "Title": "IQueryHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Common\\IQueryHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Common\\IQueryHandler.cs",
@@ -1636,7 +1663,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 72,
+              "DocumentIndex": 73,
               "Title": "PagedResult.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Common\\PagedResult.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Common\\PagedResult.cs",
@@ -1648,7 +1675,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 67,
+              "DocumentIndex": 69,
               "Title": "HealthcareDbContextModelSnapshot.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Migrations\\HealthcareDbContextModelSnapshot.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Migrations\\HealthcareDbContextModelSnapshot.cs",
@@ -1660,7 +1687,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 73,
+              "DocumentIndex": 74,
               "Title": "ValueObject.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Common\\ValueObject.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Common\\ValueObject.cs",
@@ -1672,7 +1699,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 74,
+              "DocumentIndex": 75,
               "Title": "IDomainEvent.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Common\\IDomainEvent.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Common\\IDomainEvent.cs",
@@ -1684,7 +1711,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 75,
+              "DocumentIndex": 76,
               "Title": "Guard.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Common\\Guard.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Common\\Guard.cs",
@@ -1696,7 +1723,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 76,
+              "DocumentIndex": 77,
               "Title": "Entity.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Common\\Entity.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Common\\Entity.cs",
@@ -1708,7 +1735,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 77,
+              "DocumentIndex": 78,
               "Title": "DomainException.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Common\\DomainException.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Common\\DomainException.cs",
@@ -1720,7 +1747,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 78,
+              "DocumentIndex": 79,
               "Title": "RedisHealthCheck.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\HealthChecks\\RedisHealthCheck.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\HealthChecks\\RedisHealthCheck.cs",
@@ -1732,7 +1759,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 79,
+              "DocumentIndex": 80,
               "Title": "RedisSettings.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Locking\\RedisSettings.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Locking\\RedisSettings.cs",
@@ -1744,7 +1771,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 80,
+              "DocumentIndex": 81,
               "Title": "appsettings.Development.json",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\appsettings.Development.json",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\appsettings.Development.json",
@@ -1756,7 +1783,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 81,
+              "DocumentIndex": 82,
               "Title": "Healthcare.Presentation.API.http",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Healthcare.Presentation.API.http",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Healthcare.Presentation.API.http",
@@ -1768,7 +1795,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 82,
+              "DocumentIndex": 83,
               "Title": "Healthcare.Application.csproj",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Healthcare.Application.csproj",
               "RelativeDocumentMoniker": "Healthcare.Application\\Healthcare.Application.csproj",
@@ -1776,11 +1803,12 @@
               "RelativeToolTip": "Healthcare.Application\\Healthcare.Application.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-01-05T16:09:02.93Z"
+              "WhenOpened": "2026-01-05T16:09:02.93Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 84,
+              "DocumentIndex": 85,
               "Title": "PhoneNumberTests.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Domain\\ValueObjects\\PhoneNumberTests.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Domain\\ValueObjects\\PhoneNumberTests.cs",
@@ -1792,7 +1820,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 85,
+              "DocumentIndex": 86,
               "Title": "AppointmentTimeTests.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Domain\\ValueObjects\\AppointmentTimeTests.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Domain\\ValueObjects\\AppointmentTimeTests.cs",
@@ -1804,7 +1832,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 87,
+              "DocumentIndex": 88,
               "Title": "DoctorTests.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Domain\\Entities\\DoctorTests.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Domain\\Entities\\DoctorTests.cs",
@@ -1816,7 +1844,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 83,
+              "DocumentIndex": 84,
               "Title": "PhoneNumber.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\ValueObjects\\PhoneNumber.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\ValueObjects\\PhoneNumber.cs",
@@ -1828,7 +1856,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 88,
+              "DocumentIndex": 89,
               "Title": "GetAppointmentHandlerTests.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Application\\Queries\\GetAppointmentHandlerTests.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Application\\Queries\\GetAppointmentHandlerTests.cs",
@@ -1840,7 +1868,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 86,
+              "DocumentIndex": 87,
               "Title": "PatientTests.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Domain\\Entities\\PatientTests.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Domain\\Entities\\PatientTests.cs",
@@ -1852,7 +1880,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 89,
+              "DocumentIndex": 90,
               "Title": "CancelAppointmentHandlerTests.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Application\\Commands\\CancelAppointmentHandlerTests.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Application\\Commands\\CancelAppointmentHandlerTests.cs",
@@ -1864,7 +1892,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 90,
+              "DocumentIndex": 91,
               "Title": "AppointmentTests.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Domain\\Entities\\AppointmentTests.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Domain\\Entities\\AppointmentTests.cs",
@@ -1876,7 +1904,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 92,
+              "DocumentIndex": 93,
               "Title": "TestDataBuilder.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Helpers\\TestDataBuilder.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Helpers\\TestDataBuilder.cs",
@@ -1888,7 +1916,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 91,
+              "DocumentIndex": 92,
               "Title": "ConfirmAppointmentHandlerTests.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Application\\Commands\\ConfirmAppointmentHandlerTests.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Application\\Commands\\ConfirmAppointmentHandlerTests.cs",
@@ -1900,7 +1928,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 93,
+              "DocumentIndex": 94,
               "Title": "AddressTests.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Domain\\ValueObjects\\AddressTests.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Domain\\ValueObjects\\AddressTests.cs",
@@ -1909,18 +1937,6 @@
               "ViewState": "AgIAAPsAAAAAAAAAAAAIwBMBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-01-07T22:22:37.263Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 94,
-              "Title": "Healthcare.Presentation.API.csproj",
-              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj",
-              "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj",
-              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj",
-              "RelativeToolTip": "Healthcare.Presentation.API\\Healthcare.Presentation.API.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAjAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-01-07T21:49:55.031Z"
             },
             {
               "$type": "Document",
@@ -2201,18 +2217,6 @@
             {
               "$type": "Document",
               "DocumentIndex": 118,
-              "Title": "DoctorsController.cs",
-              "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Controllers\\DoctorsController.cs",
-              "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Controllers\\DoctorsController.cs",
-              "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Controllers\\DoctorsController.cs",
-              "RelativeToolTip": "Healthcare.Presentation.API\\Controllers\\DoctorsController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-07T14:36:20.711Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 119,
               "Title": "MoneyTests.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Domain\\ValueObjects\\MoneyTests.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Domain\\ValueObjects\\MoneyTests.cs",
@@ -2224,7 +2228,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 120,
+              "DocumentIndex": 119,
               "Title": "EmailTests.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.UnitTests\\Domain\\ValueObjects\\EmailTests.cs",
               "RelativeDocumentMoniker": "Healthcare.UnitTests\\Domain\\ValueObjects\\EmailTests.cs",
@@ -2236,7 +2240,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 121,
+              "DocumentIndex": 120,
               "Title": "PaginationParameters.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Common\\PaginationParameters.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Common\\PaginationParameters.cs",
@@ -2248,7 +2252,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 122,
+              "DocumentIndex": 121,
               "Title": "EFCoreAppointmentRepository.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\EntityFramework\\Repositories\\EFCoreAppointmentRepository.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\EntityFramework\\Repositories\\EFCoreAppointmentRepository.cs",
@@ -2260,7 +2264,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 123,
+              "DocumentIndex": 122,
               "Title": "DoctorConfiguration.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\EntityFramework\\Configurations\\DoctorConfiguration.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\EntityFramework\\Configurations\\DoctorConfiguration.cs",
@@ -2272,7 +2276,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 124,
+              "DocumentIndex": 123,
               "Title": "PatientConfiguration.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\EntityFramework\\Configurations\\PatientConfiguration.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\EntityFramework\\Configurations\\PatientConfiguration.cs",
@@ -2284,7 +2288,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 125,
+              "DocumentIndex": 124,
               "Title": "ValidationFilter.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Filters\\ValidationFilter.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Filters\\ValidationFilter.cs",
@@ -2296,7 +2300,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 126,
+              "DocumentIndex": 125,
               "Title": "ExceptionHandlingMiddleware.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Middleware\\ExceptionHandlingMiddleware.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Middleware\\ExceptionHandlingMiddleware.cs",
@@ -2308,7 +2312,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 127,
+              "DocumentIndex": 126,
               "Title": "ConfirmAppointmentRequestValidator.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Validators\\ConfirmAppointmentRequestValidator.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Validators\\ConfirmAppointmentRequestValidator.cs",
@@ -2320,7 +2324,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 128,
+              "DocumentIndex": 127,
               "Title": "CreateDoctorRequestValidator.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Validators\\CreateDoctorRequestValidator.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Validators\\CreateDoctorRequestValidator.cs",
@@ -2332,7 +2336,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 129,
+              "DocumentIndex": 128,
               "Title": "CreatePatientRequestValidator.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Validators\\CreatePatientRequestValidator.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Validators\\CreatePatientRequestValidator.cs",
@@ -2344,7 +2348,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 130,
+              "DocumentIndex": 129,
               "Title": "CancelAppointmentRequestValidator.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Validators\\CancelAppointmentRequestValidator.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Validators\\CancelAppointmentRequestValidator.cs",
@@ -2356,7 +2360,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 131,
+              "DocumentIndex": 130,
               "Title": "BookAppointmentRequestValidator.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Validators\\BookAppointmentRequestValidator.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Validators\\BookAppointmentRequestValidator.cs",
@@ -2368,7 +2372,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 132,
+              "DocumentIndex": 131,
               "Title": "ErrorResponse.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Responses\\ErrorResponse.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Responses\\ErrorResponse.cs",
@@ -2380,7 +2384,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 133,
+              "DocumentIndex": 132,
               "Title": "ApiResponse.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Responses\\ApiResponse.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Responses\\ApiResponse.cs",
@@ -2392,7 +2396,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 134,
+              "DocumentIndex": 133,
               "Title": "CreateDoctorRequest.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Requests\\CreateDoctorRequest.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Requests\\CreateDoctorRequest.cs",
@@ -2404,7 +2408,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 135,
+              "DocumentIndex": 134,
               "Title": "CreatePatientRequest.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Requests\\CreatePatientRequest.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Requests\\CreatePatientRequest.cs",
@@ -2416,7 +2420,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 136,
+              "DocumentIndex": 135,
               "Title": "CancelAppointmentRequest.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Requests\\CancelAppointmentRequest.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Requests\\CancelAppointmentRequest.cs",
@@ -2428,7 +2432,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 137,
+              "DocumentIndex": 136,
               "Title": "ConfirmAppointmentRequest.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Presentation.API\\Requests\\ConfirmAppointmentRequest.cs",
               "RelativeDocumentMoniker": "Healthcare.Presentation.API\\Requests\\ConfirmAppointmentRequest.cs",
@@ -2440,7 +2444,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 138,
+              "DocumentIndex": 137,
               "Title": "FakeTimeProvider.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Common\\FakeTimeProvider.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Common\\FakeTimeProvider.cs",
@@ -2452,7 +2456,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 139,
+              "DocumentIndex": 138,
               "Title": "SystemTimeProvider.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Common\\SystemTimeProvider.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Common\\SystemTimeProvider.cs",
@@ -2464,7 +2468,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 140,
+              "DocumentIndex": 139,
               "Title": "SendConfirmationNotificationHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Events\\Handlers\\SendConfirmationNotificationHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Events\\Handlers\\SendConfirmationNotificationHandler.cs",
@@ -2476,7 +2480,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 141,
+              "DocumentIndex": 140,
               "Title": "SendCancellationNotificationHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Events\\Handlers\\SendCancellationNotificationHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Events\\Handlers\\SendCancellationNotificationHandler.cs",
@@ -2488,7 +2492,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 142,
+              "DocumentIndex": 141,
               "Title": "LogAppointmentCreatedHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Events\\Handlers\\LogAppointmentCreatedHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Events\\Handlers\\LogAppointmentCreatedHandler.cs",
@@ -2500,7 +2504,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 143,
+              "DocumentIndex": 142,
               "Title": "LogAppointmentConfirmedHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Events\\Handlers\\LogAppointmentConfirmedHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Events\\Handlers\\LogAppointmentConfirmedHandler.cs",
@@ -2512,7 +2516,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 144,
+              "DocumentIndex": 143,
               "Title": "LogAppointmentCancelledHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Events\\Handlers\\LogAppointmentCancelledHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Events\\Handlers\\LogAppointmentCancelledHandler.cs",
@@ -2524,7 +2528,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 145,
+              "DocumentIndex": 144,
               "Title": "CompositeNotificationAdapter.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Notifications\\CompositeNotificationAdapter.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Notifications\\CompositeNotificationAdapter.cs",
@@ -2536,7 +2540,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 146,
+              "DocumentIndex": 145,
               "Title": "EmailNotificationAdapter.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Notifications\\EmailNotificationAdapter.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Notifications\\EmailNotificationAdapter.cs",
@@ -2548,7 +2552,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 147,
+              "DocumentIndex": 146,
               "Title": "ConsoleNotificationAdapter.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Notifications\\ConsoleNotificationAdapter.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Notifications\\ConsoleNotificationAdapter.cs",
@@ -2560,7 +2564,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 148,
+              "DocumentIndex": 147,
               "Title": "InMemoryRepository.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\InMemory\\InMemoryRepository.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\InMemory\\InMemoryRepository.cs",
@@ -2572,7 +2576,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 149,
+              "DocumentIndex": 148,
               "Title": "InMemoryPatientRepository.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\InMemory\\InMemoryPatientRepository.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\InMemory\\InMemoryPatientRepository.cs",
@@ -2584,7 +2588,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 150,
+              "DocumentIndex": 149,
               "Title": "InMemoryDoctorRepository.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\InMemory\\InMemoryDoctorRepository.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\InMemory\\InMemoryDoctorRepository.cs",
@@ -2596,7 +2600,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 151,
+              "DocumentIndex": 150,
               "Title": "InMemoryAppointmentRepository.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Adapters\\Persistence\\InMemory\\InMemoryAppointmentRepository.cs",
               "RelativeDocumentMoniker": "Healthcare.Adapters\\Persistence\\InMemory\\InMemoryAppointmentRepository.cs",
@@ -2608,7 +2612,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 152,
+              "DocumentIndex": 151,
               "Title": "GetAppointmentQuery.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Queries\\GetAppointment\\GetAppointmentQuery.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Queries\\GetAppointment\\GetAppointmentQuery.cs",
@@ -2620,7 +2624,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 153,
+              "DocumentIndex": 152,
               "Title": "PatientDto.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\DTOs\\PatientDto.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\DTOs\\PatientDto.cs",
@@ -2632,7 +2636,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 154,
+              "DocumentIndex": 153,
               "Title": "ITimeProvider.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Ports\\Common\\ITimeProvider.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Ports\\Common\\ITimeProvider.cs",
@@ -2644,7 +2648,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 155,
+              "DocumentIndex": 154,
               "Title": "IDomainEventHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Ports\\Events\\IDomainEventHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Ports\\Events\\IDomainEventHandler.cs",
@@ -2656,7 +2660,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 156,
+              "DocumentIndex": 155,
               "Title": "IDomainEventDispatcher.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Ports\\Events\\IDomainEventDispatcher.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Ports\\Events\\IDomainEventDispatcher.cs",
@@ -2668,7 +2672,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 157,
+              "DocumentIndex": 156,
               "Title": "INotificationService.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Ports\\Notifications\\INotificationService.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Ports\\Notifications\\INotificationService.cs",
@@ -2680,7 +2684,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 158,
+              "DocumentIndex": 157,
               "Title": "IDoctorRepository.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Ports\\Repositories\\IDoctorRepository.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Ports\\Repositories\\IDoctorRepository.cs",
@@ -2692,7 +2696,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 159,
+              "DocumentIndex": 158,
               "Title": "IPatientRepository.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Ports\\Repositories\\IPatientRepository.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Ports\\Repositories\\IPatientRepository.cs",
@@ -2704,7 +2708,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 160,
+              "DocumentIndex": 159,
               "Title": "IAppointmentRepository.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Ports\\Repositories\\IAppointmentRepository.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Ports\\Repositories\\IAppointmentRepository.cs",
@@ -2716,7 +2720,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 161,
+              "DocumentIndex": 160,
               "Title": "SendCancellationNotificationHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\EventHandlers\\SendCancellationNotificationHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\EventHandlers\\SendCancellationNotificationHandler.cs",
@@ -2728,7 +2732,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 162,
+              "DocumentIndex": 161,
               "Title": "Result.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Common\\Result.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Common\\Result.cs",
@@ -2740,7 +2744,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 163,
+              "DocumentIndex": 162,
               "Title": "IQuery.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Common\\IQuery.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Common\\IQuery.cs",
@@ -2752,7 +2756,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 164,
+              "DocumentIndex": 163,
               "Title": "ICommandHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Common\\ICommandHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Common\\ICommandHandler.cs",
@@ -2764,7 +2768,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 165,
+              "DocumentIndex": 164,
               "Title": "ICommand.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Common\\ICommand.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Common\\ICommand.cs",
@@ -2776,7 +2780,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 166,
+              "DocumentIndex": 165,
               "Title": "CreatePatientHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Commands\\CreatePatient\\CreatePatientHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Commands\\CreatePatient\\CreatePatientHandler.cs",
@@ -2788,7 +2792,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 167,
+              "DocumentIndex": 166,
               "Title": "CreatePatientCommand.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Commands\\CreatePatient\\CreatePatientCommand.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Commands\\CreatePatient\\CreatePatientCommand.cs",
@@ -2800,7 +2804,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 168,
+              "DocumentIndex": 167,
               "Title": "ConfirmAppointmentHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Commands\\ConfirmAppointment\\ConfirmAppointmentHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Commands\\ConfirmAppointment\\ConfirmAppointmentHandler.cs",
@@ -2812,7 +2816,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 169,
+              "DocumentIndex": 168,
               "Title": "ConfirmAppointmentCommand.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Commands\\ConfirmAppointment\\ConfirmAppointmentCommand.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Commands\\ConfirmAppointment\\ConfirmAppointmentCommand.cs",
@@ -2824,7 +2828,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 170,
+              "DocumentIndex": 169,
               "Title": "CancelAppointmentHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Commands\\CancelAppointment\\CancelAppointmentHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Commands\\CancelAppointment\\CancelAppointmentHandler.cs",
@@ -2836,7 +2840,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 171,
+              "DocumentIndex": 170,
               "Title": "CancelAppointmentCommand.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Commands\\CancelAppointment\\CancelAppointmentCommand.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Commands\\CancelAppointment\\CancelAppointmentCommand.cs",
@@ -2848,7 +2852,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 172,
+              "DocumentIndex": 171,
               "Title": "LogAppointmentCompletedHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\EventHandlers\\LogAppointmentCompletedHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\EventHandlers\\LogAppointmentCompletedHandler.cs",
@@ -2860,7 +2864,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 174,
+              "DocumentIndex": 189,
               "Title": "SendConfirmationNotificationHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\EventHandlers\\SendConfirmationNotificationHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\EventHandlers\\SendConfirmationNotificationHandler.cs",
@@ -2872,7 +2876,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 173,
+              "DocumentIndex": 190,
               "Title": "LogAppointmentConfirmedHandler.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\EventHandlers\\LogAppointmentConfirmedHandler.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\EventHandlers\\LogAppointmentConfirmedHandler.cs",
@@ -2884,7 +2888,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 175,
+              "DocumentIndex": 172,
               "Title": "GetAppointmentsByPatientQuery.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Queries\\GetAppointmentsByPatient\\GetAppointmentsByPatientQuery.cs",
               "RelativeDocumentMoniker": "Healthcare.Application\\Queries\\GetAppointmentsByPatient\\GetAppointmentsByPatientQuery.cs",
@@ -2896,18 +2900,19 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 176,
+              "DocumentIndex": 173,
               "Title": "Healthcare.Application",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Healthcare.Application.csproj",
               "RelativeDocumentMoniker": "Healthcare.Application\\Healthcare.Application.csproj",
               "ToolTip": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Application\\Healthcare.Application.csproj",
               "RelativeToolTip": "Healthcare.Application\\Healthcare.Application.csproj",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-01-05T16:20:38.537Z"
+              "WhenOpened": "2026-01-05T16:20:38.537Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 178,
+              "DocumentIndex": 175,
               "Title": "Specialty.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Enums\\Specialty.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Enums\\Specialty.cs",
@@ -2919,7 +2924,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 177,
+              "DocumentIndex": 174,
               "Title": "AppointmentCancelledEvent.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Events\\AppointmentCancelledEvent.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Events\\AppointmentCancelledEvent.cs",
@@ -2931,7 +2936,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 179,
+              "DocumentIndex": 176,
               "Title": "Gender.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Enums\\Gender.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Enums\\Gender.cs",
@@ -2943,7 +2948,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 180,
+              "DocumentIndex": 177,
               "Title": "AppointmentStatus.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Enums\\AppointmentStatus.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Enums\\AppointmentStatus.cs",
@@ -2955,7 +2960,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 181,
+              "DocumentIndex": 178,
               "Title": "Patient.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Entities\\Patient.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Entities\\Patient.cs",
@@ -2967,7 +2972,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 182,
+              "DocumentIndex": 179,
               "Title": "Doctor.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Entities\\Doctor.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Entities\\Doctor.cs",
@@ -2979,7 +2984,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 183,
+              "DocumentIndex": 180,
               "Title": "AppointmentNoShowEvent.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Events\\AppointmentNoShowEvent.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Events\\AppointmentNoShowEvent.cs",
@@ -2991,7 +2996,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 184,
+              "DocumentIndex": 181,
               "Title": "AppointmentCompletedEvent.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Events\\AppointmentCompletedEvent.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Events\\AppointmentCompletedEvent.cs",
@@ -3003,7 +3008,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 185,
+              "DocumentIndex": 182,
               "Title": "AppointmentConfirmedEvent.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Events\\AppointmentConfirmedEvent.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Events\\AppointmentConfirmedEvent.cs",
@@ -3015,7 +3020,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 186,
+              "DocumentIndex": 183,
               "Title": "AppointmentCreatedEvent.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\Events\\AppointmentCreatedEvent.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\Events\\AppointmentCreatedEvent.cs",
@@ -3027,7 +3032,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 187,
+              "DocumentIndex": 184,
               "Title": "Money.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\ValueObjects\\Money.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\ValueObjects\\Money.cs",
@@ -3039,7 +3044,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 188,
+              "DocumentIndex": 185,
               "Title": "Email.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\ValueObjects\\Email.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\ValueObjects\\Email.cs",
@@ -3051,7 +3056,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 189,
+              "DocumentIndex": 186,
               "Title": "AppointmentTime.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\ValueObjects\\AppointmentTime.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\ValueObjects\\AppointmentTime.cs",
@@ -3063,7 +3068,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 190,
+              "DocumentIndex": 187,
               "Title": "Address.cs",
               "DocumentMoniker": "C:\\Users\\flore\\OneDrive\\Desktop\\Healthcare\\Healthcare-Appointment-Notification-System\\Healthcare.AppointmentSystem\\Healthcare.Domain\\ValueObjects\\Address.cs",
               "RelativeDocumentMoniker": "Healthcare.Domain\\ValueObjects\\Address.cs",

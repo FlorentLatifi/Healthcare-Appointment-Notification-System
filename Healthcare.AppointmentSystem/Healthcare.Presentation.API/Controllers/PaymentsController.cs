@@ -10,6 +10,7 @@ using Healthcare.Presentation.API.Authorization;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Healthcare.Application.Common;
 
 namespace Healthcare.Presentation.API.Controllers;
 
@@ -339,19 +340,34 @@ public sealed class PaymentsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of all payments.</returns>
     /// <response code="200">Payments retrieved successfully.</response>
+    /// <summary>
+    /// Gets paginated list of all payments (admin only).
+    /// </summary>
     [HttpGet]
     [Authorize(Roles = AppRoles.Admin)]
-    [ProducesResponseType(typeof(ApiResponse<List<PaymentDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAllPayments(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<PaymentDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAllPayments(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Retrieving all payments");
+        _logger.LogInformation("Retrieving all payments - Page: {Page}, Size: {Size}", pageNumber, pageSize);
 
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        // TODO: Paginimi aktualisht bëhet in-memory (Skip/Take mbi IEnumerable<Payment>
+        // të kthyer nga GetAllAsync). Duhet migruar në DB-level kur repository-t
+        // të mbështesin IQueryable (Skip/Take përpara ToListAsync).
         var payments = await _unitOfWork.Payments.GetAllAsync(cancellationToken);
-        var dtos = payments.Select(MapToDto).ToList();
+        var dtos = payments.Select(MapToDto);
 
-        return Ok(ApiResponse<List<PaymentDto>>.SuccessResponse(
-            dtos,
-            $"Retrieved {dtos.Count} payment(s)"));
+        var pagedResult = PagedResult<PaymentDto>.Create(dtos, pageNumber, pageSize);
+
+        return Ok(ApiResponse<PagedResult<PaymentDto>>.SuccessResponse(
+            pagedResult,
+            $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} payment(s))"));
     }
 
     /// <summary>

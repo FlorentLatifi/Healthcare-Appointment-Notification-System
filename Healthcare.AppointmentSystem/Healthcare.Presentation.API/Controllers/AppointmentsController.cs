@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 using Healthcare.Application.Builders;
 using Healthcare.Application.Ports.Facades;
 using Healthcare.Presentation.API.Authorization;
+using Healthcare.Application.Common;
 
 namespace Healthcare.Presentation.API.Controllers;
 
@@ -97,46 +98,89 @@ public sealed class AppointmentsController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<AppointmentDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAllAppointments(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<AppointmentDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAllAppointments(
+    [FromQuery] int pageNumber = 1,
+    [FromQuery] int pageSize = 20,
+    CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Retrieving all appointments");
+        _logger.LogInformation("Retrieving all appointments - Page: {Page}, Size: {Size}", pageNumber, pageSize);
 
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        // TODO: Paginimi aktualisht bëhet in-memory (Skip/Take mbi IEnumerable<Appointment>
+        // të kthyer nga GetAllAsync). Duhet migruar në DB-level (IQueryable.Skip/Take
+        // përpara ToListAsync) kur repository-t të mbështesin queryable.
         var appointments = await _unitOfWork.Appointments.GetAllAsync(cancellationToken);
-        var mappedList = appointments.Select(MapToDto).ToList();
+        var mappedList = appointments.Select(MapToDto);
 
-        return Ok(ApiResponse<List<AppointmentDto>>.SuccessResponse(
-            mappedList, $"Retrieved {mappedList.Count} appointment(s)"));
+        var pagedResult = PagedResult<AppointmentDto>.Create(mappedList, pageNumber, pageSize);
+
+        return Ok(ApiResponse<PagedResult<AppointmentDto>>.SuccessResponse(
+            pagedResult,
+            $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} appointment(s))"));
     }
 
+    /// <summary>
+    /// Gets paginated list of appointments for a patient.
+    /// </summary>
     [HttpGet("patient/{patientId}")]
-    [ProducesResponseType(typeof(ApiResponse<List<AppointmentDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<AppointmentDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAppointmentsByPatient(
-        int patientId, CancellationToken cancellationToken)
+        int patientId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Retrieving appointments for Patient {PatientId}", patientId);
+        _logger.LogInformation("Retrieving appointments for Patient {PatientId} - Page: {Page}, Size: {Size}",
+            patientId, pageNumber, pageSize);
 
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        // TODO: shih koment mbi paginimin in-memory te GetAllAppointments.
         var appointments = await _unitOfWork.Appointments
             .GetByPatientIdAsync(patientId, cancellationToken);
-        var mappedList = appointments.Select(MapToDto).ToList();
+        var mappedList = appointments.Select(MapToDto);
 
-        return Ok(ApiResponse<List<AppointmentDto>>.SuccessResponse(
-            mappedList, $"Retrieved {mappedList.Count} appointment(s) for patient"));
+        var pagedResult = PagedResult<AppointmentDto>.Create(mappedList, pageNumber, pageSize);
+
+        return Ok(ApiResponse<PagedResult<AppointmentDto>>.SuccessResponse(
+            pagedResult,
+            $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} appointment(s)) for patient"));
     }
 
+    /// <summary>
+    /// Gets paginated list of appointments for a doctor.
+    /// </summary>
     [HttpGet("doctor/{doctorId}")]
-    [ProducesResponseType(typeof(ApiResponse<List<AppointmentDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<AppointmentDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAppointmentsByDoctor(
-        int doctorId, CancellationToken cancellationToken)
+        int doctorId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Retrieving appointments for Doctor {DoctorId}", doctorId);
+        _logger.LogInformation("Retrieving appointments for Doctor {DoctorId} - Page: {Page}, Size: {Size}",
+            doctorId, pageNumber, pageSize);
 
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        // TODO: shih koment mbi paginimin in-memory te GetAllAppointments.
         var appointments = await _unitOfWork.Appointments
             .GetByDoctorIdAsync(doctorId, cancellationToken);
-        var mappedList = appointments.Select(MapToDto).ToList();
+        var mappedList = appointments.Select(MapToDto);
 
-        return Ok(ApiResponse<List<AppointmentDto>>.SuccessResponse(
-            mappedList, $"Retrieved {mappedList.Count} appointment(s) for doctor"));
+        var pagedResult = PagedResult<AppointmentDto>.Create(mappedList, pageNumber, pageSize);
+
+        return Ok(ApiResponse<PagedResult<AppointmentDto>>.SuccessResponse(
+            pagedResult,
+            $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} appointment(s)) for doctor"));
     }
 
     [HttpPut("{id}/confirm")]
