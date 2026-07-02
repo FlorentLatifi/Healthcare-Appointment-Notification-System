@@ -1,6 +1,7 @@
 ﻿using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
+using Healthcare.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -39,8 +40,10 @@ public sealed class EFCoreDoctorRepository : IDoctorRepository
 
     public async Task<Doctor?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
+        var normalizedEmail = Email.Create(email);
+
         var doctor = await _context.Doctors
-            .FirstOrDefaultAsync(d => d.Email.Value == email, cancellationToken);
+            .FirstOrDefaultAsync(d => d.Email == normalizedEmail, cancellationToken);
 
         if (doctor != null)
         {
@@ -142,8 +145,10 @@ public sealed class EFCoreDoctorRepository : IDoctorRepository
 
     public async Task<bool> ExistsAsync(string email, CancellationToken cancellationToken = default)
     {
+        var normalizedEmail = Email.Create(email);
+
         return await _context.Doctors
-            .AnyAsync(d => d.Email.Value == email, cancellationToken);
+            .AnyAsync(d => d.Email == normalizedEmail, cancellationToken);
     }
 
     public async Task AddAsync(Doctor doctor, CancellationToken cancellationToken = default)

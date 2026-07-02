@@ -1,5 +1,6 @@
 ﻿using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
+using Healthcare.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
 namespace Healthcare.Adapters.Persistence.EntityFramework.Repositories;
@@ -24,8 +25,10 @@ public sealed class EFCorePatientRepository : IPatientRepository
 
     public async Task<Patient?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
+        var normalizedEmail = Email.Create(email);
+
         return await _context.Patients
-            .FirstOrDefaultAsync(p => p.Email.Value == email, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Email == normalizedEmail, cancellationToken);
     }
 
     public async Task<IEnumerable<Patient>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -58,8 +61,10 @@ public sealed class EFCorePatientRepository : IPatientRepository
 
     public async Task<bool> ExistsAsync(string email, CancellationToken cancellationToken = default)
     {
+        var normalizedEmail = Email.Create(email);
+
         return await _context.Patients
-            .AnyAsync(p => p.Email.Value == email, cancellationToken);
+            .AnyAsync(p => p.Email == normalizedEmail, cancellationToken);
     }
 
     public async Task AddAsync(Patient patient, CancellationToken cancellationToken = default)

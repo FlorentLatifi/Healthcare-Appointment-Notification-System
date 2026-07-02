@@ -1,5 +1,6 @@
 ﻿using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
+using Healthcare.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
 namespace Healthcare.Adapters.Persistence.EntityFramework.Repositories;
@@ -30,9 +31,10 @@ public sealed class EFCoreUserRepository : IUserRepository
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        // Email is a value object, so we need to compare the Value property
+        var normalizedEmail = Email.Create(email);
+
         return await _context.Users
-            .FirstOrDefaultAsync(u => u.Email.Value == email, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Email == normalizedEmail, cancellationToken);
     }
 
     public async Task<bool> ExistsAsync(string username, CancellationToken cancellationToken = default)
