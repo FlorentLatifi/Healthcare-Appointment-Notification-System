@@ -30,17 +30,11 @@ public sealed class AppointmentDto
     public string? DoctorNotes { get; set; }
     public string? CancellationReason { get; set; }
 
-    /// <summary>Fee amount — used by full MapToDto mapping.</summary>
+    /// <summary>Fee amount.</summary>
     public decimal ConsultationFeeAmount { get; set; }
 
-    /// <summary>Fee currency — used by full MapToDto mapping.</summary>
+    /// <summary>Fee currency.</summary>
     public string ConsultationFeeCurrency { get; set; } = string.Empty;
-
-    /// <summary>Fee amount — used by AppointmentFacade lightweight mapping.</summary>
-    public decimal ConsultationFee { get; set; }
-
-    /// <summary>Currency — used by AppointmentFacade lightweight mapping.</summary>
-    public string Currency { get; set; } = string.Empty;
 
     public DateTime? ConfirmedAt { get; set; }
     public DateTime? CompletedAt { get; set; }

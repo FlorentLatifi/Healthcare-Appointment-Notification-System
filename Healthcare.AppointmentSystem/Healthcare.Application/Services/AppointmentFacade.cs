@@ -101,8 +101,8 @@ public sealed class AppointmentFacade : IAppointmentFacade
             ScheduledTime = appointment.ScheduledTime.Value,
             Reason = appointment.Reason,
             Status = appointment.Status.ToString(),
-            ConsultationFee = appointment.ConsultationFee.Amount,
-            Currency = appointment.ConsultationFee.Currency
+            ConsultationFeeAmount = appointment.ConsultationFee.Amount,
+            ConsultationFeeCurrency = appointment.ConsultationFee.Currency
         };
 
         return Result<AppointmentDto>.Success(dto);
