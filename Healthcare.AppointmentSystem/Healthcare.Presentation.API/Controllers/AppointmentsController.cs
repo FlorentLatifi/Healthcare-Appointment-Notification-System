@@ -11,6 +11,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Healthcare.Application.Builders;
 using Healthcare.Application.Ports.Facades;
+using Healthcare.Presentation.API.Authorization;
 
 namespace Healthcare.Presentation.API.Controllers;
 
@@ -44,7 +45,7 @@ public sealed class AppointmentsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Patient")]
+    [Authorize(Roles = AppRoles.Patient)]
     [ProducesResponseType(typeof(ApiResponse<AppointmentDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> BookAppointment(
@@ -139,7 +140,7 @@ public sealed class AppointmentsController : ControllerBase
     }
 
     [HttpPut("{id}/confirm")]
-    [Authorize(Roles = "Doctor,Admin")]
+    [Authorize(Roles = AppRoles.DoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -167,7 +168,7 @@ public sealed class AppointmentsController : ControllerBase
     }
 
     [HttpPut("{id}/cancel")]
-    [Authorize(Roles = "Patient,Doctor,Admin")]
+    [Authorize(Roles = AppRoles.PatientOrDoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -203,7 +204,7 @@ public sealed class AppointmentsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = AppRoles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteAppointment(

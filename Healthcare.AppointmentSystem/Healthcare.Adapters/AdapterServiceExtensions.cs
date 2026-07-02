@@ -412,6 +412,9 @@ public static class AdapterServiceExtensions
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<IAuthenticationService, JwtAuthenticationService>();
 
+        services.AddSingleton<IAppointmentCodeGenerator>(
+            _ => AppointmentCodeGenerator.Instance);
+
         // PAYMENT GATEWAY
         services.AddStripePaymentGateway(configuration);
 

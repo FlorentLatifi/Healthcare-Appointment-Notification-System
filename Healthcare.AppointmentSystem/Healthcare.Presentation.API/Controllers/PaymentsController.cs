@@ -6,6 +6,7 @@ using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Payments;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Presentation.API.Requests;
+using Healthcare.Presentation.API.Authorization;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -85,7 +86,7 @@ public sealed class PaymentsController : ControllerBase
     /// <response code="400">Invalid request or appointment not found.</response>
     /// <response code="404">Appointment not found.</response>
     [HttpPost("create-intent")]
-    [Authorize(Roles = "Patient")]
+    [Authorize(Roles = AppRoles.Patient)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -188,7 +189,7 @@ public sealed class PaymentsController : ControllerBase
     /// <response code="200">Payment processed successfully.</response>
     /// <response code="400">Invalid request or payment failed.</response>
     [HttpPost("process")]
-    [Authorize(Roles = "Patient")]
+    [Authorize(Roles = AppRoles.Patient)]
     [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ProcessPayment(
@@ -232,7 +233,7 @@ public sealed class PaymentsController : ControllerBase
     /// <response code="400">Invalid request or refund failed.</response>
     /// <response code="404">Payment not found.</response>
     [HttpPost("refund")]
-    [Authorize(Roles = "Admin,Doctor")]
+    [Authorize(Roles = AppRoles.AdminOrDoctor)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -339,7 +340,7 @@ public sealed class PaymentsController : ControllerBase
     /// <returns>List of all payments.</returns>
     /// <response code="200">Payments retrieved successfully.</response>
     [HttpGet]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = AppRoles.Admin)]
     [ProducesResponseType(typeof(ApiResponse<List<PaymentDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAllPayments(CancellationToken cancellationToken)
     {
