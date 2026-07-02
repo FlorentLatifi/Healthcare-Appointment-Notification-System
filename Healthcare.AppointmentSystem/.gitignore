@@ -9,6 +9,17 @@
 bin/
 obj/
 
+# NuGet
+project.assets.json
+project.nuget.cache
+*.nuget.dgspec.json
+*.nuget.g.props
+*.nuget.g.targets
+
+# Cache files
+*.cache
+*.bin
+
 # Rider / VS Code
 .idea/
 .vscode/
@@ -16,3 +27,9 @@ obj/
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+logs/
+*.tmp
+*Backup*
+*.log
