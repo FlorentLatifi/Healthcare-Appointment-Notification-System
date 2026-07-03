@@ -88,6 +88,18 @@ public sealed class Appointment : Entity
     public Money ConsultationFee { get; private set; } = null!;
 
     /// <summary>
+          /// Gets the consultation fee for this appointment.
+          /// </summary>
+
+
+    /// <summary>
+    /// Gets the justification recorded when a Doctor/Admin confirmed this
+    /// appointment despite no successful payment existing yet (business-rule
+    /// override). Null when the appointment was confirmed normally.
+    /// </summary>
+    public string? PaymentOverrideReason { get; private set; }
+
+    /// <summary>
     /// Row version for optimistic concurrency control.
     /// </summary>
     /// <remarks>
@@ -213,7 +225,16 @@ public sealed class Appointment : Entity
     /// <summary>
     /// Confirms the appointment.
     /// </summary>
-    public void Confirm()
+    /// <param name="paymentOverrideReason">
+    /// Optional justification. Pass a non-null value ONLY when a Doctor/Admin
+    /// is deliberately confirming this appointment despite payment not having
+    /// succeeded yet (e.g. an emergency walk-in). Leave null for the normal
+    /// flow, where payment has already succeeded.
+    /// The application layer (<c>ConfirmAppointmentHandler</c>) decides
+    /// WHETHER an override is allowed/required for a given appointment; this
+    /// method only enforces that, IF a reason is supplied, it is meaningful.
+    /// </param>
+    public void Confirm(string? paymentOverrideReason = null)
     {
         if (Status != AppointmentStatus.Pending)
         {
@@ -225,15 +246,30 @@ public sealed class Appointment : Entity
             throw new InvalidOperationException("Cannot confirm past appointments.");
         }
 
+        string? normalizedReason = null;
+        if (!string.IsNullOrWhiteSpace(paymentOverrideReason))
+        {
+            normalizedReason = paymentOverrideReason.Trim();
+
+            if (normalizedReason.Length < 10)
+            {
+                throw new ArgumentException(
+                    "Payment override reason must be at least 10 characters.",
+                    nameof(paymentOverrideReason));
+            }
+        }
+
         Status = AppointmentStatus.Confirmed;
         ConfirmedAt = DateTime.UtcNow;
+        PaymentOverrideReason = normalizedReason;
         MarkAsModified();
 
         AddDomainEvent(new AppointmentConfirmedEvent(
             Id,
             PatientId,
             DoctorId,
-            ScheduledTime.Value));
+            ScheduledTime.Value,
+            normalizedReason));
     }
 
     /// <summary>

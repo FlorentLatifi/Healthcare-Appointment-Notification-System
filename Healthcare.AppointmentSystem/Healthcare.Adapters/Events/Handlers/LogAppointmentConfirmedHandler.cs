@@ -7,20 +7,6 @@ namespace Healthcare.Adapters.Events.Handlers;
 /// <summary>
 /// Logs appointment confirmation to audit trail.
 /// </summary>
-/// <remarks>
-/// Design Pattern: Observer Pattern
-/// 
-/// This handler creates an audit log entry when appointment is confirmed.
-/// In production, this would write to:
-/// - Audit database table
-/// - External logging service (Elasticsearch, Splunk)
-/// - Compliance tracking system
-/// 
-/// Multiple handlers can observe the same event!
-/// - SendConfirmationNotificationHandler sends email
-/// - LogAppointmentConfirmedHandler writes audit log
-/// - UpdateAnalyticsHandler updates statistics
-/// </remarks>
 public sealed class LogAppointmentConfirmedHandler
     : IDomainEventHandler<AppointmentConfirmedEvent>
 {
@@ -45,9 +31,14 @@ public sealed class LogAppointmentConfirmedHandler
             domainEvent.DoctorId,
             domainEvent.ScheduledTime);
 
-        // In production, write to audit database or external logging service:
-        // await _auditRepository.AddAsync(new AuditLog { ... });
-        // await _elasticsearchClient.IndexAsync(new AuditDocument { ... });
+        if (!string.IsNullOrWhiteSpace(domainEvent.PaymentOverrideReason))
+        {
+            _logger.LogWarning(
+                "[AUDIT] Appointment {AppointmentId} was confirmed WITHOUT a completed payment " +
+                "(Doctor/Admin override). Reason: {OverrideReason}",
+                domainEvent.AppointmentId,
+                domainEvent.PaymentOverrideReason);
+        }
 
         return Task.CompletedTask;
     }

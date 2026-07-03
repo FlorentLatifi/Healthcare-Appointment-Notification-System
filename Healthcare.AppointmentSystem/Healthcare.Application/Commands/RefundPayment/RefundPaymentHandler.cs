@@ -2,6 +2,8 @@
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Payments;
 using Healthcare.Application.Ports.Repositories;
+using Healthcare.Domain.Entities;
+using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
 
 namespace Healthcare.Application.Commands.RefundPayment;
@@ -64,12 +66,37 @@ public sealed class RefundPaymentHandler : ICommandHandler<RefundPaymentCommand,
             var refundTransactionId = TransactionId.Create(refundResult.Value.RefundId);
             payment.CompleteRefund(refundTransactionId);
 
-            // 6. Save changes
+            // 6. Sync the appointment status with the refunded payment.
+            //    A refund means the consultation is no longer paid for, so if the
+            //    appointment is still upcoming and Confirmed, it must be cancelled.
+            //    We intentionally do NOT touch Pending/Completed/Cancelled/NoShow —
+            //    those states are either not yet confirmed, already resolved, or
+            //    the appointment already happened.
+            Appointment? appointment = null;
+
+            appointment = await _unitOfWork.Appointments
+                .GetByIdAsync(payment.AppointmentId, cancellationToken);
+
+            if (appointment is not null
+                && appointment.Status == AppointmentStatus.Confirmed
+                && !appointment.ScheduledTime.IsPast())
+            {
+                appointment.Cancel("Payment refunded");
+                await _unitOfWork.Appointments.UpdateAsync(appointment, cancellationToken);
+            }
+
+            // 7. Save changes (payment + appointment together, same transaction)
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 7. Dispatch domain events
+            // 8. Dispatch domain events
             await _eventDispatcher.DispatchAsync(payment.DomainEvents, cancellationToken);
             payment.ClearDomainEvents();
+
+            if (appointment is not null && appointment.DomainEvents.Count > 0)
+            {
+                await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
+                appointment.ClearDomainEvents();
+            }
 
             return Result.Success();
         }
@@ -77,5 +104,6 @@ public sealed class RefundPaymentHandler : ICommandHandler<RefundPaymentCommand,
         {
             return Result.Failure($"An unexpected error occurred: {ex.Message}");
         }
+        
     }
 }

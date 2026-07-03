@@ -189,11 +189,19 @@ public sealed class AppointmentsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ConfirmAppointment(
-        int id, CancellationToken cancellationToken)
+        int id,
+        [FromBody] ConfirmAppointmentRequest? request,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("Confirming appointment {AppointmentId}", id);
 
-        var command = new ConfirmAppointmentCommand { AppointmentId = id };
+        var command = new ConfirmAppointmentCommand
+        {
+            AppointmentId = id,
+            OverridePaymentRequirement = request?.OverridePaymentRequirement ?? false,
+            OverrideReason = request?.OverrideReason
+        };
+
         var result = await _confirmAppointmentHandler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
@@ -205,6 +213,13 @@ public sealed class AppointmentsController : ControllerBase
 
             return BadRequest(ApiResponse.ErrorResponse(
                 result.Error, "Failed to confirm appointment"));
+        }
+
+        if (command.OverridePaymentRequirement)
+        {
+            _logger.LogWarning(
+                "Appointment {AppointmentId} confirmed WITHOUT payment via Doctor/Admin override. Reason: {Reason}",
+                id, command.OverrideReason);
         }
 
         _logger.LogInformation("Appointment {AppointmentId} confirmed successfully", id);

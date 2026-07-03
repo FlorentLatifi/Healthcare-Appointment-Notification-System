@@ -15,11 +15,20 @@ public sealed class AppointmentConfirmedEvent : IDomainEvent
     public int DoctorId { get; }
     public DateTime ScheduledTime { get; }
 
+    /// <summary>
+    /// Non-null when this appointment was confirmed by a Doctor/Admin who
+    /// explicitly overrode the "must be paid before confirmation" business
+    /// rule. Null for the normal path (payment already succeeded, or the
+    /// rule didn't apply because the appointment wasn't Pending).
+    /// </summary>
+    public string? PaymentOverrideReason { get; }
+
     public AppointmentConfirmedEvent(
         int appointmentId,
         int patientId,
         int doctorId,
-        DateTime scheduledTime)
+        DateTime scheduledTime,
+        string? paymentOverrideReason = null)
     {
         EventId = Guid.NewGuid();
         OccurredOn = DateTime.UtcNow;
@@ -27,5 +36,6 @@ public sealed class AppointmentConfirmedEvent : IDomainEvent
         PatientId = patientId;
         DoctorId = doctorId;
         ScheduledTime = scheduledTime;
+        PaymentOverrideReason = paymentOverrideReason;
     }
 }
