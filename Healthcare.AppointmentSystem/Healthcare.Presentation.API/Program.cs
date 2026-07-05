@@ -295,6 +295,7 @@ try
     });
 
     app.UseHttpsRedirection();
+    app.UseMiddleware<SecurityHeadersMiddleware>();
     app.UseCors("ConfiguredOrigins");
     app.UseRateLimiter();
     app.UseAuthentication();
