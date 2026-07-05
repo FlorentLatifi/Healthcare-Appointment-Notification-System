@@ -26,12 +26,15 @@ using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Healthcare.Presentation.API.Responses;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 // ============================================
 // SERILOG CONFIGURATION
 // ============================================
 Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {CorrelationId}{NewLine}{Exception}")
     .WriteTo.File("logs/healthcare-api-.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
@@ -245,6 +248,21 @@ try
     builder.Services.AddSingleton<IHealthcareRepositoryFactory,
         InMemoryRepositoryFactory>();
     // ============================================
+    // OPEN TELEMETRY (Distributed Tracing)
+    // ============================================
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource => resource.AddService("HealthcareAPI"))
+        .WithTracing(tracing => tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddEntityFrameworkCoreInstrumentation()
+            .AddConsoleExporter());
+    // ── PRODUCTION ───────────────────────────────────
+    // Replace .AddConsoleExporter() with:
+    // .AddOtlpExporter(options => options.Endpoint = new Uri("http://jaeger:4317"))
+    // Requires OpenTelemetry.Exporter.OpenTelemetryProtocol package.
+
+    // ============================================
     // CORS
     // ============================================
     var allowedOrigins = builder.Configuration
@@ -290,6 +308,7 @@ try
     // MIDDLEWARE PIPELINE
     // ============================================
     app.UseMiddleware<ExceptionHandlingMiddleware>();
+    app.UseMiddleware<CorrelationIdMiddleware>();
 
     app.UseSwagger();
     app.UseSwaggerUI(options =>
