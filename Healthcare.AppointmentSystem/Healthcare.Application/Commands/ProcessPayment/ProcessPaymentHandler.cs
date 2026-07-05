@@ -4,42 +4,27 @@ using Healthcare.Application.Ports.Payments;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.ValueObjects;
+using Microsoft.Extensions.Logging;
 
 namespace Healthcare.Application.Commands.ProcessPayment;
 
-/// <summary>
-/// Handler for ProcessPaymentCommand.
-/// </summary>
-/// <remarks>
-/// Design Pattern: Command Handler + Unit of Work
-/// 
-/// Responsibilities:
-/// 1. Validate appointment exists
-/// 2. Check payment hasn't already been processed
-/// 3. Confirm payment with gateway (Stripe)
-/// 4. Create Payment entity
-/// 5. Auto-confirm appointment on successful payment
-/// 6. Dispatch domain events
-/// 
-/// Transaction Boundary:
-/// All database operations happen in a single transaction.
-/// If payment succeeds but DB save fails → payment is still captured
-/// (we'd need idempotency to handle this properly).
-/// </remarks>
 public sealed class ProcessPaymentHandler : ICommandHandler<ProcessPaymentCommand, Result<int>>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPaymentGateway _paymentGateway;
     private readonly IDomainEventDispatcher _eventDispatcher;
+    private readonly ILogger<ProcessPaymentHandler> _logger;
 
     public ProcessPaymentHandler(
         IUnitOfWork unitOfWork,
         IPaymentGateway paymentGateway,
-        IDomainEventDispatcher eventDispatcher)
+        IDomainEventDispatcher eventDispatcher,
+        ILogger<ProcessPaymentHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _paymentGateway = paymentGateway;
         _eventDispatcher = eventDispatcher;
+        _logger = logger;
     }
 
     public async Task<Result<int>> HandleAsync(
@@ -48,7 +33,6 @@ public sealed class ProcessPaymentHandler : ICommandHandler<ProcessPaymentComman
     {
         try
         {
-            // 1. Fetch appointment
             var appointment = await _unitOfWork.Appointments
                 .GetByIdAsync(command.AppointmentId, cancellationToken);
 
@@ -57,7 +41,6 @@ public sealed class ProcessPaymentHandler : ICommandHandler<ProcessPaymentComman
                 return Result<int>.Failure($"Appointment with ID {command.AppointmentId} not found.");
             }
 
-            // 2. Check if payment already exists
             var existingPayment = await _unitOfWork.Payments
                 .GetByAppointmentIdAsync(command.AppointmentId, cancellationToken);
 
@@ -66,7 +49,6 @@ public sealed class ProcessPaymentHandler : ICommandHandler<ProcessPaymentComman
                 return Result<int>.Failure("Payment has already been processed for this appointment.");
             }
 
-            // 3. Confirm payment with gateway
             var confirmationResult = await _paymentGateway.ConfirmPaymentAsync(
                 command.PaymentIntentId,
                 cancellationToken);
@@ -78,7 +60,6 @@ public sealed class ProcessPaymentHandler : ICommandHandler<ProcessPaymentComman
 
             var confirmation = confirmationResult.Value;
 
-            // 4. Create or update payment entity
             Payment payment;
 
             if (existingPayment == null)
@@ -95,23 +76,22 @@ public sealed class ProcessPaymentHandler : ICommandHandler<ProcessPaymentComman
                 payment = existingPayment;
             }
 
-            // 5. Update payment status based on gateway response
             if (confirmation.Succeeded)
             {
                 var transactionId = TransactionId.Create(confirmation.TransactionId);
                 payment.MarkAsSucceeded(transactionId, confirmation.PaymentMethod);
 
-                // Auto-confirm appointment
                 try
                 {
                     appointment.Confirm();
                 }
                 catch (Exception ex)
                 {
-                    // Payment succeeded but appointment confirmation failed
-                    // Log this for manual intervention
-                    return Result<int>.Failure(
-                        $"Payment succeeded but appointment confirmation failed: {ex.Message}");
+                    _logger.LogWarning(
+                        "Payment {PaymentId} for appointment {AppointmentId} succeeded but auto-confirm failed: {Error}",
+                        payment.Id,
+                        appointment.Id,
+                        ex.Message);
                 }
             }
             else
@@ -119,15 +99,16 @@ public sealed class ProcessPaymentHandler : ICommandHandler<ProcessPaymentComman
                 payment.MarkAsFailed(confirmation.FailureReason ?? "Unknown error");
             }
 
-            // 6. Save changes
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 7. Dispatch domain events
             await _eventDispatcher.DispatchAsync(payment.DomainEvents, cancellationToken);
             payment.ClearDomainEvents();
 
-            await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
-            appointment.ClearDomainEvents();
+            if (appointment.DomainEvents.Count > 0)
+            {
+                await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
+                appointment.ClearDomainEvents();
+            }
 
             return confirmation.Succeeded
                 ? Result<int>.Success(payment.Id)
