@@ -158,10 +158,21 @@ public static class AdapterServiceExtensions
         services.AddSingleton<IDistributedLockService, InMemoryLockService>();
 
         // DESIGN PATTERN: Singleton (Creational)
-       
-           services.AddSingleton<IAppointmentCodeGenerator>(
-               _ => AppointmentCodeGenerator.Instance);
 
+        services.AddSingleton<IAppointmentCodeGenerator>(
+            _ => AppointmentCodeGenerator.Instance);
+
+        // Register Redis for refresh token storage (gracefully handles missing Redis)
+        services.AddSingleton<IConnectionMultiplexer>(provider =>
+        {
+            var config = provider.GetRequiredService<IConfiguration>();
+            var connectionString = config.GetSection("Redis")["ConnectionString"] ?? "localhost:6379";
+            var configOptions = ConfigurationOptions.Parse(connectionString);
+            configOptions.AbortOnConnectFail = false;
+            configOptions.ConnectTimeout = 5000;
+            configOptions.SyncTimeout = 5000;
+            return ConnectionMultiplexer.Connect(configOptions);
+        });
 
         return services;
     }

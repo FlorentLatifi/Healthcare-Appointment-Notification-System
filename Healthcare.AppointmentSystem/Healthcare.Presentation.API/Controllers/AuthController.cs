@@ -9,15 +9,6 @@ using System.Security.Claims;
 
 namespace Healthcare.Presentation.API.Controllers;
 
-/// <summary>
-/// Controller for authentication and authorization.
-/// </summary>
-/// <remarks>
-/// REST Endpoints:
-/// - POST /api/auth/register - Register new user
-/// - POST /api/auth/login    - Login and get JWT token
-/// - GET  /api/auth/me       - Get current user info (requires auth)
-/// </remarks>
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
@@ -35,14 +26,6 @@ public sealed class AuthController : ControllerBase
         _logger = logger;
     }
 
-    /// <summary>
-    /// Registers a new user.
-    /// </summary>
-    /// <param name="request">Registration details.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>User ID if successful.</returns>
-    /// <response code="201">User registered successfully.</response>
-    /// <response code="400">Invalid data or username/email already exists.</response>
     [HttpPost("register")]
     [AllowAnonymous]
     [EnableRateLimiting("AuthPolicy")]
@@ -81,14 +64,6 @@ public sealed class AuthController : ControllerBase
                 "User registered successfully. Please login to get your token."));
     }
 
-    /// <summary>
-    /// Authenticates a user and returns JWT token.
-    /// </summary>
-    /// <param name="request">Login credentials.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>JWT token if successful.</returns>
-    /// <response code="200">Login successful.</response>
-    /// <response code="400">Invalid credentials.</response>
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting("AuthPolicy")]
@@ -116,14 +91,14 @@ public sealed class AuthController : ControllerBase
 
         _logger.LogInformation("User {Username} logged in successfully", request.Username);
 
-        // Parse token to extract claims
         var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-        var jwtToken = handler.ReadJwtToken(result.Value);
+        var jwtToken = handler.ReadJwtToken(result.Value.AccessToken);
 
         var response = new LoginResponse
         {
-            Token = result.Value,
-            ExpiresAt = jwtToken.ValidTo,
+            Token = result.Value.AccessToken,
+            RefreshToken = result.Value.RefreshToken,
+            ExpiresAt = result.Value.ExpiresAt,
             Username = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "",
             Role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? ""
         };
@@ -133,12 +108,73 @@ public sealed class AuthController : ControllerBase
             "Login successful"));
     }
 
-    /// <summary>
-    /// Gets current authenticated user information.
-    /// </summary>
-    /// <returns>Current user details.</returns>
-    /// <response code="200">User information retrieved.</response>
-    /// <response code="401">Not authenticated.</response>
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    [EnableRateLimiting("AuthPolicy")]
+    [ProducesResponseType(typeof(ApiResponse<LoginResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Refresh(
+        [FromBody] RefreshTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Token refresh requested");
+
+        var result = await _authService.RefreshTokenAsync(
+            request.RefreshToken,
+            cancellationToken);
+
+        if (result.IsFailure)
+        {
+            _logger.LogWarning("Token refresh failed: {Error}", result.Error);
+            return BadRequest(ApiResponse<LoginResponse>.ErrorResponse(
+                result.Error,
+                "Token refresh failed"));
+        }
+
+        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+        var jwtToken = handler.ReadJwtToken(result.Value.AccessToken);
+
+        var response = new LoginResponse
+        {
+            Token = result.Value.AccessToken,
+            RefreshToken = result.Value.RefreshToken,
+            ExpiresAt = result.Value.ExpiresAt,
+            Username = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "",
+            Role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? ""
+        };
+
+        return Ok(ApiResponse<LoginResponse>.SuccessResponse(
+            response,
+            "Token refreshed successfully"));
+    }
+
+    [HttpPost("logout")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Logout(
+        [FromBody] RefreshTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Logout requested");
+
+        var result = await _authService.RevokeTokenAsync(
+            request.RefreshToken,
+            cancellationToken);
+
+        if (result.IsFailure)
+        {
+            _logger.LogWarning("Logout failed: {Error}", result.Error);
+            return BadRequest(ApiResponse.ErrorResponse(
+                result.Error,
+                "Logout failed"));
+        }
+
+        _logger.LogInformation("User logged out successfully");
+        return Ok(ApiResponse.SuccessResponse("Logout successful. Refresh token revoked."));
+    }
+
     [HttpGet("me")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]

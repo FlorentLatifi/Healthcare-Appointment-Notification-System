@@ -11,6 +11,11 @@ public sealed class LoginResponse
     public string Token { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the refresh token.
+    /// </summary>
+    public string RefreshToken { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the token expiration time.
     /// </summary>
     public DateTime ExpiresAt { get; set; }

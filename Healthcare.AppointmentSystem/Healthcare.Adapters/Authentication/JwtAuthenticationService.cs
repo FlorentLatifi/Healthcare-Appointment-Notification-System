@@ -6,38 +6,39 @@ using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
+using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Healthcare.Adapters.Authentication;
 
-/// <summary>
-/// JWT implementation of IAuthenticationService.
-/// </summary>
-/// <remarks>
-/// Design Pattern: Adapter Pattern
-/// 
-/// This ADAPTER implements the PORT defined in Application layer.
-/// It knows HOW to work with JWT, but Application layer doesn't care.
-/// </remarks>
 public sealed class JwtAuthenticationService : IAuthenticationService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher _passwordHasher;
     private readonly JwtSettings _jwtSettings;
     private readonly ILogger<JwtAuthenticationService> _logger;
+    private readonly IDatabase? _redisDb;
+    private readonly ConcurrentDictionary<string, string> _memoryStore;
+
+    private const string RefreshTokenKeyPrefix = "refresh_token:";
 
     public JwtAuthenticationService(
         IUnitOfWork unitOfWork,
         IPasswordHasher passwordHasher,
         JwtSettings jwtSettings,
-        ILogger<JwtAuthenticationService> logger)
+        ILogger<JwtAuthenticationService> logger,
+        IConnectionMultiplexer? redis = null)
     {
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
         _jwtSettings = jwtSettings;
         _logger = logger;
+        _redisDb = redis?.GetDatabase();
+        _memoryStore = new ConcurrentDictionary<string, string>();
     }
 
     public async Task<Result<int>> RegisterAsync(
@@ -49,7 +50,6 @@ public sealed class JwtAuthenticationService : IAuthenticationService
     {
         try
         {
-            // 1. Check if user already exists
             var existingUser = await _unitOfWork.Users.GetByUsernameAsync(username, cancellationToken);
             if (existingUser != null)
             {
@@ -62,22 +62,15 @@ public sealed class JwtAuthenticationService : IAuthenticationService
                 return Result<int>.Failure($"Email '{email}' is already registered.");
             }
 
-            // 2. Parse role
             if (!Enum.TryParse<UserRole>(role, true, out var userRole))
             {
                 return Result<int>.Failure($"Invalid role: {role}. Valid roles: Patient, Doctor, Admin");
             }
 
-            // 3. Create value objects
             var emailVo = Email.Create(email);
-
-            // 4. Hash password
             var passwordHash = _passwordHasher.HashPassword(password);
-
-            // 5. Create user entity
             var user = User.Create(username, emailVo, passwordHash, userRole);
 
-            // 6. Persist
             await _unitOfWork.Users.AddAsync(user, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -92,46 +85,115 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         }
     }
 
-    public async Task<Result<string>> LoginAsync(
+    public async Task<Result<LoginResult>> LoginAsync(
         string username,
         string password,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            // 1. Find user
             var user = await _unitOfWork.Users.GetByUsernameAsync(username, cancellationToken);
             if (user == null)
             {
                 _logger.LogWarning("Login failed: User {Username} not found", username);
-                return Result<string>.Failure("Invalid username or password.");
+                return Result<LoginResult>.Failure("Invalid username or password.");
             }
 
-            // 2. Verify password
             if (!_passwordHasher.VerifyPassword(password, user.PasswordHash))
             {
                 _logger.LogWarning("Login failed: Invalid password for user {Username}", username);
-                return Result<string>.Failure("Invalid username or password.");
+                return Result<LoginResult>.Failure("Invalid username or password.");
             }
 
-            // 3. Check if user is active
             if (!user.IsActive)
             {
                 _logger.LogWarning("Login failed: User {Username} is deactivated", username);
-                return Result<string>.Failure("Account is deactivated.");
+                return Result<LoginResult>.Failure("Account is deactivated.");
             }
 
-            // 4. Generate JWT token
-            var token = GenerateJwtToken(user);
+            var accessToken = GenerateJwtToken(user);
+            var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationInMinutes);
+            var refreshToken = await GenerateAndStoreRefreshTokenAsync(user.Id.ToString());
 
             _logger.LogInformation("User {Username} logged in successfully", username);
 
-            return Result<string>.Success(token);
+            return Result<LoginResult>.Success(new LoginResult
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                ExpiresAt = expiresAt
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Login failed for user {Username}", username);
-            return Result<string>.Failure($"Login failed: {ex.Message}");
+            return Result<LoginResult>.Failure($"Login failed: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<LoginResult>> RefreshTokenAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var tokenHash = HashToken(refreshToken);
+            var userId = await ConsumeRefreshTokenAsync(tokenHash);
+
+            if (userId == null)
+            {
+                _logger.LogWarning("Refresh token reuse or invalid token attempted");
+                return Result<LoginResult>.Failure("Invalid or expired refresh token.");
+            }
+
+            if (!int.TryParse(userId, out var parsedUserId))
+            {
+                return Result<LoginResult>.Failure("Invalid refresh token data.");
+            }
+
+            var user = await _unitOfWork.Users.GetByIdAsync(parsedUserId, cancellationToken);
+            if (user == null || !user.IsActive)
+            {
+                _logger.LogWarning("Refresh failed: User {UserId} not found or inactive", userId);
+                return Result<LoginResult>.Failure("User account not found or deactivated.");
+            }
+
+            var accessToken = GenerateJwtToken(user);
+            var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationInMinutes);
+            var newRefreshToken = await GenerateAndStoreRefreshTokenAsync(user.Id.ToString());
+
+            _logger.LogInformation("Token refreshed for user {Username}", user.Username);
+
+            return Result<LoginResult>.Success(new LoginResult
+            {
+                AccessToken = accessToken,
+                RefreshToken = newRefreshToken,
+                ExpiresAt = expiresAt
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Refresh token failed");
+            return Result<LoginResult>.Failure($"Token refresh failed: {ex.Message}");
+        }
+    }
+
+    public async Task<Result> RevokeTokenAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var tokenHash = HashToken(refreshToken);
+            await DeleteRefreshTokenAsync(tokenHash);
+
+            _logger.LogInformation("Refresh token revoked");
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to revoke refresh token");
+            return Result.Failure($"Token revocation failed: {ex.Message}");
         }
     }
 
@@ -172,9 +234,6 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         }
     }
 
-    /// <summary>
-    /// Generates a JWT token for the user.
-    /// </summary>
     private string GenerateJwtToken(User user)
     {
         var key = Encoding.UTF8.GetBytes(_jwtSettings.Secret);
@@ -201,5 +260,85 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         var token = tokenHandler.CreateToken(tokenDescriptor);
 
         return tokenHandler.WriteToken(token);
+    }
+
+    private static string GenerateRefreshTokenValue()
+    {
+        var randomBytes = new byte[32];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomBytes);
+        return Convert.ToBase64String(randomBytes);
+    }
+
+    private static string HashToken(string token)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    private async Task<string> GenerateAndStoreRefreshTokenAsync(string userId)
+    {
+        var refreshToken = GenerateRefreshTokenValue();
+        var tokenHash = HashToken(refreshToken);
+        var ttl = TimeSpan.FromDays(_jwtSettings.RefreshTokenExpirationInDays);
+
+        if (_redisDb != null)
+        {
+            await _redisDb.StringSetAsync(
+                $"{RefreshTokenKeyPrefix}{tokenHash}",
+                userId,
+                ttl);
+        }
+        else
+        {
+            _memoryStore.TryAdd(tokenHash, userId);
+            _ = ScheduleMemoryCleanup(tokenHash, ttl);
+        }
+
+        return refreshToken;
+    }
+
+    private async Task<string?> ConsumeRefreshTokenAsync(string tokenHash)
+    {
+        if (_redisDb != null)
+        {
+            var script = @"
+                local val = redis.call('GET', KEYS[1])
+                if val then
+                    redis.call('DEL', KEYS[1])
+                    return val
+                end
+                return nil";
+
+            var key = $"{RefreshTokenKeyPrefix}{tokenHash}";
+            var result = await _redisDb.ScriptEvaluateAsync(script, new RedisKey[] { key });
+            return result.IsNull ? null : (string?)result;
+        }
+
+        if (_memoryStore.TryRemove(tokenHash, out var userId))
+        {
+            return userId;
+        }
+
+        return null;
+    }
+
+    private async Task DeleteRefreshTokenAsync(string tokenHash)
+    {
+        if (_redisDb != null)
+        {
+            var key = $"{RefreshTokenKeyPrefix}{tokenHash}";
+            await _redisDb.KeyDeleteAsync(key);
+        }
+        else
+        {
+            _memoryStore.TryRemove(tokenHash, out _);
+        }
+    }
+
+    private async Task ScheduleMemoryCleanup(string tokenHash, TimeSpan ttl)
+    {
+        await Task.Delay(ttl);
+        _memoryStore.TryRemove(tokenHash, out _);
     }
 }
