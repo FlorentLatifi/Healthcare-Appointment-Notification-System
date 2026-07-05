@@ -5,6 +5,10 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
+import DoctorsListPage from './pages/DoctorsListPage';
+import BookAppointmentPage from './pages/BookAppointmentPage';
+import MyAppointmentsPage from './pages/MyAppointmentsPage';
+import CreatePatientProfilePage from './pages/CreatePatientProfilePage';
 
 export default function App() {
   return (
@@ -16,6 +20,18 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/dashboard" element={
             <ProtectedRoute><DashboardPage /></ProtectedRoute>
+          } />
+          <Route path="/doctors" element={
+            <ProtectedRoute><DoctorsListPage /></ProtectedRoute>
+          } />
+          <Route path="/book-appointment/:doctorId" element={
+            <ProtectedRoute><BookAppointmentPage /></ProtectedRoute>
+          } />
+          <Route path="/my-appointments" element={
+            <ProtectedRoute><MyAppointmentsPage /></ProtectedRoute>
+          } />
+          <Route path="/create-patient" element={
+            <ProtectedRoute><CreatePatientProfilePage /></ProtectedRoute>
           } />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
