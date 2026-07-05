@@ -174,6 +174,10 @@ try
     // ============================================
     // RATE LIMITING
     // ============================================
+    var globalRateLimit = builder.Configuration.GetValue<int>("RateLimiting:GlobalPermitLimit", 100);
+    var authRateLimit = builder.Configuration.GetValue<int>("RateLimiting:AuthPermitLimit", 5);
+    var rateLimitWindowMinutes = builder.Configuration.GetValue<int>("RateLimiting:WindowMinutes", 1);
+
     builder.Services.AddRateLimiter(options =>
     {
         options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
@@ -187,9 +191,9 @@ try
                 factory: partition => new FixedWindowRateLimiterOptions
                 {
                     AutoReplenishment = true,
-                    PermitLimit = 100,
+                    PermitLimit = globalRateLimit,
                     QueueLimit = 0,
-                    Window = TimeSpan.FromMinutes(1)
+                    Window = TimeSpan.FromMinutes(rateLimitWindowMinutes)
                 });
         });
 
@@ -204,9 +208,9 @@ try
                 factory: partition => new FixedWindowRateLimiterOptions
                 {
                     AutoReplenishment = true,
-                    PermitLimit = 5,
+                    PermitLimit = authRateLimit,
                     QueueLimit = 0,
-                    Window = TimeSpan.FromMinutes(1)
+                    Window = TimeSpan.FromMinutes(rateLimitWindowMinutes)
                 });
         });
 
