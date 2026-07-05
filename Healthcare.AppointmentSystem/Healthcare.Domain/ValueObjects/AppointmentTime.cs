@@ -3,24 +3,21 @@
 namespace Healthcare.Domain.ValueObjects;
 
 /// <summary>
-/// Represents a valid appointment time with business rules enforced.
+/// Represents a valid appointment time with global business rules enforced.
+/// Doctor-specific working hours are validated separately by Doctor.IsAvailable.
 /// </summary>
 /// <remarks>
 /// Design Pattern: Value Object Pattern
 /// 
-/// Business Rules Enforced:
+/// Global Business Rules (doctor-agnostic):
 /// 1. Must be in the future (cannot book appointments in the past)
-/// 2. Must be during working hours (8:00 AM - 6:00 PM)
+/// 2. Must be at least 1 hour in advance (no same-hour bookings)
 /// 3. Must be on 30-minute intervals (:00 or :30 minutes only)
-/// 4. Cannot be on weekends (Saturday/Sunday)
-/// 5. Must be at least 1 hour in advance (no same-hour bookings)
 /// 
-/// This is a "self-validating" value object - invalid times cannot exist.
+/// Doctor-specific rules (working hours, day off) are enforced by Doctor.IsAvailable.
 /// </remarks>
 public sealed class AppointmentTime : ValueObject
 {
-    private const int WorkingHoursStart = 8;  // 8:00 AM
-    private const int WorkingHoursEnd = 18;    // 6:00 PM
     private const int MinimumAdvanceHours = 1; // At least 1 hour advance booking
 
     /// <summary>
@@ -37,60 +34,40 @@ public sealed class AppointmentTime : ValueObject
     }
 
     /// <summary>
-    /// Creates a new AppointmentTime value object with full business rule validation.
+    /// Creates a new AppointmentTime value object with global business rule validation.
+    /// Doctor-specific rules (working hours, days off) are validated separately.
     /// </summary>
     /// <param name="dateTime">The desired appointment date and time.</param>
     /// <returns>A valid AppointmentTime value object.</returns>
     /// <exception cref="InvalidAppointmentTimeException">
-    /// Thrown when the time violates any business rule.
+    /// Thrown when the time violates any global business rule.
     /// </exception>
     public static AppointmentTime Create(DateTime dateTime)
     {
-        // Convert to UTC for consistent storage
         var utcDateTime = dateTime.Kind == DateTimeKind.Utc
             ? dateTime
             : dateTime.ToUniversalTime();
 
-        // For validation, convert to local time
         var localDateTime = utcDateTime.ToLocalTime();
 
-        // Rule 1: Must be in the future
         if (localDateTime <= DateTime.Now)
         {
             throw new InvalidAppointmentTimeException(
                 "Appointment time must be in the future.");
         }
 
-        // Rule 2: Must be at least 1 hour in advance
         if (localDateTime <= DateTime.Now.AddHours(MinimumAdvanceHours))
         {
             throw new InvalidAppointmentTimeException(
                 $"Appointments must be booked at least {MinimumAdvanceHours} hour(s) in advance.");
         }
 
-        // Rule 3: Cannot be on weekends
-        if (localDateTime.DayOfWeek == DayOfWeek.Saturday ||
-            localDateTime.DayOfWeek == DayOfWeek.Sunday)
-        {
-            throw new InvalidAppointmentTimeException(
-                "Appointments cannot be scheduled on weekends.");
-        }
-
-        // Rule 4: Must be during working hours
-        if (localDateTime.Hour < WorkingHoursStart || localDateTime.Hour >= WorkingHoursEnd)
-        {
-            throw new InvalidAppointmentTimeException(
-                $"Appointments must be scheduled between {WorkingHoursStart}:00 and {WorkingHoursEnd}:00.");
-        }
-
-        // Rule 5: Must be on 30-minute intervals
         if (localDateTime.Minute != 0 && localDateTime.Minute != 30)
         {
             throw new InvalidAppointmentTimeException(
                 "Appointments must be scheduled on the hour (:00) or half-hour (:30).");
         }
 
-        // Rule 6: Seconds and milliseconds must be zero
         if (localDateTime.Second != 0 || localDateTime.Millisecond != 0)
         {
             throw new InvalidAppointmentTimeException(

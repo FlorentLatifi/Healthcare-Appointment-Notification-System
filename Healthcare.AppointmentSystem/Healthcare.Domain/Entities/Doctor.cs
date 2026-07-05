@@ -1,6 +1,9 @@
 ﻿using Healthcare.Domain.Common;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Healthcare.Domain.Entities;
 
@@ -13,6 +16,7 @@ namespace Healthcare.Domain.Entities;
 public sealed class Doctor : Entity
 {
     private readonly List<Specialty> _specialties = new();
+    private readonly List<DoctorWorkingHours> _weeklySchedule = new();
 
     /// <summary>
     /// Gets the doctor's first name.
@@ -45,6 +49,11 @@ public sealed class Doctor : Entity
     public IReadOnlyCollection<Specialty> Specialties => _specialties.AsReadOnly();
 
     /// <summary>
+    /// Gets the doctor's weekly working schedule.
+    /// </summary>
+    public IReadOnlyCollection<DoctorWorkingHours> WeeklySchedule => _weeklySchedule.AsReadOnly();
+
+    /// <summary>
     /// Gets the doctor's consultation fee.
     /// </summary>
     public Money ConsultationFee { get; private set; } = null!;
@@ -70,7 +79,10 @@ public sealed class Doctor : Entity
     public string FullName => $"Dr. {FirstName} {LastName}";
 
     // Private parameterless constructor for EF Core
-    private Doctor() { }
+    private Doctor()
+    {
+        InitializeDefaultSchedule();
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Doctor"/> class.
@@ -95,6 +107,7 @@ public sealed class Doctor : Entity
         IsAcceptingPatients = true;
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
+        InitializeDefaultSchedule();
     }
 
     /// <summary>
@@ -294,9 +307,18 @@ public sealed class Doctor : Entity
             return false;
         }
 
-        var requestedTime = appointmentTime.Value;
-        var thirtyMinutesBefore = requestedTime.AddMinutes(-30);
-        var thirtyMinutesAfter = requestedTime.AddMinutes(30);
+        var localTime = appointmentTime.Value.ToLocalTime();
+        var dayOfWeek = localTime.DayOfWeek;
+        var timeOfDay = TimeOnly.FromDateTime(localTime);
+
+        var schedule = _weeklySchedule.FirstOrDefault(s => s.DayOfWeek == dayOfWeek);
+        if (schedule == null || !schedule.IsWorkingDay || !schedule.IsWithinHours(timeOfDay))
+        {
+            return false;
+        }
+
+        var thirtyMinutesBefore = appointmentTime.Value.AddMinutes(-30);
+        var thirtyMinutesAfter = appointmentTime.Value.AddMinutes(30);
 
         var hasConflict = existingAppointments.Any(apt =>
             apt.Status != AppointmentStatus.Cancelled &&
@@ -305,6 +327,57 @@ public sealed class Doctor : Entity
             apt.ScheduledTime.Value < thirtyMinutesAfter);
 
         return !hasConflict;
+    }
+
+    /// <summary>
+    /// Initializes the default weekly schedule (Mon-Fri 8:00-18:00).
+    /// </summary>
+    private void InitializeDefaultSchedule()
+    {
+        _weeklySchedule.Clear();
+        var workDays = new[]
+        {
+            DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+            DayOfWeek.Thursday, DayOfWeek.Friday
+        };
+
+        foreach (var day in workDays)
+        {
+            _weeklySchedule.Add(
+                DoctorWorkingHours.Create(day, new TimeOnly(8, 0), new TimeOnly(18, 0)));
+        }
+
+        _weeklySchedule.Add(DoctorWorkingHours.CreateDayOff(DayOfWeek.Saturday));
+        _weeklySchedule.Add(DoctorWorkingHours.CreateDayOff(DayOfWeek.Sunday));
+    }
+
+    /// <summary>
+    /// Sets working hours for a specific day of the week.
+    /// </summary>
+    public void SetWorkingHours(DayOfWeek day, TimeOnly startTime, TimeOnly endTime)
+    {
+        if (startTime >= endTime)
+            throw new ArgumentException("Start time must be before end time.", nameof(startTime));
+
+        var existing = _weeklySchedule.FirstOrDefault(s => s.DayOfWeek == day);
+        if (existing != null)
+            _weeklySchedule.Remove(existing);
+
+        _weeklySchedule.Add(DoctorWorkingHours.Create(day, startTime, endTime));
+        MarkAsModified();
+    }
+
+    /// <summary>
+    /// Marks a specific day of the week as a day off.
+    /// </summary>
+    public void MarkDayOff(DayOfWeek day)
+    {
+        var existing = _weeklySchedule.FirstOrDefault(s => s.DayOfWeek == day);
+        if (existing != null)
+            _weeklySchedule.Remove(existing);
+
+        _weeklySchedule.Add(DoctorWorkingHours.CreateDayOff(day));
+        MarkAsModified();
     }
 
     /// <summary>

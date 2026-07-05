@@ -101,5 +101,17 @@ public class DoctorConfiguration : IEntityTypeConfiguration<Doctor>
 
         // Ignore Specialties collection (we use backing field _specialtiesJson)
         builder.Ignore(d => d.Specialties);
+
+        // Owned Collection: WeeklySchedule
+        builder.OwnsMany(d => d.WeeklySchedule, schedule =>
+        {
+            schedule.WithOwner().HasForeignKey("DoctorId");
+            schedule.ToTable("DoctorWorkingHours");
+            schedule.HasKey("Id");
+            schedule.Property(s => s.DayOfWeek).IsRequired();
+            schedule.Property(s => s.StartTime).IsRequired(false);
+            schedule.Property(s => s.EndTime).IsRequired(false);
+            schedule.Property(s => s.IsWorkingDay).IsRequired();
+        });
     }
 }

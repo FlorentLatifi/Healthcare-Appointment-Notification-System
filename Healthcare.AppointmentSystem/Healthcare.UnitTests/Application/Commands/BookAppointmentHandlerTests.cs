@@ -36,6 +36,17 @@ public class BookAppointmentHandlerTests
         _eventDispatcherMock = new Mock<IDomainEventDispatcher>();
         _lockServiceMock = new Mock<IDistributedLockService>();
 
+        var lockHandleMock = new Mock<ILockHandle>();
+        lockHandleMock.Setup(h => h.LockKey).Returns("test-lock");
+        lockHandleMock.Setup(h => h.AcquiredAt).Returns(DateTime.UtcNow);
+
+        _lockServiceMock
+            .Setup(l => l.AcquireLockAsync(
+                It.IsAny<string>(),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(lockHandleMock.Object);
+
         // Use the real Singleton instance — proves it works end-to-end
         _codeGenerator = AppointmentCodeGenerator.Instance;
 
@@ -210,6 +221,63 @@ public class BookAppointmentHandlerTests
     #region Edge Cases
 
     [Fact]
+    public async Task HandleAsync_WhenDoctorNotInWorkingHours_ShouldReturnFailure()
+    {
+        // Arrange
+        var patient = TestDataBuilder.APatient().Build();
+        var doctor = TestDataBuilder.ADoctor().Build();
+        doctor.SetWorkingHours(DayOfWeek.Monday, new TimeOnly(9, 0), new TimeOnly(12, 0));
+        var scheduledTime = GetNextWeekday(DayOfWeek.Monday).Date.AddHours(14);
+
+        SetupPatientRepositoryMock(patient);
+        SetupDoctorRepositoryMock(doctor);
+        SetupAppointmentRepositoryMock(new List<Appointment>());
+
+        var command = new BookAppointmentCommand
+        {
+            PatientId = patient.Id,
+            DoctorId = doctor.Id,
+            ScheduledTime = scheduledTime,
+            Reason = "Test reason that is long enough"
+        };
+
+        // Act
+        var result = await _handler.HandleAsync(command);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("not available");
+    }
+
+    [Fact]
+    public async Task HandleAsync_OnDoctorDayOff_ShouldReturnFailure()
+    {
+        // Arrange
+        var patient = TestDataBuilder.APatient().Build();
+        var doctor = TestDataBuilder.ADoctor().Build();
+        var scheduledTime = GetNextWeekday(DayOfWeek.Saturday).Date.AddHours(10);
+
+        SetupPatientRepositoryMock(patient);
+        SetupDoctorRepositoryMock(doctor);
+        SetupAppointmentRepositoryMock(new List<Appointment>());
+
+        var command = new BookAppointmentCommand
+        {
+            PatientId = patient.Id,
+            DoctorId = doctor.Id,
+            ScheduledTime = scheduledTime,
+            Reason = "Test reason that is long enough"
+        };
+
+        // Act
+        var result = await _handler.HandleAsync(command);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("not available");
+    }
+
+    [Fact]
     public async Task HandleAsync_WithInactivePatient_ShouldReturnFailure()
     {
         // Arrange
@@ -329,6 +397,14 @@ public class BookAppointmentHandlerTests
             futureDate = futureDate.AddDays(1);
         }
         return futureDate.AddHours(10);
+    }
+
+    private static DateTime GetNextWeekday(DayOfWeek targetDay)
+    {
+        var today = DateTime.Now.Date;
+        var daysUntilTarget = ((int)targetDay - (int)today.DayOfWeek + 7) % 7;
+        if (daysUntilTarget == 0) daysUntilTarget = 7;
+        return today.AddDays(daysUntilTarget);
     }
 
     #endregion

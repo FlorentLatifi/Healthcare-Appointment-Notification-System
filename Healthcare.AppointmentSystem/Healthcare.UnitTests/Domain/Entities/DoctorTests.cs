@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using Healthcare.Domain.Common;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
@@ -653,6 +654,262 @@ public class DoctorTests
 
         // Act & Assert
         doctor.FullName.Should().Be("Dr. Jane Smith");
+    }
+
+    #endregion
+
+    #region Working Schedule Tests
+
+    [Fact]
+    public void Create_ShouldInitializeDefaultSchedule_MonToFri8To18()
+    {
+        // Arrange
+        var doctor = CreateDefaultDoctor();
+
+        // Assert
+        doctor.WeeklySchedule.Should().HaveCount(7);
+
+        var mon = doctor.WeeklySchedule.First(s => s.DayOfWeek == DayOfWeek.Monday);
+        mon.IsWorkingDay.Should().BeTrue();
+        mon.StartTime.Should().Be(new TimeOnly(8, 0));
+        mon.EndTime.Should().Be(new TimeOnly(18, 0));
+
+        var sat = doctor.WeeklySchedule.First(s => s.DayOfWeek == DayOfWeek.Saturday);
+        sat.IsWorkingDay.Should().BeFalse();
+        sat.StartTime.Should().BeNull();
+        sat.EndTime.Should().BeNull();
+
+        var sun = doctor.WeeklySchedule.First(s => s.DayOfWeek == DayOfWeek.Sunday);
+        sun.IsWorkingDay.Should().BeFalse();
+    }
+
+    [Fact]
+    public void SetWorkingHours_WithValidHours_ShouldUpdateSchedule()
+    {
+        // Arrange
+        var doctor = CreateDefaultDoctor();
+        var start = new TimeOnly(9, 0);
+        var end = new TimeOnly(17, 0);
+
+        // Act
+        doctor.SetWorkingHours(DayOfWeek.Monday, start, end);
+
+        // Assert
+        var monday = doctor.WeeklySchedule.First(s => s.DayOfWeek == DayOfWeek.Monday);
+        monday.StartTime.Should().Be(start);
+        monday.EndTime.Should().Be(end);
+        monday.IsWorkingDay.Should().BeTrue();
+        doctor.ModifiedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void SetWorkingHours_WithStartAfterEnd_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var doctor = CreateDefaultDoctor();
+
+        // Act
+        Action act = () => doctor.SetWorkingHours(
+            DayOfWeek.Monday, new TimeOnly(18, 0), new TimeOnly(8, 0));
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*Start time must be before end time*");
+    }
+
+    [Fact]
+    public void SetWorkingHours_WithEqualStartAndEnd_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var doctor = CreateDefaultDoctor();
+
+        // Act
+        Action act = () => doctor.SetWorkingHours(
+            DayOfWeek.Monday, new TimeOnly(10, 0), new TimeOnly(10, 0));
+
+        // Assert
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void MarkDayOff_ShouldSetDayAsNonWorking()
+    {
+        // Arrange
+        var doctor = CreateDefaultDoctor();
+
+        // Act
+        doctor.MarkDayOff(DayOfWeek.Wednesday);
+
+        // Assert
+        var wed = doctor.WeeklySchedule.First(s => s.DayOfWeek == DayOfWeek.Wednesday);
+        wed.IsWorkingDay.Should().BeFalse();
+        wed.StartTime.Should().BeNull();
+        wed.EndTime.Should().BeNull();
+        doctor.ModifiedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void IsAvailable_WithinWorkingHours_ShouldReturnTrue()
+    {
+        // Arrange
+        var doctor = CreateDefaultDoctor();
+        var appointmentTime = CreateAppointmentTime(DayOfWeek.Monday, 10, 0);
+        var existingAppointments = new List<Appointment>();
+
+        // Act
+        var result = doctor.IsAvailable(appointmentTime, existingAppointments);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsAvailable_OutsideWorkingHours_ShouldReturnFalse()
+    {
+        // Arrange
+        var doctor = CreateDefaultDoctor();
+        var appointmentTime = CreateAppointmentTime(DayOfWeek.Monday, 7, 0);
+        var existingAppointments = new List<Appointment>();
+
+        // Act
+        var result = doctor.IsAvailable(appointmentTime, existingAppointments);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsAvailable_OnDayOff_ShouldReturnFalse()
+    {
+        // Arrange
+        var doctor = CreateDefaultDoctor();
+        var appointmentTime = CreateAppointmentTime(DayOfWeek.Saturday, 10, 0);
+        var existingAppointments = new List<Appointment>();
+
+        // Act
+        var result = doctor.IsAvailable(appointmentTime, existingAppointments);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsAvailable_AfterCustomWorkingHours_ShouldReturnFalse()
+    {
+        // Arrange
+        var doctor = CreateDefaultDoctor();
+        doctor.SetWorkingHours(DayOfWeek.Monday, new TimeOnly(9, 0), new TimeOnly(15, 0));
+        var appointmentTime = CreateAppointmentTime(DayOfWeek.Monday, 16, 0);
+        var existingAppointments = new List<Appointment>();
+
+        // Act
+        var result = doctor.IsAvailable(appointmentTime, existingAppointments);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsAvailable_WithExistingAppointment_ShouldReturnFalse()
+    {
+        // Arrange
+        var doctor = CreateDefaultDoctor();
+        var appointmentTime = CreateAppointmentTime(DayOfWeek.Monday, 10, 0);
+        var conflictAppointment = CreateAppointmentAt(appointmentTime.Value);
+        var existingAppointments = new List<Appointment> { conflictAppointment };
+
+        // Act
+        var result = doctor.IsAvailable(appointmentTime, existingAppointments);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsAvailable_WhenDoctorInactive_ShouldReturnFalse()
+    {
+        // Arrange
+        var doctor = CreateDefaultDoctor();
+        doctor.Deactivate();
+        var appointmentTime = CreateAppointmentTime(DayOfWeek.Monday, 10, 0);
+
+        // Act
+        var result = doctor.IsAvailable(appointmentTime, new List<Appointment>());
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsAvailable_WhenNotAcceptingPatients_ShouldReturnFalse()
+    {
+        // Arrange
+        var doctor = CreateDefaultDoctor();
+        doctor.StopAcceptingPatients();
+        var appointmentTime = CreateAppointmentTime(DayOfWeek.Monday, 10, 0);
+
+        // Act
+        var result = doctor.IsAvailable(appointmentTime, new List<Appointment>());
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    #endregion
+
+    #region Schedule Test Helpers
+
+    private static Doctor CreateDefaultDoctor()
+    {
+        return Doctor.Create(
+            "Jane", "Smith",
+            Email.Create("doctor@test.com"),
+            PhoneNumber.Create("+38349987654"),
+            "LIC-12345",
+            Money.Create(50, "USD"),
+            10,
+            Specialty.GeneralPractice);
+    }
+
+    private static AppointmentTime CreateAppointmentTime(DayOfWeek day, int hour, int minute)
+    {
+        var nextDay = GetNextWeekday(day);
+        var dateTime = nextDay.Date.AddHours(hour).AddMinutes(minute);
+        return AppointmentTime.Create(dateTime);
+    }
+
+    private static Appointment CreateAppointmentAt(DateTime time)
+    {
+        var patient = Patient.Create(
+            "John", "Doe",
+            Email.Create("patient@test.com"),
+            PhoneNumber.Create("+38349123456"),
+            DateTime.Today.AddYears(-30),
+            Gender.Male,
+            Address.Create("St", "City", "State", "10000", "Country"));
+
+        var doctor = CreateDefaultDoctor();
+
+        var apt = Appointment.Create(
+            patient, doctor,
+            AppointmentTime.Create(time),
+            "Test reason for appointment that is long enough",
+            Healthcare.Domain.Services.AppointmentCodeGenerator.Instance);
+
+        typeof(Appointment).GetProperty("Id",
+            System.Reflection.BindingFlags.Public |
+            System.Reflection.BindingFlags.Instance)!
+            .SetValue(apt, 1);
+
+        return apt;
+    }
+
+    private static DateTime GetNextWeekday(DayOfWeek targetDay)
+    {
+        var today = DateTime.Now.Date;
+        var daysUntilTarget = ((int)targetDay - (int)today.DayOfWeek + 7) % 7;
+        if (daysUntilTarget == 0) daysUntilTarget = 7;
+        return today.AddDays(daysUntilTarget);
     }
 
     #endregion

@@ -6,15 +6,14 @@ using Xunit;
 namespace Healthcare.UnitTests.Domain.ValueObjects;
 
 /// <summary>
-/// Unit tests for AppointmentTime value object.
+/// Unit tests for AppointmentTime value object (global rules only).
+/// Doctor-specific rules (working hours, days off) are tested in DoctorTests.
 /// </summary>
 /// <remarks>
-/// Business Rules Tested:
+/// Global Business Rules Tested:
 /// 1. Must be in the future
-/// 2. Must be during working hours (8 AM - 6 PM)
-/// 3. Must be on 30-minute intervals (:00 or :30)
-/// 4. Cannot be on weekends
-/// 5. Must be at least 1 hour in advance
+/// 2. Must be on 30-minute intervals (:00 or :30)
+/// 3. Must be at least 1 hour in advance
 /// </remarks>
 public class AppointmentTimeTests
 {
@@ -100,43 +99,6 @@ public class AppointmentTimeTests
     }
 
     [Theory]
-    [InlineData(7, 0)]   // 7:00 AM - Too early
-    [InlineData(7, 30)]  // 7:30 AM - Too early
-    [InlineData(18, 0)]  // 6:00 PM - Too late
-    [InlineData(18, 30)] // 6:30 PM - Too late
-    [InlineData(20, 0)]  // 8:00 PM - Too late
-    public void Create_OutsideWorkingHours_ShouldThrowInvalidAppointmentTimeException(int hour, int minute)
-    {
-        // Arrange
-        var outsideHours = GetNextWeekday(DayOfWeek.Monday)
-            .Date.AddHours(hour).AddMinutes(minute);
-
-        // Act
-        Action act = () => AppointmentTime.Create(outsideHours);
-
-        // Assert
-        act.Should().Throw<InvalidAppointmentTimeException>()
-            .WithMessage("*between 8:00 and 18:00*");
-    }
-
-    [Theory]
-    [InlineData(DayOfWeek.Saturday)]
-    [InlineData(DayOfWeek.Sunday)]
-    public void Create_OnWeekend_ShouldThrowInvalidAppointmentTimeException(DayOfWeek weekendDay)
-    {
-        // Arrange
-        var weekend = GetNextWeekday(weekendDay)
-            .Date.AddHours(10);
-
-        // Act
-        Action act = () => AppointmentTime.Create(weekend);
-
-        // Assert
-        act.Should().Throw<InvalidAppointmentTimeException>()
-            .WithMessage("*cannot be scheduled on weekends*");
-    }
-
-    [Theory]
     [InlineData(10, 15)]
     [InlineData(10, 45)]
     [InlineData(14, 20)]
@@ -218,22 +180,11 @@ public class AppointmentTimeTests
             futureTime = futureTime.AddDays(1);
         }
 
-        // Ensure it's within working hours (8 AM - 6 PM)
-        var targetHour = futureTime.Hour;
-        if (targetHour < 8)
+        // Ensure it's on a weekday (default schedule Mon-Fri)
+        while (futureTime.DayOfWeek == DayOfWeek.Saturday ||
+               futureTime.DayOfWeek == DayOfWeek.Sunday)
         {
-            futureTime = futureTime.Date.AddHours(10);
-        }
-        else if (targetHour >= 18)
-        {
-            futureTime = futureTime.Date.AddDays(1).AddHours(10);
-
-            // Check weekend again after adding day
-            while (futureTime.DayOfWeek == DayOfWeek.Saturday ||
-                   futureTime.DayOfWeek == DayOfWeek.Sunday)
-            {
-                futureTime = futureTime.AddDays(1);
-            }
+            futureTime = futureTime.AddDays(1);
         }
 
         // Ensure it's on 30-minute interval
@@ -307,15 +258,16 @@ public class AppointmentTimeTests
     public void ToString_ShouldReturnISO8601Format()
     {
         // Arrange
-        var futureTime = new DateTime(2026, 2, 10, 10, 0, 0, DateTimeKind.Utc);
+        var futureTime = GetNextWeekday(DayOfWeek.Monday).Date.AddHours(10);
+        var utcTime = futureTime.ToUniversalTime();
         var appointmentTime = AppointmentTime.Create(futureTime);
 
         // Act
         var result = appointmentTime.ToString();
 
         // Assert
-        result.Should().Contain("2026-02-10");
-        result.Should().EndWith("Z"); // UTC indicator
+        result.Should().Contain(utcTime.ToString("yyyy-MM-dd"));
+        result.Should().EndWith("Z");
     }
 
     #endregion
