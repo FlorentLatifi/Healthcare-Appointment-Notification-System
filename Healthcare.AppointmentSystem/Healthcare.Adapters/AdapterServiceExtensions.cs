@@ -22,6 +22,8 @@ using Healthcare.Application.Ports.Locking;
 using StackExchange.Redis;
 using Healthcare.Adapters.Payments;
 using Healthcare.Application.Ports.Payments;
+using Healthcare.Adapters.Caching;
+using Healthcare.Application.Ports.Caching;
 
 
 namespace Healthcare.Adapters;
@@ -173,6 +175,9 @@ public static class AdapterServiceExtensions
             configOptions.SyncTimeout = 5000;
             return ConnectionMultiplexer.Connect(configOptions);
         });
+
+        // Doctor Cache (in-memory for dev/test)
+        services.AddSingleton<IDoctorCacheService, InMemoryDoctorCacheService>();
 
         return services;
     }
@@ -442,6 +447,9 @@ public static class AdapterServiceExtensions
         // Redis Distributed Locking
         services.AddRedisDistributedLocking(configuration);
 
+        // Doctor Cache (Redis via IConnectionMultiplexer)
+        services.AddSingleton<IDoctorCacheService, RedisDoctorCacheService>();
+
         return services;
     }
 
@@ -471,6 +479,10 @@ public static class AdapterServiceExtensions
             LogPaymentFailedHandler>();
         services.AddScoped<IDomainEventHandler<PaymentRefundedEvent>,
             LogPaymentRefundedHandler>();
+
+        // Doctor Cache Invalidation Handlers
+        services.AddScoped<IDomainEventHandler<DoctorCacheInvalidationNeededEvent>,
+            InvalidateDoctorCacheHandler>();
 
         // TODO: Add more handlers as needed:
         // services.AddScoped<IDomainEventHandler<AppointmentCompletedEvent>, ...>();

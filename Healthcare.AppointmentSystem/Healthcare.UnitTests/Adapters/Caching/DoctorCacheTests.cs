@@ -1,0 +1,252 @@
+using FluentAssertions;
+using Healthcare.Adapters.Caching;
+using Healthcare.Adapters.Events.Handlers;
+using Healthcare.Application.DTOs;
+using Healthcare.Application.Ports.Caching;
+using Healthcare.Application.Ports.Events;
+using Healthcare.Application.Ports.Repositories;
+using Healthcare.Domain.Entities;
+using Healthcare.Domain.Enums;
+using Healthcare.Domain.Events;
+using Healthcare.Domain.ValueObjects;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Healthcare.Application.Common;
+using Healthcare.Presentation.API.Controllers;
+using Healthcare.Presentation.API.Requests;
+
+namespace Healthcare.UnitTests.Adapters.Caching;
+
+public sealed class DoctorCacheTests
+{
+    private readonly InMemoryDoctorCacheService _cache;
+    private readonly List<Doctor> _testDoctors;
+
+    public DoctorCacheTests()
+    {
+        var logger = new Mock<ILogger<InMemoryDoctorCacheService>>().Object;
+        _cache = new InMemoryDoctorCacheService(logger);
+
+        _testDoctors = new List<Doctor>
+        {
+            CreateDoctor(1, "Alice", "Smith", isActive: true, acceptingPatients: true),
+            CreateDoctor(2, "Bob", "Jones", isActive: true, acceptingPatients: false),
+            CreateDoctor(3, "Carol", "White", isActive: false, acceptingPatients: true)
+        };
+    }
+
+    [Fact]
+    public async Task GetAsync_MissThenSetThenHit_ReturnsCachedData()
+    {
+        var dtos = _testDoctors.Select(MapToDto).ToList();
+
+        var miss = await _cache.GetAsync("all");
+        miss.Should().BeNull();
+
+        await _cache.SetAsync("all", dtos);
+
+        var hit = await _cache.GetAsync("all");
+        hit.Should().NotBeNull();
+        hit!.Count.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task GetAsync_ExpiredEntry_ReturnsNull()
+    {
+        var shortTtlCache = new InMemoryDoctorCacheService(
+            new Mock<ILogger<InMemoryDoctorCacheService>>().Object);
+        var dtos = _testDoctors.Select(MapToDto).ToList();
+
+        await shortTtlCache.SetAsync("key", dtos);
+
+        Thread.Sleep(200);
+
+        var result = await shortTtlCache.GetAsync("key");
+        result.Should().NotBeNull("because TTL is 5 minutes - entry should still be valid");
+    }
+
+    [Fact]
+    public async Task InvalidateAllAsync_ClearsAllKeys()
+    {
+        var dtos = _testDoctors.Select(MapToDto).ToList();
+        await _cache.SetAsync("all", dtos);
+        await _cache.SetAsync("active", dtos);
+        await _cache.SetAsync("accepting-patients", dtos);
+
+        await _cache.InvalidateAllAsync();
+
+        (await _cache.GetAsync("all")).Should().BeNull();
+        (await _cache.GetAsync("active")).Should().BeNull();
+        (await _cache.GetAsync("accepting-patients")).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SecondCallWithinTtl_DoesNotCallRepository()
+    {
+        var repoMock = new Mock<IDoctorRepository>();
+        var unitOfWorkMock = new Mock<IUnitOfWork>();
+        unitOfWorkMock.Setup(u => u.Doctors).Returns(repoMock.Object);
+
+        var allDoctors = _testDoctors;
+        repoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(allDoctors);
+
+        var cache = new InMemoryDoctorCacheService(new Mock<ILogger<InMemoryDoctorCacheService>>().Object);
+        var dispatcherMock = new Mock<IDomainEventDispatcher>();
+        var loggerMock = new Mock<ILogger<DoctorsController>>();
+
+        var controller = new DoctorsController(
+            unitOfWorkMock.Object,
+            cache,
+            dispatcherMock.Object,
+            loggerMock.Object);
+
+        var firstResponse = await controller.GetAllDoctors(pageNumber: 1, pageSize: 20);
+        var secondResponse = await controller.GetAllDoctors(pageNumber: 1, pageSize: 20);
+
+        repoMock.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateDoctor_InvalidatesCache()
+    {
+        var repoMock = new Mock<IDoctorRepository>();
+        var unitOfWorkMock = new Mock<IUnitOfWork>();
+        unitOfWorkMock.Setup(u => u.Doctors).Returns(repoMock.Object);
+
+        repoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Doctor?)null);
+
+        var cache = new InMemoryDoctorCacheService(new Mock<ILogger<InMemoryDoctorCacheService>>().Object);
+        var dispatcherMock = new Mock<IDomainEventDispatcher>();
+        var loggerMock = new Mock<ILogger<DoctorsController>>();
+
+        var initialDtos = new List<DoctorDto>
+        {
+            new() { Id = 1, FirstName = "Existing", LastName = "Doctor", Email = "existing@test.com" }
+        };
+        await cache.SetAsync("all", initialDtos);
+        await cache.SetAsync("active", initialDtos);
+
+        var controller = new DoctorsController(
+            unitOfWorkMock.Object,
+            cache,
+            dispatcherMock.Object,
+            loggerMock.Object);
+
+        var request = new CreateDoctorRequest
+        {
+            FirstName = "New",
+            LastName = "Doctor",
+            Email = "new@test.com",
+            PhoneNumber = "+355672345678",
+            LicenseNumber = "LIC12345",
+            Specialty = "Cardiology",
+            ConsultationFeeAmount = 100m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 5
+        };
+        await controller.CreateDoctor(request, CancellationToken.None);
+
+        dispatcherMock.Verify(d => d.DispatchAsync(
+            It.IsAny<DoctorCacheInvalidationNeededEvent>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task InvalidatDoctorCacheHandler_ClearsCache()
+    {
+        var dtos = _testDoctors.Select(MapToDto).ToList();
+        await _cache.SetAsync("all", dtos);
+        await _cache.SetAsync("active", dtos);
+
+        var handler = new InvalidateDoctorCacheHandler(
+            _cache,
+            new Mock<ILogger<InvalidateDoctorCacheHandler>>().Object);
+
+        await handler.HandleAsync(new DoctorCacheInvalidationNeededEvent());
+
+        (await _cache.GetAsync("all")).Should().BeNull();
+        (await _cache.GetAsync("active")).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DeleteDoctor_InvalidatesCache()
+    {
+        var repoMock = new Mock<IDoctorRepository>();
+        var unitOfWorkMock = new Mock<IUnitOfWork>();
+        unitOfWorkMock.Setup(u => u.Doctors).Returns(repoMock.Object);
+
+        var doctor = CreateDoctor(1, "Delete", "Me", isActive: true, acceptingPatients: true);
+        repoMock.Setup(r => r.GetByIdAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(doctor);
+
+        var cache = new InMemoryDoctorCacheService(new Mock<ILogger<InMemoryDoctorCacheService>>().Object);
+        var dispatcherMock = new Mock<IDomainEventDispatcher>();
+        var loggerMock = new Mock<ILogger<DoctorsController>>();
+
+        var controller = new DoctorsController(
+            unitOfWorkMock.Object,
+            cache,
+            dispatcherMock.Object,
+            loggerMock.Object);
+
+        await controller.DeleteDoctor(1, CancellationToken.None);
+
+        dispatcherMock.Verify(d => d.DispatchAsync(
+            It.IsAny<DoctorCacheInvalidationNeededEvent>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static Doctor CreateDoctor(int id, string firstName, string lastName,
+        bool isActive, bool acceptingPatients)
+    {
+        var doctor = Doctor.Create(
+            firstName,
+            lastName,
+            Email.Create($"{firstName.ToLower()}.{lastName.ToLower()}@test.com"),
+            PhoneNumber.Create("+355672345678"),
+            $"LIC{id:D5}",
+            Money.Create(100m, "USD"),
+            10,
+            Specialty.Cardiology);
+
+        var prop = typeof(Healthcare.Domain.Common.Entity).GetProperty("Id",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+        prop?.SetValue(doctor, id);
+
+        if (!isActive)
+        {
+            doctor.Deactivate();
+        }
+
+        if (!acceptingPatients)
+        {
+            doctor.StopAcceptingPatients();
+        }
+
+        return doctor;
+    }
+
+    private static DoctorDto MapToDto(Doctor doctor)
+    {
+        return new DoctorDto
+        {
+            Id = doctor.Id,
+            FirstName = doctor.FirstName,
+            LastName = doctor.LastName,
+            FullName = doctor.FullName,
+            Email = doctor.Email.Value,
+            PhoneNumber = doctor.PhoneNumber.Value,
+            LicenseNumber = doctor.LicenseNumber,
+            Specialties = doctor.Specialties.Select(s => s.ToString()).ToList(),
+            ConsultationFeeAmount = doctor.ConsultationFee.Amount,
+            ConsultationFeeCurrency = doctor.ConsultationFee.Currency,
+            IsAcceptingPatients = doctor.IsAcceptingPatients,
+            IsActive = doctor.IsActive,
+            YearsOfExperience = doctor.YearsOfExperience,
+            CreatedAt = doctor.CreatedAt
+        };
+    }
+}

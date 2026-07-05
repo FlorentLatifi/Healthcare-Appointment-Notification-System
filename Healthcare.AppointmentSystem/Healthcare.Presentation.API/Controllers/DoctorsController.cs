@@ -1,53 +1,42 @@
 ﻿using Asp.Versioning;
 using Healthcare.Application.DTOs;
+using Healthcare.Application.Ports.Caching;
+using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
+using Healthcare.Domain.Events;
 using Healthcare.Domain.ValueObjects;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Mvc;
 using Healthcare.Application.Common;
+
 namespace Healthcare.Presentation.API.Controllers;
 
-
-/// <summary>
-/// Controller for managing doctors.
-/// </summary>
-/// <remarks>
-/// REST Endpoints:
-/// - POST   /api/doctors          - Create new doctor
-/// - GET    /api/doctors/{id}     - Get doctor by ID
-/// - GET    /api/doctors          - Get all doctors
-/// - GET    /api/doctors/active   - Get active doctors
-/// - GET    /api/doctors/accepting-patients - Get doctors accepting patients
-/// - DELETE /api/doctors/{id}     - Delete doctor
-/// </remarks>
 [ApiController]
-[ApiVersion("1.0")] 
-[Route("api/v{version:apiVersion}/[controller]")] // ← NDRYSHO KËTË
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
 [Produces("application/json")]
 public sealed class DoctorsController : ControllerBase
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDoctorCacheService _cache;
+    private readonly IDomainEventDispatcher _eventDispatcher;
     private readonly ILogger<DoctorsController> _logger;
 
     public DoctorsController(
         IUnitOfWork unitOfWork,
+        IDoctorCacheService cache,
+        IDomainEventDispatcher eventDispatcher,
         ILogger<DoctorsController> logger)
     {
         _unitOfWork = unitOfWork;
+        _cache = cache;
+        _eventDispatcher = eventDispatcher;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Creates a new doctor.
-    /// </summary>
-    /// <param name="request">The doctor details.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The ID of the created doctor.</returns>
-    /// <response code="201">Doctor created successfully.</response>
-    /// <response code="400">Invalid request data or doctor already exists.</response>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
@@ -59,7 +48,6 @@ public sealed class DoctorsController : ControllerBase
 
         try
         {
-            // Check if doctor already exists
             var existingDoctor = await _unitOfWork.Doctors
                 .GetByEmailAsync(request.Email, cancellationToken);
 
@@ -70,14 +58,12 @@ public sealed class DoctorsController : ControllerBase
                     "Doctor already exists"));
             }
 
-            // Create value objects
             var email = Email.Create(request.Email);
             var phoneNumber = PhoneNumber.Create(request.PhoneNumber);
             var consultationFee = Money.Create(
                 request.ConsultationFeeAmount,
                 request.ConsultationFeeCurrency);
 
-            // Parse specialty
             if (!Enum.TryParse<Specialty>(request.Specialty, true, out var specialty))
             {
                 return BadRequest(ApiResponse<int>.ErrorResponse(
@@ -85,7 +71,6 @@ public sealed class DoctorsController : ControllerBase
                     "Invalid specialty"));
             }
 
-            // Create doctor entity
             var doctor = Doctor.Create(
                 request.FirstName,
                 request.LastName,
@@ -96,9 +81,11 @@ public sealed class DoctorsController : ControllerBase
                 request.YearsOfExperience,
                 specialty);
 
-            // Persist
             await _unitOfWork.Doctors.AddAsync(doctor, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _eventDispatcher.DispatchAsync(
+                new DoctorCacheInvalidationNeededEvent(), cancellationToken);
 
             _logger.LogInformation("Doctor {DoctorId} created successfully", doctor.Id);
             return CreatedAtAction(
@@ -113,14 +100,6 @@ public sealed class DoctorsController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Gets a doctor by ID.
-    /// </summary>
-    /// <param name="id">The doctor ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The doctor details.</returns>
-    /// <response code="200">Doctor found.</response>
-    /// <response code="404">Doctor not found.</response>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(ApiResponse<DoctorDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -142,20 +121,6 @@ public sealed class DoctorsController : ControllerBase
         return Ok(ApiResponse<DoctorDto>.SuccessResponse(dto));
     }
 
-  
-
-    
-
-   
-
-    /// <summary>
-    /// Deletes a doctor.
-    /// </summary>
-    /// <param name="id">The doctor ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Success or failure result.</returns>
-    /// <response code="204">Doctor deleted successfully.</response>
-    /// <response code="404">Doctor not found.</response>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -175,13 +140,13 @@ public sealed class DoctorsController : ControllerBase
         await _unitOfWork.Doctors.DeleteAsync(id, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await _eventDispatcher.DispatchAsync(
+            new DoctorCacheInvalidationNeededEvent(), cancellationToken);
+
         _logger.LogInformation("Doctor {DoctorId} deleted successfully", id);
         return NoContent();
     }
 
-    /// <summary>
-    /// Gets paginated list of all doctors.
-    /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAllDoctors(
@@ -195,12 +160,18 @@ public sealed class DoctorsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        // TODO: Paginimi aktualisht bëhet in-memory (Skip/Take mbi IEnumerable<Doctor>
-        // të kthyer nga GetAllAsync). Kur repository-t të kalojnë në IQueryable,
-        // duhet të lëvizë Skip/Take në query-n e DB-së para ToListAsync(), për
-        // të shmangur ngarkimin e gjithë tabelës në memorje.
-        var doctors = await _unitOfWork.Doctors.GetAllAsync(cancellationToken);
-        var dtos = doctors.Select(MapToDto);
+        var cached = await _cache.GetAsync("all", cancellationToken);
+        IReadOnlyList<DoctorDto> dtos;
+        if (cached != null)
+        {
+            dtos = cached;
+        }
+        else
+        {
+            var doctors = await _unitOfWork.Doctors.GetAllAsync(cancellationToken);
+            dtos = doctors.Select(MapToDto).ToList();
+            await _cache.SetAsync("all", dtos, cancellationToken);
+        }
 
         var pagedResult = PagedResult<DoctorDto>.Create(dtos, pageNumber, pageSize);
 
@@ -209,9 +180,6 @@ public sealed class DoctorsController : ControllerBase
             $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} items)"));
     }
 
-    /// <summary>
-    /// Gets paginated list of active doctors.
-    /// </summary>
     [HttpGet("active")]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetActiveDoctors(
@@ -225,9 +193,18 @@ public sealed class DoctorsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        // TODO: shih koment mbi paginimin in-memory te GetAllDoctors — të njëjtin duhet migruar në DB-level.
-        var doctors = await _unitOfWork.Doctors.GetActiveAsync(cancellationToken);
-        var dtos = doctors.Select(MapToDto);
+        var cached = await _cache.GetAsync("active", cancellationToken);
+        IReadOnlyList<DoctorDto> dtos;
+        if (cached != null)
+        {
+            dtos = cached;
+        }
+        else
+        {
+            var doctors = await _unitOfWork.Doctors.GetActiveAsync(cancellationToken);
+            dtos = doctors.Select(MapToDto).ToList();
+            await _cache.SetAsync("active", dtos, cancellationToken);
+        }
 
         var pagedResult = PagedResult<DoctorDto>.Create(dtos, pageNumber, pageSize);
 
@@ -236,9 +213,6 @@ public sealed class DoctorsController : ControllerBase
             $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} active doctor(s))"));
     }
 
-    /// <summary>
-    /// Gets paginated list of doctors accepting new patients.
-    /// </summary>
     [HttpGet("accepting-patients")]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDoctorsAcceptingPatients(
@@ -252,9 +226,18 @@ public sealed class DoctorsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        // TODO: shih koment mbi paginimin in-memory te GetAllDoctors — të njëjtin duhet migruar në DB-level.
-        var doctors = await _unitOfWork.Doctors.GetAcceptingPatientsAsync(cancellationToken);
-        var dtos = doctors.Select(MapToDto);
+        var cached = await _cache.GetAsync("accepting-patients", cancellationToken);
+        IReadOnlyList<DoctorDto> dtos;
+        if (cached != null)
+        {
+            dtos = cached;
+        }
+        else
+        {
+            var doctors = await _unitOfWork.Doctors.GetAcceptingPatientsAsync(cancellationToken);
+            dtos = doctors.Select(MapToDto).ToList();
+            await _cache.SetAsync("accepting-patients", dtos, cancellationToken);
+        }
 
         var pagedResult = PagedResult<DoctorDto>.Create(dtos, pageNumber, pageSize);
 
@@ -262,9 +245,7 @@ public sealed class DoctorsController : ControllerBase
             pagedResult,
             $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} doctor(s) accepting patients)"));
     }
-    /// <summary>
-    /// Maps Doctor entity to DoctorDto.
-    /// </summary>
+
     private static DoctorDto MapToDto(Doctor doctor)
     {
         return new DoctorDto
