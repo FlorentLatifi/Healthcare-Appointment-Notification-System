@@ -1,0 +1,46 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln
+    
+    - name: Build (Release)
+      run: dotnet build Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln --no-restore -c Release
+    
+    - name: Run Tests (Release)
+      run: dotnet test Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln --no-build -c Release --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
+    
+    - name: Check for vulnerable packages
+      run: dotnet list package --vulnerable --include-transitive Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln
+      continue-on-error: true
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: '**/test-results.trx'
+    
+    - name: Upload coverage reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-reports
+        path: '**/coverage.cobertura.xml'
