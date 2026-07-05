@@ -4,6 +4,7 @@ using Healthcare.Adapters.Persistence.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Healthcare.Adapters.Migrations
 {
     [DbContext(typeof(HealthcareDbContext))]
-    partial class HealthcareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260705125621_SyncModelWithSnapshot")]
+    partial class SyncModelWithSnapshot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -432,7 +435,7 @@ namespace Healthcare.Adapters.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.OwnsOne("Healthcare.Domain.Entities.Appointment.ConsultationFee#Healthcare.Domain.ValueObjects.Money", "ConsultationFee", b1 =>
+                    b.OwnsOne("Healthcare.Domain.ValueObjects.Money", "ConsultationFee", b1 =>
                         {
                             b1.Property<int>("AppointmentId")
                                 .HasColumnType("int");
@@ -449,7 +452,7 @@ namespace Healthcare.Adapters.Migrations
 
                             b1.HasKey("AppointmentId");
 
-                            b1.ToTable("Appointments", (string)null);
+                            b1.ToTable("Appointments");
 
                             b1.WithOwner()
                                 .HasForeignKey("AppointmentId");
@@ -465,7 +468,7 @@ namespace Healthcare.Adapters.Migrations
 
             modelBuilder.Entity("Healthcare.Domain.Entities.Doctor", b =>
                 {
-                    b.OwnsOne("Healthcare.Domain.Entities.Doctor.ConsultationFee#Healthcare.Domain.ValueObjects.Money", "ConsultationFee", b1 =>
+                    b.OwnsOne("Healthcare.Domain.ValueObjects.Money", "ConsultationFee", b1 =>
                         {
                             b1.Property<int>("DoctorId")
                                 .HasColumnType("int");
@@ -482,13 +485,13 @@ namespace Healthcare.Adapters.Migrations
 
                             b1.HasKey("DoctorId");
 
-                            b1.ToTable("Doctors", (string)null);
+                            b1.ToTable("Doctors");
 
                             b1.WithOwner()
                                 .HasForeignKey("DoctorId");
                         });
 
-                    b.OwnsMany("Healthcare.Domain.Entities.Doctor.WeeklySchedule#Healthcare.Domain.ValueObjects.DoctorWorkingHours", "WeeklySchedule", b1 =>
+                    b.OwnsMany("Healthcare.Domain.ValueObjects.DoctorWorkingHours", "WeeklySchedule", b1 =>
                         {
                             b1.Property<int>("Id")
                                 .ValueGeneratedOnAdd()
@@ -529,7 +532,7 @@ namespace Healthcare.Adapters.Migrations
 
             modelBuilder.Entity("Healthcare.Domain.Entities.Patient", b =>
                 {
-                    b.OwnsOne("Healthcare.Domain.Entities.Patient.Address#Healthcare.Domain.ValueObjects.Address", "Address", b1 =>
+                    b.OwnsOne("Healthcare.Domain.ValueObjects.Address", "Address", b1 =>
                         {
                             b1.Property<int>("PatientId")
                                 .HasColumnType("int");
@@ -566,13 +569,13 @@ namespace Healthcare.Adapters.Migrations
 
                             b1.HasKey("PatientId");
 
-                            b1.ToTable("Patients", (string)null);
+                            b1.ToTable("Patients");
 
                             b1.WithOwner()
                                 .HasForeignKey("PatientId");
                         });
 
-                    b.OwnsOne("Healthcare.Domain.Entities.Patient.NotificationPreferences#Healthcare.Domain.ValueObjects.NotificationPreferences", "NotificationPreferences", b1 =>
+                    b.OwnsOne("Healthcare.Domain.ValueObjects.NotificationPreferences", "NotificationPreferences", b1 =>
                         {
                             b1.Property<int>("PatientId")
                                 .HasColumnType("int");
@@ -591,7 +594,7 @@ namespace Healthcare.Adapters.Migrations
 
                             b1.HasKey("PatientId");
 
-                            b1.ToTable("Patients", (string)null);
+                            b1.ToTable("Patients");
 
                             b1.WithOwner()
                                 .HasForeignKey("PatientId");
@@ -612,7 +615,7 @@ namespace Healthcare.Adapters.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.OwnsOne("Healthcare.Domain.Entities.Payment.Amount#Healthcare.Domain.ValueObjects.Money", "Amount", b1 =>
+                    b.OwnsOne("Healthcare.Domain.ValueObjects.Money", "Amount", b1 =>
                         {
                             b1.Property<int>("PaymentId")
                                 .HasColumnType("int");
@@ -629,7 +632,7 @@ namespace Healthcare.Adapters.Migrations
 
                             b1.HasKey("PaymentId");
 
-                            b1.ToTable("Payments", (string)null);
+                            b1.ToTable("Payments");
 
                             b1.WithOwner()
                                 .HasForeignKey("PaymentId");

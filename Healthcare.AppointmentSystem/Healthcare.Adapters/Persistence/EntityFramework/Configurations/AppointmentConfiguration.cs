@@ -53,6 +53,10 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
         builder.Property(a => a.CancellationReason)
             .HasMaxLength(500);
 
+        builder.Property(a => a.PaymentOverrideReason)
+            .HasMaxLength(500)
+            .IsRequired(false);
+
         builder.Property(a => a.ConfirmedAt)
             .IsRequired(false);
 
