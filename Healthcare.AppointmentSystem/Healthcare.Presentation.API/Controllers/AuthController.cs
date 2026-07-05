@@ -1,9 +1,10 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace Healthcare.Presentation.API.Controllers;
@@ -44,6 +45,7 @@ public sealed class AuthController : ControllerBase
     /// <response code="400">Invalid data or username/email already exists.</response>
     [HttpPost("register")]
     [AllowAnonymous]
+    [EnableRateLimiting("AuthPolicy")]
     [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register(
@@ -89,6 +91,7 @@ public sealed class AuthController : ControllerBase
     /// <response code="400">Invalid credentials.</response>
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("AuthPolicy")]
     [ProducesResponseType(typeof(ApiResponse<LoginResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Login(

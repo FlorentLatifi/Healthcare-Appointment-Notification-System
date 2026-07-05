@@ -18,6 +18,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,6 +29,7 @@
     <ProjectReference Include="..\Healthcare.Domain\Healthcare.Domain.csproj" />
     <ProjectReference Include="..\Healthcare.Application\Healthcare.Application.csproj" />
     <ProjectReference Include="..\Healthcare.Adapters\Healthcare.Adapters.csproj" />
+    <ProjectReference Include="..\Healthcare.Presentation.API\Healthcare.Presentation.API.csproj" />
   </ItemGroup>
 
 </Project>

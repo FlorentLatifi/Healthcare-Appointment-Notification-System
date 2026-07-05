@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Healthcare.Adapters;
@@ -23,6 +23,9 @@ using Healthcare.Application.Ports.Factories;
 using Healthcare.Application.Ports.Facades;
 using Healthcare.Application.Services;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using Healthcare.Presentation.API.Responses;
 
 // ============================================
 // SERILOG CONFIGURATION
@@ -169,6 +172,64 @@ try
     builder.Services.AddAuthorization();
 
     // ============================================
+    // RATE LIMITING
+    // ============================================
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        {
+            var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                ?? "unknown";
+
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: ipAddress,
+                factory: partition => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 100,
+                    QueueLimit = 0,
+                    Window = TimeSpan.FromMinutes(1)
+                });
+        });
+
+        options.AddPolicy("AuthPolicy", httpContext =>
+        {
+            var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                ?? "unknown";
+
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: ipAddress,
+                factory: partition => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 5,
+                    QueueLimit = 0,
+                    Window = TimeSpan.FromMinutes(1)
+                });
+        });
+
+        options.OnRejected = async (context, cancellationToken) =>
+        {
+            context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+            context.HttpContext.Response.ContentType = "application/json";
+
+            var apiResponse = ApiResponse.ErrorResponse(
+                "Too many requests. Please try again later.",
+                "Rate limit exceeded"
+            );
+
+            var json = System.Text.Json.JsonSerializer.Serialize(apiResponse, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            });
+
+            await context.HttpContext.Response.WriteAsync(json, cancellationToken);
+        };
+    });
+
+    // ============================================
     // ADAPTERS LAYER
     // ============================================
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -235,6 +296,7 @@ try
 
     app.UseHttpsRedirection();
     app.UseCors("ConfiguredOrigins");
+    app.UseRateLimiter();
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
@@ -278,3 +340,5 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+public partial class Program { }
