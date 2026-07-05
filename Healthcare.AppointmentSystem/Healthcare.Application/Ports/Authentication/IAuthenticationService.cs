@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 
 namespace Healthcare.Application.Ports.Authentication;
 
@@ -24,11 +24,25 @@ public interface IAuthenticationService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Authenticates a user and returns a token.
+    /// Authenticates a user and returns a token set (access & refresh token).
     /// </summary>
-    Task<Result<string>> LoginAsync(
+    Task<Result<LoginResult>> LoginAsync(
         string username,
         string password,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Refreshes the access token using a valid refresh token.
+    /// </summary>
+    Task<Result<LoginResult>> RefreshTokenAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Revokes a refresh token, logging the user out.
+    /// </summary>
+    Task<Result> RevokeTokenAsync(
+        string refreshToken,
         CancellationToken cancellationToken = default);
 
     /// <summary>

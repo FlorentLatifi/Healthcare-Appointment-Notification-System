@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 
 namespace Healthcare.Adapters.Authentication;
 
@@ -11,6 +11,7 @@ public sealed class JwtSettings
     public string Issuer { get; set; } = string.Empty;
     public string Audience { get; set; } = string.Empty;
     public int ExpirationInMinutes { get; set; } = 60;
+    public int RefreshTokenExpirationInDays { get; set; } = 7;
 
     /// <summary>
     /// Binds JWT settings from configuration. Fails fast if the secret is missing or too short.
@@ -36,7 +37,8 @@ public sealed class JwtSettings
             Secret = secret,
             Issuer = configuration["Jwt:Issuer"] ?? "HealthcareAPI",
             Audience = configuration["Jwt:Audience"] ?? "HealthcareClients",
-            ExpirationInMinutes = int.Parse(configuration["Jwt:ExpirationInMinutes"] ?? "60")
+            ExpirationInMinutes = int.Parse(configuration["Jwt:ExpirationInMinutes"] ?? "60"),
+            RefreshTokenExpirationInDays = int.Parse(configuration["Jwt:RefreshTokenExpirationInDays"] ?? "7")
         };
     }
 }
