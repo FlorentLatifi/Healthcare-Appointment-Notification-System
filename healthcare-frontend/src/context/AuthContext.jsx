@@ -1,20 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import apiClient, { setTokenGetter } from '../services/apiClient';
 
-/*
- * Auth state is kept ONLY in React memory (context), NOT in localStorage.
- *
- * WHY: Storing tokens in localStorage/sessionStorage exposes them to XSS
- * attacks — any injected script can read them. Keeping them in memory
- * means they survive only for the current page session and are lost on
- * reload (forcing re-login). This is a deliberate security trade-off:
- * convenience (persisted sessions) is sacrificed for resilience against
- * token theft via XSS.
- *
- * For a production app, consider refresh tokens with httpOnly cookies
- * instead.
- */
-
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -29,6 +15,21 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     setTokenGetter(getToken);
   }, [getToken]);
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const { data } = await apiClient.post('/Auth/refresh');
+        if (data.success) {
+          setToken(data.data.token);
+          setUser({ username: data.data.username, role: data.data.role });
+        }
+      } catch {
+        // No valid refresh cookie — user stays logged out
+      }
+    };
+    restoreSession();
+  }, []);
 
   const login = useCallback(async (username, password) => {
     setLoading(true);
@@ -60,7 +61,12 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await apiClient.post('/Auth/logout');
+    } catch {
+      // Even if server-side revocation fails, clear local state
+    }
     setToken(null);
     setUser(null);
     setPatientId(null);

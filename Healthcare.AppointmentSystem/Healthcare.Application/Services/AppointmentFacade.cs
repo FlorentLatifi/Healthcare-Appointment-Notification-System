@@ -118,9 +118,16 @@ public sealed class AppointmentFacade : IAppointmentFacade
     /// </summary>
     public async Task<Result> ConfirmAppointmentAsync(
         int appointmentId,
+        bool overridePaymentRequirement = false,
+        string? overrideReason = null,
         CancellationToken cancellationToken = default)
     {
-        var command = new ConfirmAppointmentCommand { AppointmentId = appointmentId };
+        var command = new ConfirmAppointmentCommand
+        {
+            AppointmentId = appointmentId,
+            OverridePaymentRequirement = overridePaymentRequirement,
+            OverrideReason = overrideReason
+        };
         return await _confirmHandler.HandleAsync(command, cancellationToken);
     }
 

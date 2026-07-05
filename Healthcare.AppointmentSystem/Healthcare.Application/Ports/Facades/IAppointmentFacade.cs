@@ -48,6 +48,8 @@ public interface IAppointmentFacade
     /// </summary>
     Task<Result> ConfirmAppointmentAsync(
         int appointmentId,
+        bool overridePaymentRequirement = false,
+        string? overrideReason = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Healthcare.Adapters.Authentication;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
@@ -16,14 +17,64 @@ namespace Healthcare.Presentation.API.Controllers;
 public sealed class AuthController : ControllerBase
 {
     private readonly IAuthenticationService _authService;
+    private readonly JwtSettings _jwtSettings;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IAuthenticationService authService,
+        JwtSettings jwtSettings,
         ILogger<AuthController> logger)
     {
         _authService = authService;
+        _jwtSettings = jwtSettings;
         _logger = logger;
+    }
+
+    private static readonly CookieOptions RefreshCookieOptions = new()
+    {
+        HttpOnly = true,
+        Secure = true,
+        SameSite = SameSiteMode.Strict,
+        Path = "/api/v1/auth"
+    };
+
+    private void SetRefreshCookie(string refreshToken)
+    {
+        var expires = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationInDays);
+        Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Path = "/api/v1/auth",
+            Expires = expires,
+        });
+    }
+
+    private void ClearRefreshCookie()
+    {
+        Response.Cookies.Append("refreshToken", "", new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Path = "/api/v1/auth",
+            Expires = DateTime.UtcNow.AddDays(-1),
+        });
+    }
+
+    private static LoginResponse BuildLoginResponse(LoginResult result)
+    {
+        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+        var jwtToken = handler.ReadJwtToken(result.AccessToken);
+
+        return new LoginResponse
+        {
+            Token = result.AccessToken,
+            ExpiresAt = result.ExpiresAt,
+            Username = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "",
+            Role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? ""
+        };
     }
 
     [HttpPost("register")]
@@ -91,17 +142,9 @@ public sealed class AuthController : ControllerBase
 
         _logger.LogInformation("User {Username} logged in successfully", request.Username);
 
-        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-        var jwtToken = handler.ReadJwtToken(result.Value.AccessToken);
+        SetRefreshCookie(result.Value.RefreshToken);
 
-        var response = new LoginResponse
-        {
-            Token = result.Value.AccessToken,
-            RefreshToken = result.Value.RefreshToken,
-            ExpiresAt = result.Value.ExpiresAt,
-            Username = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "",
-            Role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? ""
-        };
+        var response = BuildLoginResponse(result.Value);
 
         return Ok(ApiResponse<LoginResponse>.SuccessResponse(
             response,
@@ -113,35 +156,34 @@ public sealed class AuthController : ControllerBase
     [EnableRateLimiting("AuthPolicy")]
     [ProducesResponseType(typeof(ApiResponse<LoginResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Refresh(
-        [FromBody] RefreshTokenRequest request,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Token refresh requested");
 
+        var refreshToken = Request.Cookies["refreshToken"];
+        if (string.IsNullOrEmpty(refreshToken))
+        {
+            return BadRequest(ApiResponse<LoginResponse>.ErrorResponse(
+                "Refresh token cookie is missing.",
+                "Token refresh failed"));
+        }
+
         var result = await _authService.RefreshTokenAsync(
-            request.RefreshToken,
+            refreshToken,
             cancellationToken);
 
         if (result.IsFailure)
         {
             _logger.LogWarning("Token refresh failed: {Error}", result.Error);
+            ClearRefreshCookie();
             return BadRequest(ApiResponse<LoginResponse>.ErrorResponse(
                 result.Error,
                 "Token refresh failed"));
         }
 
-        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-        var jwtToken = handler.ReadJwtToken(result.Value.AccessToken);
+        SetRefreshCookie(result.Value.RefreshToken);
 
-        var response = new LoginResponse
-        {
-            Token = result.Value.AccessToken,
-            RefreshToken = result.Value.RefreshToken,
-            ExpiresAt = result.Value.ExpiresAt,
-            Username = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "",
-            Role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? ""
-        };
+        var response = BuildLoginResponse(result.Value);
 
         return Ok(ApiResponse<LoginResponse>.SuccessResponse(
             response,
@@ -153,24 +195,27 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Logout(
-        [FromBody] RefreshTokenRequest request,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Logout requested");
 
-        var result = await _authService.RevokeTokenAsync(
-            request.RefreshToken,
-            cancellationToken);
-
-        if (result.IsFailure)
+        var refreshToken = Request.Cookies["refreshToken"];
+        if (!string.IsNullOrEmpty(refreshToken))
         {
-            _logger.LogWarning("Logout failed: {Error}", result.Error);
-            return BadRequest(ApiResponse.ErrorResponse(
-                result.Error,
-                "Logout failed"));
+            var result = await _authService.RevokeTokenAsync(
+                refreshToken,
+                cancellationToken);
+
+            if (result.IsFailure)
+            {
+                _logger.LogWarning("Logout failed: {Error}", result.Error);
+                return BadRequest(ApiResponse.ErrorResponse(
+                    result.Error,
+                    "Logout failed"));
+            }
         }
 
+        ClearRefreshCookie();
         _logger.LogInformation("User logged out successfully");
         return Ok(ApiResponse.SuccessResponse("Logout successful. Refresh token revoked."));
     }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -15,7 +16,10 @@ public abstract class IntegrationTestBase : IClassFixture<CustomWebApplicationFa
     protected IntegrationTestBase(CustomWebApplicationFactory factory)
     {
         Factory = factory;
-        Client = factory.CreateClient();
+        Client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            HandleCookies = true,
+        });
         JsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

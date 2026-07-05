@@ -74,8 +74,14 @@ public sealed class AuthFlowTests : IntegrationTestBase
         result!.Success.Should().BeTrue();
         result.Data.Should().NotBeNull();
         result.Data!.Token.Should().NotBeNullOrEmpty();
-        result.Data.RefreshToken.Should().NotBeNullOrEmpty();
         result.Data.Role.Should().Be("Patient");
+
+        var setCookieHeader = Assert.Single(
+            response.Headers.GetValues("Set-Cookie"));
+        setCookieHeader.Should().Contain("refreshToken");
+        setCookieHeader.Should().Contain("HttpOnly");
+        setCookieHeader.Should().Contain("Secure");
+        setCookieHeader.Should().Contain("SameSite=Strict");
     }
 
     [Fact]
@@ -114,5 +120,41 @@ public sealed class AuthFlowTests : IntegrationTestBase
     {
         var response = await Client.GetAsync("/api/v1/auth/me");
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Login_SetsRefreshCookie_AndRefreshEndpointUsesIt()
+    {
+        var username = "cookie_refresh_user";
+        await Client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            Username = username,
+            Email = "cookie_refresh@test.com",
+            Password = "SecurePass123!",
+            Role = "Admin"
+        });
+
+        var loginResponse = await Client.PostAsJsonAsync("/api/v1/auth/login", new
+        {
+            Username = username,
+            Password = "SecurePass123!"
+        });
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var loginResult = await DeserializeResponse<LoginResponse>(loginResponse);
+        loginResult!.Data!.Token.Should().NotBeNullOrEmpty();
+        var currentToken = loginResult.Data.Token;
+
+        var refreshResponse = await Client.PostAsync("/api/v1/auth/refresh", null);
+        refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var refreshResult = await DeserializeResponse<LoginResponse>(refreshResponse);
+        refreshResult!.Success.Should().BeTrue();
+        refreshResult.Data!.Token.Should().NotBeNullOrEmpty();
+        refreshResult.Data.Token.Should().NotBe(currentToken);
+
+        var setCookieHeader = Assert.Single(
+            refreshResponse.Headers.GetValues("Set-Cookie"));
+        setCookieHeader.Should().Contain("refreshToken");
     }
 }

@@ -3,17 +3,18 @@
 /// <summary>
 /// Response containing JWT token after successful login.
 /// </summary>
+/// <remarks>
+/// The refresh token is not included in the JSON body — it is set as an
+/// httpOnly, Secure, SameSite=Strict cookie by the controller, so it is
+/// never accessible to JavaScript and is sent automatically on subsequent
+/// requests (including the /refresh endpoint).
+/// </remarks>
 public sealed class LoginResponse
 {
     /// <summary>
     /// Gets or sets the JWT access token.
     /// </summary>
     public string Token { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the refresh token.
-    /// </summary>
-    public string RefreshToken { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the token expiration time.

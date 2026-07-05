@@ -1,9 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text;
 using Healthcare.Application.Commands.BookAppointment;
-using Healthcare.Application.Commands.CancelAppointment;
 using Healthcare.Application.Commands.CompleteAppointment;
-using Healthcare.Application.Commands.ConfirmAppointment;
 using Healthcare.Application.Commands.MarkNoShowAppointment;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
@@ -17,7 +15,6 @@ using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Mvc;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
-using Healthcare.Application.Builders;
 using Healthcare.Application.Ports.Facades;
 using Healthcare.Presentation.API.Authorization;
 
@@ -30,8 +27,6 @@ namespace Healthcare.Presentation.API.Controllers;
 public sealed class AppointmentsController : ControllerBase
 {
     private readonly ICommandHandler<BookAppointmentCommand, Result<int>> _bookAppointmentHandler;
-    private readonly ICommandHandler<ConfirmAppointmentCommand, Result> _confirmAppointmentHandler;
-    private readonly ICommandHandler<CancelAppointmentCommand, Result> _cancelAppointmentHandler;
     private readonly ICommandHandler<CompleteAppointmentCommand, Result> _completeAppointmentHandler;
     private readonly ICommandHandler<MarkNoShowAppointmentCommand, Result> _markNoShowAppointmentHandler;
     private readonly IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>> _getAppointmentHandler;
@@ -42,8 +37,6 @@ public sealed class AppointmentsController : ControllerBase
 
     public AppointmentsController(
         ICommandHandler<BookAppointmentCommand, Result<int>> bookAppointmentHandler,
-        ICommandHandler<ConfirmAppointmentCommand, Result> confirmAppointmentHandler,
-        ICommandHandler<CancelAppointmentCommand, Result> cancelAppointmentHandler,
         ICommandHandler<CompleteAppointmentCommand, Result> completeAppointmentHandler,
         ICommandHandler<MarkNoShowAppointmentCommand, Result> markNoShowAppointmentHandler,
         IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>> getAppointmentHandler,
@@ -53,8 +46,6 @@ public sealed class AppointmentsController : ControllerBase
         IAppointmentFacade facade)
     {
         _bookAppointmentHandler = bookAppointmentHandler;
-        _confirmAppointmentHandler = confirmAppointmentHandler;
-        _cancelAppointmentHandler = cancelAppointmentHandler;
         _completeAppointmentHandler = completeAppointmentHandler;
         _markNoShowAppointmentHandler = markNoShowAppointmentHandler;
         _getAppointmentHandler = getAppointmentHandler;
@@ -221,14 +212,11 @@ public sealed class AppointmentsController : ControllerBase
     {
         _logger.LogInformation("Confirming appointment {AppointmentId}", id);
 
-        var command = new ConfirmAppointmentCommand
-        {
-            AppointmentId = id,
-            OverridePaymentRequirement = request?.OverridePaymentRequirement ?? false,
-            OverrideReason = request?.OverrideReason
-        };
-
-        var result = await _confirmAppointmentHandler.HandleAsync(command, cancellationToken);
+        var result = await _facade.ConfirmAppointmentAsync(
+            appointmentId: id,
+            overridePaymentRequirement: request?.OverridePaymentRequirement ?? false,
+            overrideReason: request?.OverrideReason,
+            cancellationToken: cancellationToken);
 
         if (result.IsFailure)
         {
@@ -241,11 +229,11 @@ public sealed class AppointmentsController : ControllerBase
                 result.Error, "Failed to confirm appointment"));
         }
 
-        if (command.OverridePaymentRequirement)
+        if (request?.OverridePaymentRequirement == true)
         {
             _logger.LogWarning(
                 "Appointment {AppointmentId} confirmed WITHOUT payment via Doctor/Admin override. Reason: {Reason}",
-                id, command.OverrideReason);
+                id, request?.OverrideReason);
         }
 
         _logger.LogInformation("Appointment {AppointmentId} confirmed successfully", id);
@@ -264,13 +252,10 @@ public sealed class AppointmentsController : ControllerBase
     {
         _logger.LogInformation("Cancelling appointment {AppointmentId}", id);
 
-        var command = new CancelAppointmentCommand
-        {
-            AppointmentId = id,
-            CancellationReason = request.CancellationReason  // correct property name
-        };
-
-        var result = await _cancelAppointmentHandler.HandleAsync(command, cancellationToken);
+        var result = await _facade.CancelAppointmentAsync(
+            appointmentId: id,
+            reason: request.CancellationReason,
+            cancellationToken: cancellationToken);
 
         if (result.IsFailure)
         {
