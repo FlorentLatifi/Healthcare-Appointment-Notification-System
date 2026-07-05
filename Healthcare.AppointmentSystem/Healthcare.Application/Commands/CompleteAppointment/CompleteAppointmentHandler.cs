@@ -1,18 +1,15 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
 
-namespace Healthcare.Application.Commands.CancelAppointment;
+namespace Healthcare.Application.Commands.CompleteAppointment;
 
-/// <summary>
-/// Handler for CancelAppointmentCommand.
-/// </summary>
-public sealed class CancelAppointmentHandler : ICommandHandler<CancelAppointmentCommand, Result>
+public sealed class CompleteAppointmentHandler : ICommandHandler<CompleteAppointmentCommand, Result>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDomainEventDispatcher _eventDispatcher;
 
-    public CancelAppointmentHandler(
+    public CompleteAppointmentHandler(
         IUnitOfWork unitOfWork,
         IDomainEventDispatcher eventDispatcher)
     {
@@ -21,11 +18,10 @@ public sealed class CancelAppointmentHandler : ICommandHandler<CancelAppointment
     }
 
     public async Task<Result> HandleAsync(
-        CancelAppointmentCommand command,
+        CompleteAppointmentCommand command,
         CancellationToken cancellationToken = default)
     {
-        // 1. Fetch appointment
-            var appointment = await _unitOfWork.Appointments
+        var appointment = await _unitOfWork.Appointments
                 .GetByIdAsync(command.AppointmentId, cancellationToken);
 
             if (appointment is null)
@@ -33,21 +29,18 @@ public sealed class CancelAppointmentHandler : ICommandHandler<CancelAppointment
                 return Result.Failure($"Appointment with ID {command.AppointmentId} not found.");
             }
 
-            // 2. Cancel appointment (domain logic validates)
             try
             {
-                appointment.Cancel(command.CancellationReason);
+                appointment.Complete(command.DoctorNotes);
             }
             catch (Exception ex)
             {
-                return Result.Failure($"Failed to cancel appointment: {ex.Message}");
+                return Result.Failure($"Failed to complete appointment: {ex.Message}");
             }
 
-            // 3. Persist changes
             await _unitOfWork.Appointments.UpdateAsync(appointment, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 4. Dispatch domain events
             await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
             appointment.ClearDomainEvents();
 

@@ -36,9 +36,7 @@ public sealed class ConfirmAppointmentHandler : ICommandHandler<ConfirmAppointme
         ConfirmAppointmentCommand command,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            // 1. Fetch appointment
+        // 1. Fetch appointment
             var appointment = await _unitOfWork.Appointments
                 .GetByIdAsync(command.AppointmentId, cancellationToken);
 
@@ -100,10 +98,5 @@ public sealed class ConfirmAppointmentHandler : ICommandHandler<ConfirmAppointme
             appointment.ClearDomainEvents();
 
             return Result.Success();
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure($"An unexpected error occurred: {ex.Message}");
-        }
     }
 }

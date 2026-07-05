@@ -84,14 +84,13 @@ public class GetNoShowRateHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenRepositoryThrows_ShouldReturnFailure()
+    public async Task Handle_WhenRepositoryThrows_ShouldPropagateException()
     {
         _apptRepo.Setup(r => r.GetStatusCountsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), default))
             .ThrowsAsync(new Exception("DB error"));
 
-        var result = await _handler.HandleAsync(new GetNoShowRateQuery(DateTime.MinValue, DateTime.MaxValue));
+        Func<Task> act = () => _handler.HandleAsync(new GetNoShowRateQuery(DateTime.MinValue, DateTime.MaxValue));
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("unexpected error");
+        await act.Should().ThrowAsync<Exception>().WithMessage("DB error");
     }
 }

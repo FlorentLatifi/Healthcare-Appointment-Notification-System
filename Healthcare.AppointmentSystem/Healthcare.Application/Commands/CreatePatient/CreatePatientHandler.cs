@@ -22,9 +22,7 @@ public sealed class CreatePatientHandler : ICommandHandler<CreatePatientCommand,
         CreatePatientCommand command,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            // 1. Check if patient already exists
+        // 1. Check if patient already exists
             var existingPatient = await _unitOfWork.Patients
                 .GetByEmailAsync(command.Email, cancellationToken);
 
@@ -80,10 +78,5 @@ public sealed class CreatePatientHandler : ICommandHandler<CreatePatientCommand,
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result<int>.Success(patient.Id);
-        }
-        catch (Exception ex)
-        {
-            return Result<int>.Failure($"An unexpected error occurred: {ex.Message}");
-        }
     }
 }

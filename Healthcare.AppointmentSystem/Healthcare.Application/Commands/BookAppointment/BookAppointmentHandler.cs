@@ -32,9 +32,7 @@ public sealed class BookAppointmentHandler
         BookAppointmentCommand command,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            // 1. Fetch patient
+        // 1. Fetch patient
             var patient = await _unitOfWork.Patients
                 .GetByIdAsync(command.PatientId, cancellationToken);
 
@@ -119,11 +117,5 @@ public sealed class BookAppointmentHandler
             appointment.ClearDomainEvents();
 
             return Result<int>.Success(appointment.Id);
-        }
-        catch (Exception ex)
-        {
-            return Result<int>.Failure(
-                $"An unexpected error occurred: {ex.Message}");
-        }
     }
 }

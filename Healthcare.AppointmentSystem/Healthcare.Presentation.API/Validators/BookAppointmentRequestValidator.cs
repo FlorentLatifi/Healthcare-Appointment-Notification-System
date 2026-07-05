@@ -38,5 +38,11 @@ public sealed class BookAppointmentRequestValidator : AbstractValidator<BookAppo
             .WithMessage("Reason must be at least 10 characters")
             .MaximumLength(500)
             .WithMessage("Reason cannot exceed 500 characters");
+
+        RuleFor(x => x.AppointmentType)
+            .NotEmpty().WithMessage("Appointment type is required")
+            .Must(t => new[] { "Standard", "Insurance", "Emergency", "Vip" }
+                .Contains(t, StringComparer.OrdinalIgnoreCase))
+            .WithMessage("Appointment type must be one of: Standard, Insurance, Emergency, Vip");
     }
 }

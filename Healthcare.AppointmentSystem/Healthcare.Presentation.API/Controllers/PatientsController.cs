@@ -242,19 +242,22 @@ public sealed class PatientsController : ControllerBase
     }
 
     /// <summary>
-    /// Deletes a patient.
+    /// Deactivates a patient (soft-delete). The record remains in the database
+    /// but IsActive is set to false, preserving the historical/audit trail.
     /// </summary>
     /// <param name="id">The patient ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Success or failure result.</returns>
-    /// <response code="204">Patient deleted successfully.</response>
+    /// <response code="204">Patient deactivated successfully.</response>
+    /// <response code="400">Patient is already deactivated.</response>
     /// <response code="404">Patient not found.</response>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeletePatient(int id, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Deleting patient {PatientId}", id);
+        _logger.LogInformation("Deactivating patient {PatientId}", id);
 
         var patient = await _unitOfWork.Patients.GetByIdAsync(id, cancellationToken);
         if (patient == null)
@@ -265,10 +268,20 @@ public sealed class PatientsController : ControllerBase
                 _localizer["PatientNotFound"]));
         }
 
-        await _unitOfWork.Patients.DeleteAsync(id, cancellationToken);
+        try
+        {
+            patient.Deactivate();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Patient {PatientId} is already deactivated", id);
+            return BadRequest(ApiResponse.ErrorResponse(ex.Message, "Patient already deactivated"));
+        }
+
+        await _unitOfWork.Patients.UpdateAsync(patient, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Patient {PatientId} deleted successfully", id);
+        _logger.LogInformation("Patient {PatientId} deactivated successfully", id);
         return NoContent();
     }
 

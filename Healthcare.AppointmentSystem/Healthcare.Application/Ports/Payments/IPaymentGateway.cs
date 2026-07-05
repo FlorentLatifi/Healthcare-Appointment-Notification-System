@@ -64,12 +64,14 @@ public interface IPaymentGateway
     /// Processes a refund for a payment.
     /// </summary>
     /// <param name="paymentIntentId">The original payment intent ID.</param>
+    /// <param name="currency">The ISO 4217 currency code (e.g., "USD", "EUR").</param>
     /// <param name="amount">Amount to refund (null = full refund).</param>
     /// <param name="reason">Reason for refund.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result with refund transaction ID.</returns>
     Task<Result<RefundResult>> RefundPaymentAsync(
         string paymentIntentId,
+        string currency,
         decimal? amount = null,
         string? reason = null,
         CancellationToken cancellationToken = default);

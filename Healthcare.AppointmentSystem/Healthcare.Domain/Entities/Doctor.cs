@@ -81,7 +81,6 @@ public sealed class Doctor : Entity
     // Private parameterless constructor for EF Core
     private Doctor()
     {
-        InitializeDefaultSchedule();
     }
 
     /// <summary>

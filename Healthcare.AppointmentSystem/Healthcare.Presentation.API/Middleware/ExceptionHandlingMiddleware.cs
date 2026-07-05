@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 using Healthcare.Presentation.API.Responses;
+using Microsoft.EntityFrameworkCore;
 
 namespace Healthcare.Presentation.API.Middleware;
 
@@ -80,12 +81,27 @@ public sealed class ExceptionHandlingMiddleware
         // Set appropriate status code based on exception type
         context.Response.StatusCode = exception switch
         {
+            DbUpdateException => (int)HttpStatusCode.Conflict,
             ArgumentException => (int)HttpStatusCode.BadRequest,
             InvalidOperationException => (int)HttpStatusCode.BadRequest,
             UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
             KeyNotFoundException => (int)HttpStatusCode.NotFound,
             _ => (int)HttpStatusCode.InternalServerError
         };
+
+        // Override message for DbUpdateException so the caller gets a clear,
+        // actionable error instead of a raw SQL constraint message.
+        if (exception is DbUpdateException)
+        {
+            errorResponse.Message = "This record cannot be removed because related records exist.";
+        }
+
+        // For truly unexpected exceptions (HTTP 5xx), hide the original message
+        // in non-development environments to avoid leaking sensitive internals.
+        if (context.Response.StatusCode >= 500 && !_environment.IsDevelopment())
+        {
+            errorResponse.Message = "An internal server error occurred. Please try again later.";
+        }
 
         var options = new JsonSerializerOptions
         {

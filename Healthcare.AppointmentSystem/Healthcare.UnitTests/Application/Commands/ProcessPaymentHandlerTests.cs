@@ -7,6 +7,7 @@ using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Payments;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
+using Healthcare.Domain.Services;
 using Healthcare.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -246,7 +247,8 @@ public class ProcessPaymentHandlerTests
             patient,
             doctor,
             CreateFutureAppointmentTime(),
-            "General medical consultation");
+            "General medical consultation",
+            AppointmentCodeGenerator.Instance);
 
         appointment.ClearDomainEvents();
 

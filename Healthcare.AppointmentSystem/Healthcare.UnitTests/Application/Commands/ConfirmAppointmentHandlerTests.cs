@@ -5,6 +5,7 @@ using Healthcare.Application.Commands.ConfirmAppointment;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
+using Healthcare.Domain.Services;
 using Healthcare.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -109,7 +110,8 @@ public class ConfirmAppointmentHandlerTests
             patient,
             doctor,
             CreateFutureAppointmentTime(),
-            "General medical consultation");
+            "General medical consultation",
+            AppointmentCodeGenerator.Instance);
 
         appointment.ClearDomainEvents();
 

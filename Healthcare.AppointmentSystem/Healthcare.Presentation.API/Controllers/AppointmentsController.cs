@@ -2,10 +2,15 @@
 using System.Text;
 using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Commands.CancelAppointment;
+using Healthcare.Application.Commands.CompleteAppointment;
 using Healthcare.Application.Commands.ConfirmAppointment;
+using Healthcare.Application.Commands.MarkNoShowAppointment;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
+using Healthcare.Application.Mappings;
 using Healthcare.Application.Ports.Repositories;
+using Healthcare.Application.Queries.GetAppointment;
+using Healthcare.Application.Queries.GetAppointmentsByPatient;
 using Healthcare.Application.Services;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
@@ -27,6 +32,10 @@ public sealed class AppointmentsController : ControllerBase
     private readonly ICommandHandler<BookAppointmentCommand, Result<int>> _bookAppointmentHandler;
     private readonly ICommandHandler<ConfirmAppointmentCommand, Result> _confirmAppointmentHandler;
     private readonly ICommandHandler<CancelAppointmentCommand, Result> _cancelAppointmentHandler;
+    private readonly ICommandHandler<CompleteAppointmentCommand, Result> _completeAppointmentHandler;
+    private readonly ICommandHandler<MarkNoShowAppointmentCommand, Result> _markNoShowAppointmentHandler;
+    private readonly IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>> _getAppointmentHandler;
+    private readonly IQueryHandler<GetAppointmentsByPatientQuery, Result<IEnumerable<AppointmentDto>>> _getAppointmentsByPatientHandler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AppointmentsController> _logger;
     private readonly IAppointmentFacade _facade;
@@ -35,6 +44,10 @@ public sealed class AppointmentsController : ControllerBase
         ICommandHandler<BookAppointmentCommand, Result<int>> bookAppointmentHandler,
         ICommandHandler<ConfirmAppointmentCommand, Result> confirmAppointmentHandler,
         ICommandHandler<CancelAppointmentCommand, Result> cancelAppointmentHandler,
+        ICommandHandler<CompleteAppointmentCommand, Result> completeAppointmentHandler,
+        ICommandHandler<MarkNoShowAppointmentCommand, Result> markNoShowAppointmentHandler,
+        IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>> getAppointmentHandler,
+        IQueryHandler<GetAppointmentsByPatientQuery, Result<IEnumerable<AppointmentDto>>> getAppointmentsByPatientHandler,
         IUnitOfWork unitOfWork,
         ILogger<AppointmentsController> logger,
         IAppointmentFacade facade)
@@ -42,6 +55,10 @@ public sealed class AppointmentsController : ControllerBase
         _bookAppointmentHandler = bookAppointmentHandler;
         _confirmAppointmentHandler = confirmAppointmentHandler;
         _cancelAppointmentHandler = cancelAppointmentHandler;
+        _completeAppointmentHandler = completeAppointmentHandler;
+        _markNoShowAppointmentHandler = markNoShowAppointmentHandler;
+        _getAppointmentHandler = getAppointmentHandler;
+        _getAppointmentsByPatientHandler = getAppointmentsByPatientHandler;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _facade = facade;
@@ -88,15 +105,17 @@ public sealed class AppointmentsController : ControllerBase
     {
         _logger.LogInformation("Retrieving appointment {AppointmentId}", id);
 
-        var appointment = await _unitOfWork.Appointments.GetByIdAsync(id, cancellationToken);
-        if (appointment == null)
+        var query = new GetAppointmentQuery(id);
+        var result = await _getAppointmentHandler.HandleAsync(query, cancellationToken);
+
+        if (result.IsFailure)
         {
             _logger.LogWarning("Appointment {AppointmentId} not found", id);
             return NotFound(ApiResponse<AppointmentDto>.ErrorResponse(
-                $"Appointment with ID {id} not found", "Appointment not found"));
+                result.Error, "Appointment not found"));
         }
 
-        return Ok(ApiResponse<AppointmentDto>.SuccessResponse(MapToDto(appointment)));
+        return Ok(ApiResponse<AppointmentDto>.SuccessResponse(result.Value));
     }
 
     [HttpGet]
@@ -116,7 +135,7 @@ public sealed class AppointmentsController : ControllerBase
         // të kthyer nga GetAllAsync). Duhet migruar në DB-level (IQueryable.Skip/Take
         // përpara ToListAsync) kur repository-t të mbështesin queryable.
         var appointments = await _unitOfWork.Appointments.GetAllAsync(cancellationToken);
-        var mappedList = appointments.Select(MapToDto);
+        var mappedList = appointments.Select(AppointmentMapper.ToDto);
 
         var pagedResult = PagedResult<AppointmentDto>.Create(mappedList, pageNumber, pageSize);
 
@@ -143,12 +162,17 @@ public sealed class AppointmentsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        // TODO: shih koment mbi paginimin in-memory te GetAllAppointments.
-        var appointments = await _unitOfWork.Appointments
-            .GetByPatientIdAsync(patientId, cancellationToken);
-        var mappedList = appointments.Select(MapToDto);
+        var query = new GetAppointmentsByPatientQuery(patientId);
+        var result = await _getAppointmentsByPatientHandler.HandleAsync(query, cancellationToken);
 
-        var pagedResult = PagedResult<AppointmentDto>.Create(mappedList, pageNumber, pageSize);
+        if (result.IsFailure)
+        {
+            return BadRequest(ApiResponse<PagedResult<AppointmentDto>>.ErrorResponse(
+                result.Error, "Failed to retrieve appointments"));
+        }
+
+        // TODO: shih koment mbi paginimin in-memory te GetAllAppointments.
+        var pagedResult = PagedResult<AppointmentDto>.Create(result.Value, pageNumber, pageSize);
 
         return Ok(ApiResponse<PagedResult<AppointmentDto>>.SuccessResponse(
             pagedResult,
@@ -175,8 +199,8 @@ public sealed class AppointmentsController : ControllerBase
 
         // TODO: shih koment mbi paginimin in-memory te GetAllAppointments.
         var appointments = await _unitOfWork.Appointments
-            .GetByDoctorIdAsync(doctorId, cancellationToken);
-        var mappedList = appointments.Select(MapToDto);
+                .GetByDoctorIdAsync(doctorId, cancellationToken);
+        var mappedList = appointments.Select(AppointmentMapper.ToDto);
 
         var pagedResult = PagedResult<AppointmentDto>.Create(mappedList, pageNumber, pageSize);
 
@@ -307,16 +331,25 @@ public sealed class AppointmentsController : ControllerBase
     {
         _logger.LogInformation("Completing appointment {AppointmentId}", id);
 
-        var appointment = await _unitOfWork.Appointments.GetByIdAsync(id, cancellationToken);
-        if (appointment == null)
+        var command = new CompleteAppointmentCommand
         {
-            _logger.LogWarning("Appointment {AppointmentId} not found", id);
-            return NotFound(ApiResponse.ErrorResponse(
-                $"Appointment with ID {id} not found", "Appointment not found"));
-        }
+            AppointmentId = id,
+            DoctorNotes = request.DoctorNotes
+        };
 
-        appointment.Complete(request.DoctorNotes);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        var result = await _completeAppointmentHandler.HandleAsync(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            _logger.LogWarning("Failed to complete appointment {AppointmentId}: {Error}",
+                id, result.Error);
+
+            if (result.Error.Contains("not found"))
+                return NotFound(ApiResponse.ErrorResponse(result.Error, "Appointment not found"));
+
+            return BadRequest(ApiResponse.ErrorResponse(
+                result.Error, "Failed to complete appointment"));
+        }
 
         _logger.LogInformation("Appointment {AppointmentId} completed successfully", id);
         return Ok(ApiResponse.SuccessResponse("Appointment completed successfully"));
@@ -333,16 +366,24 @@ public sealed class AppointmentsController : ControllerBase
     {
         _logger.LogInformation("Marking appointment {AppointmentId} as No-Show", id);
 
-        var appointment = await _unitOfWork.Appointments.GetByIdAsync(id, cancellationToken);
-        if (appointment == null)
+        var command = new MarkNoShowAppointmentCommand
         {
-            _logger.LogWarning("Appointment {AppointmentId} not found", id);
-            return NotFound(ApiResponse.ErrorResponse(
-                $"Appointment with ID {id} not found", "Appointment not found"));
-        }
+            AppointmentId = id
+        };
 
-        appointment.MarkAsNoShow();
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        var result = await _markNoShowAppointmentHandler.HandleAsync(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            _logger.LogWarning("Failed to mark appointment {AppointmentId} as no-show: {Error}",
+                id, result.Error);
+
+            if (result.Error.Contains("not found"))
+                return NotFound(ApiResponse.ErrorResponse(result.Error, "Appointment not found"));
+
+            return BadRequest(ApiResponse.ErrorResponse(
+                result.Error, "Failed to mark appointment as no-show"));
+        }
 
         _logger.LogInformation("Appointment {AppointmentId} marked as No-Show", id);
         return Ok(ApiResponse.SuccessResponse("Appointment marked as No-Show"));
@@ -372,64 +413,4 @@ public sealed class AppointmentsController : ControllerBase
         return NoContent();
     }
 
-    private static AppointmentDto MapToDto(Domain.Entities.Appointment appointment)
-    {
-        if (appointment.Patient == null || appointment.Doctor == null)
-            throw new InvalidOperationException(
-                "Appointment must have Patient and Doctor loaded.");
-
-        return new AppointmentDto
-        {
-            Id = appointment.Id,
-            ReferenceCode = appointment.ReferenceCode,
-            PatientId = appointment.PatientId,
-            DoctorId = appointment.DoctorId,
-            Patient = new PatientDto
-            {
-                Id = appointment.Patient.Id,
-                FirstName = appointment.Patient.FirstName,
-                LastName = appointment.Patient.LastName,
-                FullName = appointment.Patient.FullName,
-                Email = appointment.Patient.Email.Value,
-                PhoneNumber = appointment.Patient.PhoneNumber.Value,
-                DateOfBirth = appointment.Patient.DateOfBirth,
-                Age = appointment.Patient.Age,
-                Gender = appointment.Patient.Gender.ToString(),
-                Address = appointment.Patient.Address.GetFullAddress(),
-                IsActive = appointment.Patient.IsActive,
-                CreatedAt = appointment.Patient.CreatedAt
-            },
-            Doctor = new DoctorDto
-            {
-                Id = appointment.Doctor.Id,
-                FirstName = appointment.Doctor.FirstName,
-                LastName = appointment.Doctor.LastName,
-                FullName = appointment.Doctor.FullName,
-                Email = appointment.Doctor.Email.Value,
-                PhoneNumber = appointment.Doctor.PhoneNumber.Value,
-                LicenseNumber = appointment.Doctor.LicenseNumber,
-                Specialties = appointment.Doctor.Specialties
-                    .Select(s => s.ToString()).ToList(),
-                ConsultationFeeAmount = appointment.Doctor.ConsultationFee.Amount,
-                ConsultationFeeCurrency = appointment.Doctor.ConsultationFee.Currency,
-                IsAcceptingPatients = appointment.Doctor.IsAcceptingPatients,
-                IsActive = appointment.Doctor.IsActive,
-                YearsOfExperience = appointment.Doctor.YearsOfExperience,
-                CreatedAt = appointment.Doctor.CreatedAt
-            },
-            ScheduledTime = appointment.ScheduledTime.Value,
-            ScheduledDate = appointment.ScheduledTime.GetDate().ToString("yyyy-MM-dd"),
-            ScheduledTimeFormatted = appointment.ScheduledTime.ToDisplayString(),
-            Status = appointment.Status.ToString(),
-            Reason = appointment.Reason,
-            DoctorNotes = appointment.DoctorNotes,
-            CancellationReason = appointment.CancellationReason,
-            ConsultationFeeAmount = appointment.ConsultationFee.Amount,
-            ConsultationFeeCurrency = appointment.ConsultationFee.Currency,
-            ConfirmedAt = appointment.ConfirmedAt,
-            CompletedAt = appointment.CompletedAt,
-            CancelledAt = appointment.CancelledAt,
-            CreatedAt = appointment.CreatedAt
-        };
-    }
 }

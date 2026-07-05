@@ -97,10 +97,8 @@ public sealed class PaymentsController : ControllerBase
         _logger.LogInformation("Creating payment intent for appointment {AppointmentId}",
             request.AppointmentId);
 
-        try
-        {
-            // 1. Fetch appointment
-            var appointment = await _unitOfWork.Appointments
+        // 1. Fetch appointment
+        var appointment = await _unitOfWork.Appointments
                 .GetByIdAsync(request.AppointmentId, cancellationToken);
 
             if (appointment == null)
@@ -170,14 +168,6 @@ public sealed class PaymentsController : ControllerBase
             return Ok(ApiResponse<object>.SuccessResponse(
                 response,
                 "Payment intent created. Use client secret to complete payment on frontend."));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error creating payment intent");
-            return BadRequest(ApiResponse<object>.ErrorResponse(
-                ex.Message,
-                "An unexpected error occurred"));
-        }
     }
 
     /// <summary>

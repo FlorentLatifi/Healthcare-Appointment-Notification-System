@@ -5,6 +5,7 @@ using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Queries.GetAppointment;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
+using Healthcare.Domain.Services;
 using Healthcare.Domain.ValueObjects;
 using Xunit;
 
@@ -103,7 +104,8 @@ public class GetAppointmentHandlerTests
             patient,
             doctor,
             scheduledTime,
-            "Annual checkup and blood pressure monitoring");
+            "Annual checkup and blood pressure monitoring",
+            AppointmentCodeGenerator.Instance);
 
         if (status == AppointmentStatus.Confirmed)
         {
@@ -423,7 +425,7 @@ public class GetAppointmentHandlerTests
         var scheduledTime = CreateFutureAppointmentTime();
         const string specialReason = "Patient has symptoms: fever, cough & headache (urgent!)";
 
-        var appointment = Appointment.Create(patient, doctor, scheduledTime, specialReason);
+        var appointment = Appointment.Create(patient, doctor, scheduledTime, specialReason, AppointmentCodeGenerator.Instance);
         await _appointmentRepository.AddAsync(appointment);
 
         var query = new GetAppointmentQuery(appointment.Id);

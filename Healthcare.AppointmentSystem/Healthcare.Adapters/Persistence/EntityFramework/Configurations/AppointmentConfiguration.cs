@@ -72,10 +72,10 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
         builder.Property(a => a.ModifiedAt)
             .IsRequired(false);
 
-        builder.Property(a => a.RowVersion)
-       .IsRowVersion() // SQL Server timestamp column
-       .IsConcurrencyToken(); // EF Core concurrency token
-                              // Value Object: Money (ConsultationFee)
+        builder.Property<byte[]>("RowVersion")
+            .IsRowVersion()
+            .IsConcurrencyToken();
+                               // Value Object: Money (ConsultationFee)
 
         // ── SINGLETON PATTERN — column for generated code ─────────────────────
           builder.Property(a => a.ReferenceCode)

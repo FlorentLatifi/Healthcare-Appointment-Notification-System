@@ -17,54 +17,46 @@ public sealed class GetRevenueReportHandler : IQueryHandler<GetRevenueReportQuer
         GetRevenueReportQuery query,
         CancellationToken cancellationToken = default)
     {
-        try
+        var totalRevenue = await _paymentRepository.GetTotalRevenueAsync(
+            query.DateFrom, query.DateTo, cancellationToken);
+
+        var dto = new RevenueReportDto
         {
-            var totalRevenue = await _paymentRepository.GetTotalRevenueAsync(
-                query.DateFrom, query.DateTo, cancellationToken);
+            DateFrom = query.DateFrom,
+            DateTo = query.DateTo,
+            TotalRevenue = totalRevenue,
+            Currency = "USD"
+        };
 
-            var dto = new RevenueReportDto
+        if (!string.IsNullOrWhiteSpace(query.GroupBy))
+        {
+            if (string.Equals(query.GroupBy, "doctor", StringComparison.OrdinalIgnoreCase))
             {
-                DateFrom = query.DateFrom,
-                DateTo = query.DateTo,
-                TotalRevenue = totalRevenue,
-                Currency = "USD"
-            };
-
-            if (!string.IsNullOrWhiteSpace(query.GroupBy))
-            {
-                if (string.Equals(query.GroupBy, "doctor", StringComparison.OrdinalIgnoreCase))
-                {
-                    var byDoctor = await _paymentRepository.GetRevenueByDoctorAsync(
-                        query.DateFrom, query.DateTo, cancellationToken);
-                    dto.ByDoctor = byDoctor
-                        .Select(r => new RevenueByDoctorItemDto
-                        {
-                            DoctorId = r.DoctorId,
-                            DoctorName = $"Dr. {r.FirstName} {r.LastName}",
-                            Revenue = r.Revenue
-                        })
-                        .ToList();
-                }
-                else if (string.Equals(query.GroupBy, "specialty", StringComparison.OrdinalIgnoreCase))
-                {
-                    var bySpecialty = await _paymentRepository.GetRevenueBySpecialtyAsync(
-                        query.DateFrom, query.DateTo, cancellationToken);
-                    dto.BySpecialty = bySpecialty
-                        .Select(r => new RevenueBySpecialtyItemDto
-                        {
-                            Specialty = r.Specialty,
-                            Revenue = r.Revenue
-                        })
-                        .ToList();
-                }
+                var byDoctor = await _paymentRepository.GetRevenueByDoctorAsync(
+                    query.DateFrom, query.DateTo, cancellationToken);
+                dto.ByDoctor = byDoctor
+                    .Select(r => new RevenueByDoctorItemDto
+                    {
+                        DoctorId = r.DoctorId,
+                        DoctorName = $"Dr. {r.FirstName} {r.LastName}",
+                        Revenue = r.Revenue
+                    })
+                    .ToList();
             }
+            else if (string.Equals(query.GroupBy, "specialty", StringComparison.OrdinalIgnoreCase))
+            {
+                var bySpecialty = await _paymentRepository.GetRevenueBySpecialtyAsync(
+                    query.DateFrom, query.DateTo, cancellationToken);
+                dto.BySpecialty = bySpecialty
+                    .Select(r => new RevenueBySpecialtyItemDto
+                    {
+                        Specialty = r.Specialty,
+                        Revenue = r.Revenue
+                    })
+                    .ToList();
+            }
+        }
 
-            return Result<RevenueReportDto>.Success(dto);
-        }
-        catch (Exception ex)
-        {
-            return Result<RevenueReportDto>.Failure(
-                $"An unexpected error occurred: {ex.Message}");
-        }
+        return Result<RevenueReportDto>.Success(dto);
     }
 }

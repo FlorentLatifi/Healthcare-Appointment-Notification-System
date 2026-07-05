@@ -3,6 +3,7 @@ using Healthcare.Domain.Common;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.Events;
+using Healthcare.Domain.Services;
 using Healthcare.Domain.ValueObjects;
 using Xunit;
 
@@ -80,7 +81,7 @@ public class AppointmentTests
         var scheduledTime = CreateFutureAppointmentTime();
 
         // Act
-        var appointment = Appointment.Create(patient, doctor, scheduledTime, ValidReason);
+        var appointment = Appointment.Create(patient, doctor, scheduledTime, ValidReason, AppointmentCodeGenerator.Instance);
 
         // Assert
         appointment.Should().NotBeNull();
@@ -101,7 +102,7 @@ public class AppointmentTests
         var scheduledTime = CreateFutureAppointmentTime();
 
         // Act
-        var appointment = Appointment.Create(patient, doctor, scheduledTime, ValidReason);
+        var appointment = Appointment.Create(patient, doctor, scheduledTime, ValidReason, AppointmentCodeGenerator.Instance);
 
         // Assert
         appointment.DomainEvents.Should().ContainSingle();
@@ -125,7 +126,7 @@ public class AppointmentTests
         var scheduledTime = CreateFutureAppointmentTime();
 
         // Act
-        Action act = () => Appointment.Create(patient, doctor, scheduledTime, ValidReason);
+        Action act = () => Appointment.Create(patient, doctor, scheduledTime, ValidReason, AppointmentCodeGenerator.Instance);
 
         // Assert
         act.Should().Throw<InvalidOperationException>()
@@ -143,7 +144,7 @@ public class AppointmentTests
         var scheduledTime = CreateFutureAppointmentTime();
 
         // Act
-        Action act = () => Appointment.Create(patient, doctor, scheduledTime, ValidReason);
+        Action act = () => Appointment.Create(patient, doctor, scheduledTime, ValidReason, AppointmentCodeGenerator.Instance);
 
         // Assert
         act.Should().Throw<InvalidOperationException>()
@@ -161,7 +162,7 @@ public class AppointmentTests
         var scheduledTime = CreateFutureAppointmentTime();
 
         // Act
-        Action act = () => Appointment.Create(patient, doctor, scheduledTime, ValidReason);
+        Action act = () => Appointment.Create(patient, doctor, scheduledTime, ValidReason, AppointmentCodeGenerator.Instance);
 
         // Assert
         act.Should().Throw<InvalidOperationException>()
@@ -179,7 +180,7 @@ public class AppointmentTests
         var scheduledTime = CreateFutureAppointmentTime();
 
         // Act
-        Action act = () => Appointment.Create(patient, doctor, scheduledTime, shortReason);
+        Action act = () => Appointment.Create(patient, doctor, scheduledTime, shortReason, AppointmentCodeGenerator.Instance);
 
         // Assert
         act.Should().Throw<ArgumentException>()
@@ -198,7 +199,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         appointment.ClearDomainEvents();
 
@@ -219,7 +221,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         appointment.ClearDomainEvents();
 
@@ -244,7 +247,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         var statusProperty = typeof(Appointment).GetProperty("Status");
         statusProperty.Should().NotBeNull();
@@ -272,7 +276,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         if (startStatus == AppointmentStatus.Confirmed)
         {
@@ -300,7 +305,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         appointment.ClearDomainEvents();
 
@@ -324,7 +330,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         typeof(Appointment)
             .GetProperty("Status")!
@@ -347,7 +354,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         // Act
         Action act = () => appointment.Cancel(shortReason);
@@ -369,7 +377,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         appointment.Confirm();
         appointment.ClearDomainEvents();
@@ -393,7 +402,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         appointment.Confirm();
         appointment.ClearDomainEvents();
@@ -418,7 +428,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         typeof(Appointment)
             .GetProperty("Status")!
@@ -441,7 +452,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         appointment.Confirm();
 
@@ -468,7 +480,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         typeof(Appointment)
             .GetProperty("Status")!
@@ -491,7 +504,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         typeof(Appointment)
             .GetProperty("Status")!
@@ -516,7 +530,8 @@ public class AppointmentTests
             CreateTestPatient(),
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
-            ValidReason);
+            ValidReason,
+            AppointmentCodeGenerator.Instance);
 
         appointment.DomainEvents.Should().HaveCount(1);
 

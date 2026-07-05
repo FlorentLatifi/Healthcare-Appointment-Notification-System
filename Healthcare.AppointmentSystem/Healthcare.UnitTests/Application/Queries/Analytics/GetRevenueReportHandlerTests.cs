@@ -124,7 +124,7 @@ public class GetRevenueReportHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenRepositoryThrows_ShouldReturnFailure()
+    public async Task Handle_WhenRepositoryThrows_ShouldPropagateException()
     {
         var from = new DateTime(2026, 1, 1);
         var to = new DateTime(2026, 1, 31);
@@ -132,9 +132,8 @@ public class GetRevenueReportHandlerTests
             .ThrowsAsync(new Exception("DB connection failed"));
 
         var query = new GetRevenueReportQuery(from, to);
-        var result = await _handler.HandleAsync(query);
+        Func<Task> act = () => _handler.HandleAsync(query);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("unexpected error");
+        await act.Should().ThrowAsync<Exception>().WithMessage("DB connection failed");
     }
 }

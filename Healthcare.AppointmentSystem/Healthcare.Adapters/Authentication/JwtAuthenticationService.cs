@@ -81,7 +81,7 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to register user {Username}", username);
-            return Result<int>.Failure($"Registration failed: {ex.Message}");
+            throw;
         }
     }
 
@@ -127,7 +127,7 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Login failed for user {Username}", username);
-            return Result<LoginResult>.Failure($"Login failed: {ex.Message}");
+            throw;
         }
     }
 
@@ -174,7 +174,7 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Refresh token failed");
-            return Result<LoginResult>.Failure($"Token refresh failed: {ex.Message}");
+            throw;
         }
     }
 
@@ -193,7 +193,7 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to revoke refresh token");
-            return Result.Failure($"Token revocation failed: {ex.Message}");
+            throw;
         }
     }
 
@@ -230,7 +230,7 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Token validation failed");
-            return Result<int>.Failure($"Token validation failed: {ex.Message}");
+            throw;
         }
     }
 
@@ -284,10 +284,23 @@ public sealed class JwtAuthenticationService : IAuthenticationService
 
         if (_redisDb != null)
         {
-            await _redisDb.StringSetAsync(
-                $"{RefreshTokenKeyPrefix}{tokenHash}",
-                userId,
-                ttl);
+            try
+            {
+                await _redisDb.StringSetAsync(
+                    $"{RefreshTokenKeyPrefix}{tokenHash}",
+                    userId,
+                    ttl);
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for refresh-token storage");
+                throw;
+            }
+            catch (RedisTimeoutException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for refresh-token storage");
+                throw;
+            }
         }
         else
         {
@@ -302,17 +315,30 @@ public sealed class JwtAuthenticationService : IAuthenticationService
     {
         if (_redisDb != null)
         {
-            var script = @"
-                local val = redis.call('GET', KEYS[1])
-                if val then
-                    redis.call('DEL', KEYS[1])
-                    return val
-                end
-                return nil";
+            try
+            {
+                var script = @"
+                    local val = redis.call('GET', KEYS[1])
+                    if val then
+                        redis.call('DEL', KEYS[1])
+                        return val
+                    end
+                    return nil";
 
-            var key = $"{RefreshTokenKeyPrefix}{tokenHash}";
-            var result = await _redisDb.ScriptEvaluateAsync(script, new RedisKey[] { key });
-            return result.IsNull ? null : (string?)result;
+                var key = $"{RefreshTokenKeyPrefix}{tokenHash}";
+                var result = await _redisDb.ScriptEvaluateAsync(script, new RedisKey[] { key });
+                return result.IsNull ? null : (string?)result;
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for refresh-token storage");
+                throw;
+            }
+            catch (RedisTimeoutException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for refresh-token storage");
+                throw;
+            }
         }
 
         if (_memoryStore.TryRemove(tokenHash, out var userId))
@@ -327,8 +353,21 @@ public sealed class JwtAuthenticationService : IAuthenticationService
     {
         if (_redisDb != null)
         {
-            var key = $"{RefreshTokenKeyPrefix}{tokenHash}";
-            await _redisDb.KeyDeleteAsync(key);
+            try
+            {
+                var key = $"{RefreshTokenKeyPrefix}{tokenHash}";
+                await _redisDb.KeyDeleteAsync(key);
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for refresh-token storage");
+                throw;
+            }
+            catch (RedisTimeoutException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for refresh-token storage");
+                throw;
+            }
         }
         else
         {

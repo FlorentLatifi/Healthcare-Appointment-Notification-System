@@ -6,7 +6,9 @@ using Healthcare.Presentation.API.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Commands.CancelAppointment;
+using Healthcare.Application.Commands.CompleteAppointment;
 using Healthcare.Application.Commands.ConfirmAppointment;
+using Healthcare.Application.Commands.MarkNoShowAppointment;
 using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Common;
 using Healthcare.Presentation.API.Filters;
@@ -19,6 +21,8 @@ using System.Text;
 using Healthcare.Application.Commands.ProcessPayment;
 using Healthcare.Application.Commands.RefundPayment;
 using Healthcare.Application.Queries.Analytics;
+using Healthcare.Application.Queries.GetAppointment;
+using Healthcare.Application.Queries.GetAppointmentsByPatient;
 using Healthcare.Application.DTOs;
 using Healthcare.Adapters.Factories;
 using Healthcare.Application.Ports.Factories;
@@ -136,6 +140,8 @@ try
     builder.Services.AddScoped<ICommandHandler<BookAppointmentCommand, Result<int>>, BookAppointmentHandler>();
     builder.Services.AddScoped<ICommandHandler<ConfirmAppointmentCommand, Result>, ConfirmAppointmentHandler>();
     builder.Services.AddScoped<ICommandHandler<CancelAppointmentCommand, Result>, CancelAppointmentHandler>();
+    builder.Services.AddScoped<ICommandHandler<CompleteAppointmentCommand, Result>, CompleteAppointmentHandler>();
+    builder.Services.AddScoped<ICommandHandler<MarkNoShowAppointmentCommand, Result>, MarkNoShowAppointmentHandler>();
     builder.Services.AddScoped<ICommandHandler<CreatePatientCommand, Result<int>>, CreatePatientHandler>();
     builder.Services.AddScoped<ICommandHandler<ProcessPaymentCommand, Result<int>>, ProcessPaymentHandler>();
     builder.Services.AddScoped<ICommandHandler<RefundPaymentCommand, Result>, RefundPaymentHandler>();
@@ -146,6 +152,8 @@ try
     builder.Services.AddScoped<IQueryHandler<GetRevenueReportQuery, Result<RevenueReportDto>>, GetRevenueReportHandler>();
     builder.Services.AddScoped<IQueryHandler<GetNoShowRateQuery, Result<NoShowRateDto>>, GetNoShowRateHandler>();
     builder.Services.AddScoped<IQueryHandler<GetAppointmentVolumeQuery, Result<AppointmentVolumeDto>>, GetAppointmentVolumeHandler>();
+    builder.Services.AddScoped<IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>>, GetAppointmentHandler>();
+    builder.Services.AddScoped<IQueryHandler<GetAppointmentsByPatientQuery, Result<IEnumerable<AppointmentDto>>>, GetAppointmentsByPatientHandler>();
     // ── FACADE PATTERN (Structural) ──────────────────────────
     builder.Services.AddScoped<IAppointmentFacade, AppointmentFacade>();
     // ─────────────────────────────────────────────────────────

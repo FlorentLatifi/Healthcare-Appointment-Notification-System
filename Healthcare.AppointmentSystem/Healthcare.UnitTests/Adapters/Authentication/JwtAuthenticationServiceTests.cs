@@ -9,6 +9,7 @@ using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using Moq;
+using StackExchange.Redis;
 
 namespace Healthcare.UnitTests.Adapters.Authentication;
 
@@ -213,5 +214,117 @@ public sealed class JwtAuthenticationServiceTests
 
         var reuseNew = await _service.RefreshTokenAsync(newRefreshToken);
         reuseNew.IsSuccess.Should().BeTrue("new token should still be valid");
+    }
+
+    [Fact]
+    public async Task LoginAsync_RedisConnectionExceptionOnStore_PropagatesException()
+    {
+        var dbMock = new Mock<IDatabase>(MockBehavior.Loose);
+        dbMock.Setup(d => d.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<Expiration>(),
+                It.IsAny<ValueCondition>(),
+                It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect,
+                "No connection could be made to the Redis server"));
+
+        var redisMock = new Mock<IConnectionMultiplexer>(MockBehavior.Loose);
+        redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object?>()))
+            .Returns(dbMock.Object);
+
+        var serviceWithRedis = new JwtAuthenticationService(
+            _unitOfWorkMock.Object,
+            _passwordHasherMock.Object,
+            _jwtSettings,
+            _loggerMock.Object,
+            redisMock.Object);
+
+        var user = CreateTestUser();
+        _userRepoMock.Setup(r => r.GetByUsernameAsync("testuser", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _passwordHasherMock.Setup(p => p.VerifyPassword("password", user.PasswordHash))
+            .Returns(true);
+
+        var act = () => serviceWithRedis.LoginAsync("testuser", "password");
+
+        await act.Should().ThrowAsync<RedisConnectionException>();
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v!.ToString()!.Contains("Redis unavailable for refresh-token storage")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_RedisConnectionExceptionOnConsume_PropagatesException()
+    {
+        var dbMock = new Mock<IDatabase>(MockBehavior.Loose);
+        dbMock.Setup(d => d.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect,
+                "No connection could be made to the Redis server"));
+
+        var redisMock = new Mock<IConnectionMultiplexer>(MockBehavior.Loose);
+        redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object?>()))
+            .Returns(dbMock.Object);
+
+        var serviceWithRedis = new JwtAuthenticationService(
+            _unitOfWorkMock.Object,
+            _passwordHasherMock.Object,
+            _jwtSettings,
+            _loggerMock.Object,
+            redisMock.Object);
+
+        var act = () => serviceWithRedis.RefreshTokenAsync("some-refresh-token");
+
+        await act.Should().ThrowAsync<RedisConnectionException>();
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v!.ToString()!.Contains("Redis unavailable for refresh-token storage")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task RevokeTokenAsync_RedisConnectionExceptionOnDelete_PropagatesException()
+    {
+        var redisMock = new Mock<IConnectionMultiplexer>();
+        var dbMock = new Mock<IDatabase>();
+        dbMock.Setup(d => d.KeyDeleteAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect,
+                "No connection could be made to the Redis server"));
+        redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object?>()))
+            .Returns(dbMock.Object);
+
+        var serviceWithRedis = new JwtAuthenticationService(
+            _unitOfWorkMock.Object,
+            _passwordHasherMock.Object,
+            _jwtSettings,
+            _loggerMock.Object,
+            redisMock.Object);
+
+        var act = () => serviceWithRedis.RevokeTokenAsync("some-refresh-token");
+
+        await act.Should().ThrowAsync<RedisConnectionException>();
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v!.ToString()!.Contains("Redis unavailable for refresh-token storage")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
     }
 }

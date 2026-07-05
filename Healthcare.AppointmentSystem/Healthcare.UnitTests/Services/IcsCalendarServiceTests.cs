@@ -3,6 +3,7 @@ using Healthcare.Application.Services;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
+using Healthcare.Domain.Services;
 using Healthcare.UnitTests.Helpers;
 using Xunit;
 
@@ -16,7 +17,7 @@ public class IcsCalendarServiceTests
         var doctor = new TestDataBuilder.DoctorBuilder().Build();
         var future = DateTime.UtcNow.Date.AddDays(1).AddHours(10);
         var scheduledTime = AppointmentTime.Create(future);
-        return Appointment.Create(patient, doctor, scheduledTime, "Routine checkup");
+        return Appointment.Create(patient, doctor, scheduledTime, "Routine checkup", AppointmentCodeGenerator.Instance);
     }
 
     [Fact]

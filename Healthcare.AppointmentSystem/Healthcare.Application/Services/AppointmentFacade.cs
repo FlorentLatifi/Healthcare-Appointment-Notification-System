@@ -63,6 +63,10 @@ public sealed class AppointmentFacade : IAppointmentFacade
                 .At(scheduledTime)
                 .BecauseOf(reason);
 
+            // ── PRIMARY GUARD: BookAppointmentRequestValidator enforces that
+            // appointmentType is one of the known values. This default arm is
+            // defense-in-depth only — it should never be reached with a valid
+            // request. ────────────────────────────────────────────────────────
             command = appointmentType switch
             {
                 "Insurance" => builder.WithInsurance().Build(),

@@ -17,33 +17,25 @@ public sealed class GetNoShowRateHandler : IQueryHandler<GetNoShowRateQuery, Res
         GetNoShowRateQuery query,
         CancellationToken cancellationToken = default)
     {
-        try
+        var counts = await _appointmentRepository.GetStatusCountsAsync(
+            query.DateFrom, query.DateTo, cancellationToken);
+
+        var denominator = counts.Confirmed + counts.Completed + counts.NoShow;
+        var rate = denominator > 0
+            ? (double)counts.NoShow / denominator * 100.0
+            : 0.0;
+
+        var dto = new NoShowRateDto
         {
-            var counts = await _appointmentRepository.GetStatusCountsAsync(
-                query.DateFrom, query.DateTo, cancellationToken);
+            DateFrom = query.DateFrom,
+            DateTo = query.DateTo,
+            NoShowRatePercent = Math.Round(rate, 2),
+            ConfirmedCount = counts.Confirmed,
+            CompletedCount = counts.Completed,
+            NoShowCount = counts.NoShow,
+            TotalCount = counts.Confirmed + counts.Completed + counts.NoShow
+        };
 
-            var denominator = counts.Confirmed + counts.Completed + counts.NoShow;
-            var rate = denominator > 0
-                ? (double)counts.NoShow / denominator * 100.0
-                : 0.0;
-
-            var dto = new NoShowRateDto
-            {
-                DateFrom = query.DateFrom,
-                DateTo = query.DateTo,
-                NoShowRatePercent = Math.Round(rate, 2),
-                ConfirmedCount = counts.Confirmed,
-                CompletedCount = counts.Completed,
-                NoShowCount = counts.NoShow,
-                TotalCount = counts.Confirmed + counts.Completed + counts.NoShow
-            };
-
-            return Result<NoShowRateDto>.Success(dto);
-        }
-        catch (Exception ex)
-        {
-            return Result<NoShowRateDto>.Failure(
-                $"An unexpected error occurred: {ex.Message}");
-        }
+        return Result<NoShowRateDto>.Success(dto);
     }
 }

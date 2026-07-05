@@ -31,9 +31,7 @@ public sealed class ProcessPaymentHandler : ICommandHandler<ProcessPaymentComman
         ProcessPaymentCommand command,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var appointment = await _unitOfWork.Appointments
+        var appointment = await _unitOfWork.Appointments
                 .GetByIdAsync(command.AppointmentId, cancellationToken);
 
             if (appointment == null)
@@ -113,10 +111,5 @@ public sealed class ProcessPaymentHandler : ICommandHandler<ProcessPaymentComman
             return confirmation.Succeeded
                 ? Result<int>.Success(payment.Id)
                 : Result<int>.Failure($"Payment failed: {confirmation.FailureReason}");
-        }
-        catch (Exception ex)
-        {
-            return Result<int>.Failure($"An unexpected error occurred: {ex.Message}");
-        }
     }
 }

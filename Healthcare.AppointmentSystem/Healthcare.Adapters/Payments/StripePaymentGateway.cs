@@ -192,6 +192,7 @@ public sealed class StripePaymentGateway : IPaymentGateway
 
     public async Task<Result<RefundResult>> RefundPaymentAsync(
         string paymentIntentId,
+        string currency,
         decimal? amount = null,
         string? reason = null,
         CancellationToken cancellationToken = default)
@@ -199,8 +200,8 @@ public sealed class StripePaymentGateway : IPaymentGateway
         try
         {
             _logger.LogInformation(
-                "Processing refund: PaymentIntentId={PaymentIntentId}, Amount={Amount}, Reason={Reason}",
-                paymentIntentId, amount, reason);
+                "Processing refund: PaymentIntentId={PaymentIntentId}, Currency={Currency}, Amount={Amount}, Reason={Reason}",
+                paymentIntentId, currency, amount, reason);
 
             var options = new RefundCreateOptions
             {
@@ -216,7 +217,7 @@ public sealed class StripePaymentGateway : IPaymentGateway
             // If partial refund, specify amount
             if (amount.HasValue)
             {
-                options.Amount = ConvertToSmallestUnit(amount.Value, _settings.DefaultCurrency);
+                options.Amount = ConvertToSmallestUnit(amount.Value, currency);
             }
 
             var refund = await _refundService.CreateAsync(options, cancellationToken: cancellationToken);

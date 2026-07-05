@@ -51,9 +51,7 @@ public sealed class DoctorsController : ControllerBase
     {
         _logger.LogInformation("Creating doctor: {Email}", request.Email);
 
-        try
-        {
-            var existingDoctor = await _unitOfWork.Doctors
+        var existingDoctor = await _unitOfWork.Doctors
                 .GetByEmailAsync(request.Email, cancellationToken);
 
             if (existingDoctor != null)
@@ -97,12 +95,6 @@ public sealed class DoctorsController : ControllerBase
                 nameof(GetDoctorById),
                 new { id = doctor.Id },
                 ApiResponse<int>.SuccessResponse(doctor.Id, "Doctor created successfully"));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create doctor");
-            return BadRequest(ApiResponse<int>.ErrorResponse(ex.Message, "Failed to create doctor"));
-        }
     }
 
     [HttpGet("{id}")]
@@ -126,12 +118,24 @@ public sealed class DoctorsController : ControllerBase
         return Ok(ApiResponse<DoctorDto>.SuccessResponse(dto));
     }
 
+    /// <summary>
+    /// Deactivates a doctor (soft-delete). The record remains in the database
+    /// but IsActive is set to false (and IsAcceptingPatients to false),
+    /// preserving the historical/audit trail.
+    /// </summary>
+    /// <param name="id">The doctor ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Success or failure result.</returns>
+    /// <response code="204">Doctor deactivated successfully.</response>
+    /// <response code="400">Doctor is already deactivated.</response>
+    /// <response code="404">Doctor not found.</response>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteDoctor(int id, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Deleting doctor {DoctorId}", id);
+        _logger.LogInformation("Deactivating doctor {DoctorId}", id);
 
         var doctor = await _unitOfWork.Doctors.GetByIdAsync(id, cancellationToken);
         if (doctor == null)
@@ -142,13 +146,23 @@ public sealed class DoctorsController : ControllerBase
                 _localizer["DoctorNotFound"]));
         }
 
-        await _unitOfWork.Doctors.DeleteAsync(id, cancellationToken);
+        try
+        {
+            doctor.Deactivate();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Doctor {DoctorId} is already deactivated", id);
+            return BadRequest(ApiResponse.ErrorResponse(ex.Message, "Doctor already deactivated"));
+        }
+
+        await _unitOfWork.Doctors.UpdateAsync(doctor, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _eventDispatcher.DispatchAsync(
             new DoctorCacheInvalidationNeededEvent(), cancellationToken);
 
-        _logger.LogInformation("Doctor {DoctorId} deleted successfully", id);
+        _logger.LogInformation("Doctor {DoctorId} deactivated successfully", id);
         return NoContent();
     }
 
