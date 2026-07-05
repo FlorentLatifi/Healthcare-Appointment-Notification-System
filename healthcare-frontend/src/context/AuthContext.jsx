@@ -21,6 +21,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [patientId, setPatientId] = useState(null);
+  const [doctorId, setDoctorId] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const getToken = useCallback(() => token, [token]);
@@ -63,10 +64,11 @@ export function AuthProvider({ children }) {
     setToken(null);
     setUser(null);
     setPatientId(null);
+    setDoctorId(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, patientId, loading, login, register, logout, setPatientId, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ user, token, patientId, doctorId, loading, login, register, logout, setPatientId, setDoctorId, isAuthenticated: !!token }}>
       {children}
     </AuthContext.Provider>
   );

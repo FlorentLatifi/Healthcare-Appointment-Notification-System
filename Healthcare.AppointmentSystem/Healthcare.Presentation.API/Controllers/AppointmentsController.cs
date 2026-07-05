@@ -261,6 +261,59 @@ public sealed class AppointmentsController : ControllerBase
         return Ok(ApiResponse.SuccessResponse("Appointment cancelled successfully"));
     }
 
+    [HttpPut("{id}/complete")]
+    [Authorize(Roles = AppRoles.DoctorOrAdmin)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CompleteAppointment(
+        int id,
+        [FromBody] CompleteAppointmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Completing appointment {AppointmentId}", id);
+
+        var appointment = await _unitOfWork.Appointments.GetByIdAsync(id, cancellationToken);
+        if (appointment == null)
+        {
+            _logger.LogWarning("Appointment {AppointmentId} not found", id);
+            return NotFound(ApiResponse.ErrorResponse(
+                $"Appointment with ID {id} not found", "Appointment not found"));
+        }
+
+        appointment.Complete(request.DoctorNotes);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Appointment {AppointmentId} completed successfully", id);
+        return Ok(ApiResponse.SuccessResponse("Appointment completed successfully"));
+    }
+
+    [HttpPut("{id}/mark-no-show")]
+    [Authorize(Roles = AppRoles.DoctorOrAdmin)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> MarkNoShowAppointment(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Marking appointment {AppointmentId} as No-Show", id);
+
+        var appointment = await _unitOfWork.Appointments.GetByIdAsync(id, cancellationToken);
+        if (appointment == null)
+        {
+            _logger.LogWarning("Appointment {AppointmentId} not found", id);
+            return NotFound(ApiResponse.ErrorResponse(
+                $"Appointment with ID {id} not found", "Appointment not found"));
+        }
+
+        appointment.MarkAsNoShow();
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Appointment {AppointmentId} marked as No-Show", id);
+        return Ok(ApiResponse.SuccessResponse("Appointment marked as No-Show"));
+    }
+
     [HttpDelete("{id}")]
     [Authorize(Roles = AppRoles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
