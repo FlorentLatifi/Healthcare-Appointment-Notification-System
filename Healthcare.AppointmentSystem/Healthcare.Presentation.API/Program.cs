@@ -27,6 +27,7 @@ using Healthcare.Application.Services;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Healthcare.Presentation.API.Resources;
 using Healthcare.Presentation.API.Responses;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -155,6 +156,11 @@ try
         .AddCheck<DatabaseHealthCheck>("database", failureStatus: HealthStatus.Unhealthy, tags: new[] { "db", "sql", "critical" })
         .AddCheck<RedisHealthCheck>("redis", failureStatus: HealthStatus.Degraded, tags: new[] { "cache", "redis", "locking" })
         .AddCheck<MemoryHealthCheck>("memory", failureStatus: HealthStatus.Degraded, tags: new[] { "memory", "performance" });
+
+    // ============================================
+    // LOCALIZATION
+    // ============================================
+    builder.Services.AddLocalization();
 
     // ============================================
     // JWT AUTHENTICATION
@@ -327,6 +333,14 @@ try
     });
 
     app.UseHttpsRedirection();
+
+    var supportedCultures = new[] { "en", "sq" };
+    var localizationOptions = new RequestLocalizationOptions()
+        .SetDefaultCulture("en")
+        .AddSupportedCultures(supportedCultures)
+        .AddSupportedUICultures(supportedCultures);
+    app.UseRequestLocalization(localizationOptions);
+
     app.UseMiddleware<SecurityHeadersMiddleware>();
     app.UseCors("ConfiguredOrigins");
     app.UseRateLimiter();

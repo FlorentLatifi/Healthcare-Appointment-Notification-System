@@ -4,8 +4,10 @@ using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Presentation.API.Requests;
+using Healthcare.Presentation.API.Resources;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 
 
 namespace Healthcare.Presentation.API.Controllers;
@@ -23,22 +25,25 @@ namespace Healthcare.Presentation.API.Controllers;
 /// - DELETE /api/patients/{id}     - Delete patient
 /// </remarks>
 [ApiController]
-[ApiVersion("1.0")] // ← SHTO KËTË
-[Route("api/v{version:apiVersion}/[controller]")] // ← NDRYSHO KËTË
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
 [Produces("application/json")]
 public sealed class PatientsController : ControllerBase
 {
     private readonly ICommandHandler<CreatePatientCommand, Result<int>> _createPatientHandler;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IStringLocalizer<Messages> _localizer;
     private readonly ILogger<PatientsController> _logger;
 
     public PatientsController(
         ICommandHandler<CreatePatientCommand, Result<int>> createPatientHandler,
         IUnitOfWork unitOfWork,
+        IStringLocalizer<Messages> localizer,
         ILogger<PatientsController> logger)
     {
         _createPatientHandler = createPatientHandler;
         _unitOfWork = unitOfWork;
+        _localizer = localizer;
         _logger = logger;
     }
 
@@ -110,8 +115,8 @@ public sealed class PatientsController : ControllerBase
         {
             _logger.LogWarning("Patient {PatientId} not found", id);
             return NotFound(ApiResponse<PatientDto>.ErrorResponse(
-                $"Patient with ID {id} not found",
-                "Patient not found"));
+                _localizer["PatientNotFoundWithId", id],
+                _localizer["PatientNotFound"]));
         }
 
         var dto = MapToDto(patient);
@@ -226,14 +231,14 @@ public sealed class PatientsController : ControllerBase
         {
             _logger.LogWarning("Patient {PatientId} not found", id);
             return NotFound(ApiResponse.ErrorResponse(
-                $"Patient with ID {id} not found", "Patient not found"));
+                _localizer["PatientNotFoundWithId", id], _localizer["PatientNotFound"]));
         }
 
         patient.UpdateNotificationPreferences(request.EmailEnabled, request.SmsEnabled);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Notification preferences updated for patient {PatientId}", id);
-        return Ok(ApiResponse.SuccessResponse("Notification preferences updated successfully"));
+        return Ok(ApiResponse.SuccessResponse(_localizer["NotificationPreferencesUpdated"]));
     }
 
     /// <summary>
@@ -256,8 +261,8 @@ public sealed class PatientsController : ControllerBase
         {
             _logger.LogWarning("Patient {PatientId} not found", id);
             return NotFound(ApiResponse.ErrorResponse(
-                $"Patient with ID {id} not found",
-                "Patient not found"));
+                _localizer["PatientNotFoundWithId", id],
+                _localizer["PatientNotFound"]));
         }
 
         await _unitOfWork.Patients.DeleteAsync(id, cancellationToken);

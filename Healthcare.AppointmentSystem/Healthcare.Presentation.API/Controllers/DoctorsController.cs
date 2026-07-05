@@ -11,6 +11,8 @@ using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Mvc;
 using Healthcare.Application.Common;
+using Healthcare.Presentation.API.Resources;
+using Microsoft.Extensions.Localization;
 
 namespace Healthcare.Presentation.API.Controllers;
 
@@ -23,17 +25,20 @@ public sealed class DoctorsController : ControllerBase
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDoctorCacheService _cache;
     private readonly IDomainEventDispatcher _eventDispatcher;
+    private readonly IStringLocalizer<Messages> _localizer;
     private readonly ILogger<DoctorsController> _logger;
 
     public DoctorsController(
         IUnitOfWork unitOfWork,
         IDoctorCacheService cache,
         IDomainEventDispatcher eventDispatcher,
+        IStringLocalizer<Messages> localizer,
         ILogger<DoctorsController> logger)
     {
         _unitOfWork = unitOfWork;
         _cache = cache;
         _eventDispatcher = eventDispatcher;
+        _localizer = localizer;
         _logger = logger;
     }
 
@@ -113,8 +118,8 @@ public sealed class DoctorsController : ControllerBase
         {
             _logger.LogWarning("Doctor {DoctorId} not found", id);
             return NotFound(ApiResponse<DoctorDto>.ErrorResponse(
-                $"Doctor with ID {id} not found",
-                "Doctor not found"));
+                _localizer["DoctorNotFoundWithId", id],
+                _localizer["DoctorNotFound"]));
         }
 
         var dto = MapToDto(doctor);
@@ -133,8 +138,8 @@ public sealed class DoctorsController : ControllerBase
         {
             _logger.LogWarning("Doctor {DoctorId} not found", id);
             return NotFound(ApiResponse.ErrorResponse(
-                $"Doctor with ID {id} not found",
-                "Doctor not found"));
+                _localizer["DoctorNotFoundWithId", id],
+                _localizer["DoctorNotFound"]));
         }
 
         await _unitOfWork.Doctors.DeleteAsync(id, cancellationToken);

@@ -9,7 +9,9 @@ using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.Events;
 using Healthcare.Domain.ValueObjects;
+using Healthcare.Presentation.API.Resources;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Healthcare.Application.Common;
@@ -100,6 +102,7 @@ public sealed class DoctorCacheTests
             unitOfWorkMock.Object,
             cache,
             dispatcherMock.Object,
+            new Mock<IStringLocalizer<Messages>>().Object,
             loggerMock.Object);
 
         var firstResponse = await controller.GetAllDoctors(pageNumber: 1, pageSize: 20);
@@ -133,6 +136,7 @@ public sealed class DoctorCacheTests
             unitOfWorkMock.Object,
             cache,
             dispatcherMock.Object,
+            new Mock<IStringLocalizer<Messages>>().Object,
             loggerMock.Object);
 
         var request = new CreateDoctorRequest
@@ -190,6 +194,7 @@ public sealed class DoctorCacheTests
             unitOfWorkMock.Object,
             cache,
             dispatcherMock.Object,
+            new Mock<IStringLocalizer<Messages>>().Object,
             loggerMock.Object);
 
         await controller.DeleteDoctor(1, CancellationToken.None);
