@@ -1,4 +1,5 @@
 ﻿using Healthcare.Application.Ports.Repositories;
+using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 
@@ -86,5 +87,51 @@ public sealed class InMemoryAppointmentRepository : InMemoryRepository<Appointme
     public Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         return base.DeleteAsync(id);
+    }
+
+    public async Task<StatusCountsResult> GetStatusCountsAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
+    {
+        var appointments = (await FindAsync(a => a.ScheduledTime.Value >= from && a.ScheduledTime.Value < to)).ToList();
+        return new StatusCountsResult(
+            appointments.Count(a => a.Status == AppointmentStatus.Pending),
+            appointments.Count(a => a.Status == AppointmentStatus.Confirmed),
+            appointments.Count(a => a.Status == AppointmentStatus.Completed),
+            appointments.Count(a => a.Status == AppointmentStatus.Cancelled),
+            appointments.Count(a => a.Status == AppointmentStatus.NoShow));
+    }
+
+    public async Task<List<DailyVolumeResult>> GetDailyVolumeAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
+    {
+        var appointments = (await FindAsync(a => a.ScheduledTime.Value >= from && a.ScheduledTime.Value < to)).ToList();
+        return appointments
+            .GroupBy(a => a.ScheduledTime.Value.Date)
+            .Select(g => new DailyVolumeResult(
+                g.Key,
+                g.Count(a => a.Status == AppointmentStatus.Pending),
+                g.Count(a => a.Status == AppointmentStatus.Confirmed),
+                g.Count(a => a.Status == AppointmentStatus.Cancelled)))
+            .OrderBy(r => r.Date)
+            .ToList();
+    }
+
+    public async Task<List<WeeklyVolumeResult>> GetWeeklyVolumeAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
+    {
+        var daily = await GetDailyVolumeAsync(from, to, cancellationToken);
+        return daily
+            .GroupBy(d => GetIsoWeek(d.Date))
+            .Select(g => new WeeklyVolumeResult(g.Key.Year, g.Key.Week, g.Sum(d => d.Created), g.Sum(d => d.Confirmed), g.Sum(d => d.Cancelled)))
+            .OrderBy(r => r.Year).ThenBy(r => r.Week)
+            .ToList();
+    }
+
+    private static (int Year, int Week) GetIsoWeek(DateTime date)
+    {
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        var cal = culture.Calendar;
+        var week = cal.GetWeekOfYear(date, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+        var year = date.Year;
+        if (week >= 52 && date.Month == 1) year--;
+        if (week <= 1 && date.Month == 12) year++;
+        return (year, week);
     }
 }

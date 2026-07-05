@@ -1,4 +1,5 @@
 ﻿using Healthcare.Application.Ports.Repositories;
+using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 
@@ -57,5 +58,24 @@ public sealed class InMemoryPaymentRepository : InMemoryRepository<Payment>, IPa
     public Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         return base.DeleteAsync(id);
+    }
+
+    public async Task<decimal> GetTotalRevenueAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
+    {
+        var payments = await FindAsync(p =>
+            p.Status == PaymentStatus.Succeeded &&
+            p.PaidAt >= from &&
+            p.PaidAt < to);
+        return payments.Sum(p => p.Amount.Amount);
+    }
+
+    public Task<List<DoctorRevenueResult>> GetRevenueByDoctorAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException("InMemoryPaymentRepository does not support GetRevenueByDoctorAsync. Use EFCorePaymentRepository in production.");
+    }
+
+    public Task<List<SpecialtyRevenueResult>> GetRevenueBySpecialtyAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException("InMemoryPaymentRepository does not support GetRevenueBySpecialtyAsync. Use EFCorePaymentRepository in production.");
     }
 }

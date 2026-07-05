@@ -18,6 +18,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Healthcare.Application.Commands.ProcessPayment;
 using Healthcare.Application.Commands.RefundPayment;
+using Healthcare.Application.Queries.Analytics;
+using Healthcare.Application.DTOs;
 using Healthcare.Adapters.Factories;
 using Healthcare.Application.Ports.Factories;
 using Healthcare.Application.Ports.Facades;
@@ -136,6 +138,13 @@ try
     builder.Services.AddScoped<ICommandHandler<CreatePatientCommand, Result<int>>, CreatePatientHandler>();
     builder.Services.AddScoped<ICommandHandler<ProcessPaymentCommand, Result<int>>, ProcessPaymentHandler>();
     builder.Services.AddScoped<ICommandHandler<RefundPaymentCommand, Result>, RefundPaymentHandler>();
+
+    // ============================================
+    // APPLICATION LAYER (QUERY HANDLERS)
+    // ============================================
+    builder.Services.AddScoped<IQueryHandler<GetRevenueReportQuery, Result<RevenueReportDto>>, GetRevenueReportHandler>();
+    builder.Services.AddScoped<IQueryHandler<GetNoShowRateQuery, Result<NoShowRateDto>>, GetNoShowRateHandler>();
+    builder.Services.AddScoped<IQueryHandler<GetAppointmentVolumeQuery, Result<AppointmentVolumeDto>>, GetAppointmentVolumeHandler>();
     // ── FACADE PATTERN (Structural) ──────────────────────────
     builder.Services.AddScoped<IAppointmentFacade, AppointmentFacade>();
     // ─────────────────────────────────────────────────────────

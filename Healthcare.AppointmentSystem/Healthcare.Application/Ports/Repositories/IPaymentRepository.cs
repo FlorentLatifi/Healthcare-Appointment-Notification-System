@@ -1,4 +1,5 @@
-﻿using Healthcare.Domain.Entities;
+﻿using Healthcare.Application.Queries.Analytics;
+using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 
 namespace Healthcare.Application.Ports.Repositories;
@@ -58,4 +59,19 @@ public interface IPaymentRepository
     /// Deletes a payment by its ID.
     /// </summary>
     Task DeleteAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the total revenue from succeeded payments in a date range.
+    /// </summary>
+    Task<decimal> GetTotalRevenueAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets total revenue grouped by doctor for succeeded payments in a date range.
+    /// </summary>
+    Task<List<DoctorRevenueResult>> GetRevenueByDoctorAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets total revenue grouped by specialty for succeeded payments in a date range.
+    /// </summary>
+    Task<List<SpecialtyRevenueResult>> GetRevenueBySpecialtyAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default);
 }

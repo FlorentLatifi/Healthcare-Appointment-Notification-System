@@ -1,4 +1,5 @@
-﻿using Healthcare.Domain.Entities;
+﻿using Healthcare.Application.Queries.Analytics;
+using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 
 namespace Healthcare.Application.Ports.Repositories;
@@ -99,4 +100,19 @@ public interface IAppointmentRepository
     /// <param name="id">The appointment ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task DeleteAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets status counts for appointments in a date range, aggregated at DB level.
+    /// </summary>
+    Task<StatusCountsResult> GetStatusCountsAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets appointment volume grouped by day for a date range.
+    /// </summary>
+    Task<List<DailyVolumeResult>> GetDailyVolumeAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets appointment volume grouped by ISO week for a date range.
+    /// </summary>
+    Task<List<WeeklyVolumeResult>> GetWeeklyVolumeAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default);
 }
