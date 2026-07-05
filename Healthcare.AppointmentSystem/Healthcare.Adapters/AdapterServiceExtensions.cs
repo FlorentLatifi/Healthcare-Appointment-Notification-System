@@ -134,6 +134,7 @@ public static class AdapterServiceExtensions
         services.AddSingleton<IDoctorRepository, InMemoryDoctorRepository>();
         services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
         services.AddSingleton<IUserRepository, InMemoryUserRepository>();
+        services.AddSingleton<IAuditLogRepository, InMemoryAuditLogRepository>();
 
         // Authentication Services
         services.AddSingleton<JwtSettings>(provider =>
@@ -422,6 +423,7 @@ public static class AdapterServiceExtensions
         services.AddScoped<IDoctorRepository, EFCoreDoctorRepository>();
         services.AddScoped<IUserRepository, EFCoreUserRepository>();
         services.AddScoped<IPaymentRepository, EFCorePaymentRepository>();
+        services.AddScoped<IAuditLogRepository, EFCoreAuditLogRepository>();
         services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
 
         // ✅ AUTHENTICATION SERVICES (Simplified - JWT registered in Program.cs)
@@ -483,6 +485,8 @@ public static class AdapterServiceExtensions
         // Doctor Cache Invalidation Handlers
         services.AddScoped<IDomainEventHandler<DoctorCacheInvalidationNeededEvent>,
             InvalidateDoctorCacheHandler>();
+
+        // Audit Log Handlers
 
         // TODO: Add more handlers as needed:
         // services.AddScoped<IDomainEventHandler<AppointmentCompletedEvent>, ...>();

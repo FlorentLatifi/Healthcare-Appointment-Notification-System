@@ -42,13 +42,15 @@ public class CancelAppointmentHandlerTests
         var doctorRepo = new InMemoryDoctorRepository();
         var userRepo = new InMemoryUserRepository();
         var paymentRepo = new InMemoryPaymentRepository();
+        var auditLogRepo = new InMemoryAuditLogRepository();
 
         _unitOfWork = new InMemoryUnitOfWork(
             appointmentRepo,
             patientRepo,
             doctorRepo,
             userRepo,
-            paymentRepo);
+            paymentRepo,
+            auditLogRepo);
 
         // Setup event dispatcher (with mock logger)
         var mockLogger = new Mock<ILogger<DomainEventDispatcher>>();

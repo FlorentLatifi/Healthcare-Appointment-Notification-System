@@ -10,7 +10,6 @@ using Healthcare.Presentation.API.Authorization;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Healthcare.Application.Common;
 
 namespace Healthcare.Presentation.API.Controllers;
 

@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Authorization;
 using Healthcare.Application.Builders;
 using Healthcare.Application.Ports.Facades;
 using Healthcare.Presentation.API.Authorization;
-using Healthcare.Application.Common;
 
 namespace Healthcare.Presentation.API.Controllers;
 

@@ -1,32 +1,29 @@
-﻿using Healthcare.Application.Ports.Events;
+﻿using Healthcare.Application.Ports.Repositories;
+using Healthcare.Application.Ports.Events;
+using Healthcare.Domain.Entities;
 using Healthcare.Domain.Events;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace Healthcare.Adapters.Events.Handlers;
 
-/// <summary>
-/// Logs payment success to audit trail.
-/// </summary>
-/// <remarks>
-/// Design Pattern: Observer Pattern
-/// 
-/// This handler creates an audit log when payment succeeds.
-/// In production, this would:
-/// - Write to audit database table
-/// - Send to external logging service (Elasticsearch, Splunk)
-/// - Trigger analytics tracking
-/// - Send success notification to finance team
-/// </remarks>
 public sealed class LogPaymentSucceededHandler : IDomainEventHandler<PaymentSucceededEvent>
 {
     private readonly ILogger<LogPaymentSucceededHandler> _logger;
+    private readonly IAuditLogRepository _auditLogRepo;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public LogPaymentSucceededHandler(ILogger<LogPaymentSucceededHandler> logger)
+    public LogPaymentSucceededHandler(
+        ILogger<LogPaymentSucceededHandler> logger,
+        IAuditLogRepository auditLogRepo,
+        IUnitOfWork unitOfWork)
     {
         _logger = logger;
+        _auditLogRepo = auditLogRepo;
+        _unitOfWork = unitOfWork;
     }
 
-    public Task HandleAsync(
+    public async Task HandleAsync(
         PaymentSucceededEvent domainEvent,
         CancellationToken cancellationToken = default)
     {
@@ -41,7 +38,6 @@ public sealed class LogPaymentSucceededHandler : IDomainEventHandler<PaymentSucc
             domainEvent.Amount.Currency,
             domainEvent.TransactionId.Value);
 
-        // Console output for development
         Console.WriteLine("═══════════════════════════════════════════════");
         Console.WriteLine("💰 PAYMENT SUCCEEDED - AUDIT LOG");
         Console.WriteLine("═══════════════════════════════════════════════");
@@ -53,6 +49,24 @@ public sealed class LogPaymentSucceededHandler : IDomainEventHandler<PaymentSucc
         Console.WriteLine($"Transaction ID:  {domainEvent.TransactionId.Value}");
         Console.WriteLine("═══════════════════════════════════════════════");
 
-        return Task.CompletedTask;
+        var details = JsonSerializer.Serialize(new
+        {
+            domainEvent.PaymentId,
+            domainEvent.AppointmentId,
+            Amount = domainEvent.Amount.Amount,
+            Currency = domainEvent.Amount.Currency,
+            TransactionId = domainEvent.TransactionId.Value
+        });
+
+        var entry = new AuditLogEntry(
+            "PaymentSucceeded",
+            "Payment",
+            domainEvent.PaymentId,
+            domainEvent.OccurredOn,
+            details,
+            null);
+
+        await _auditLogRepo.AddAsync(entry, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

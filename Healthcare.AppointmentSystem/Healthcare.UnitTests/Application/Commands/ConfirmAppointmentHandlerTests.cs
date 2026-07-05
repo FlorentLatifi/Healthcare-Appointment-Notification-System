@@ -44,13 +44,15 @@ public class ConfirmAppointmentHandlerTests
         var doctorRepo = new InMemoryDoctorRepository();
         var userRepo = new InMemoryUserRepository();
         var paymentRepo = new InMemoryPaymentRepository();
+        var auditLogRepo = new InMemoryAuditLogRepository();
 
         _unitOfWork = new InMemoryUnitOfWork(
             appointmentRepo,
             patientRepo,
             doctorRepo,
             userRepo,
-            paymentRepo);
+            paymentRepo,
+            auditLogRepo);
 
         // Event dispatcher
         var loggerMock = new Mock<ILogger<DomainEventDispatcher>>();

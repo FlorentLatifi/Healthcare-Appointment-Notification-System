@@ -1,24 +1,30 @@
-﻿using Healthcare.Application.Ports.Events;
+﻿using Healthcare.Application.Ports.Repositories;
+using Healthcare.Application.Ports.Events;
+using Healthcare.Domain.Entities;
 using Healthcare.Domain.Events;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace Healthcare.Adapters.Events.Handlers;
 
-/// <summary>
-/// Logs appointment confirmation to audit trail.
-/// </summary>
 public sealed class LogAppointmentConfirmedHandler
     : IDomainEventHandler<AppointmentConfirmedEvent>
 {
     private readonly ILogger<LogAppointmentConfirmedHandler> _logger;
+    private readonly IAuditLogRepository _auditLogRepo;
+    private readonly IUnitOfWork _unitOfWork;
 
     public LogAppointmentConfirmedHandler(
-        ILogger<LogAppointmentConfirmedHandler> logger)
+        ILogger<LogAppointmentConfirmedHandler> logger,
+        IAuditLogRepository auditLogRepo,
+        IUnitOfWork unitOfWork)
     {
         _logger = logger;
+        _auditLogRepo = auditLogRepo;
+        _unitOfWork = unitOfWork;
     }
 
-    public Task HandleAsync(
+    public async Task HandleAsync(
         AppointmentConfirmedEvent domainEvent,
         CancellationToken cancellationToken = default)
     {
@@ -40,6 +46,24 @@ public sealed class LogAppointmentConfirmedHandler
                 domainEvent.PaymentOverrideReason);
         }
 
-        return Task.CompletedTask;
+        var details = JsonSerializer.Serialize(new
+        {
+            domainEvent.AppointmentId,
+            domainEvent.PatientId,
+            domainEvent.DoctorId,
+            domainEvent.ScheduledTime,
+            PaymentOverrideReason = domainEvent.PaymentOverrideReason
+        });
+
+        var entry = new AuditLogEntry(
+            "AppointmentConfirmed",
+            "Appointment",
+            domainEvent.AppointmentId,
+            domainEvent.OccurredOn,
+            details,
+            null);
+
+        await _auditLogRepo.AddAsync(entry, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

@@ -1,24 +1,30 @@
-﻿using Healthcare.Application.Ports.Events;
+﻿using Healthcare.Application.Ports.Repositories;
+using Healthcare.Application.Ports.Events;
+using Healthcare.Domain.Entities;
 using Healthcare.Domain.Events;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace Healthcare.Adapters.Events.Handlers;
 
-/// <summary>
-/// Logs appointment cancellation to audit trail.
-/// </summary>
 public sealed class LogAppointmentCancelledHandler
     : IDomainEventHandler<AppointmentCancelledEvent>
 {
     private readonly ILogger<LogAppointmentCancelledHandler> _logger;
+    private readonly IAuditLogRepository _auditLogRepo;
+    private readonly IUnitOfWork _unitOfWork;
 
     public LogAppointmentCancelledHandler(
-        ILogger<LogAppointmentCancelledHandler> logger)
+        ILogger<LogAppointmentCancelledHandler> logger,
+        IAuditLogRepository auditLogRepo,
+        IUnitOfWork unitOfWork)
     {
         _logger = logger;
+        _auditLogRepo = auditLogRepo;
+        _unitOfWork = unitOfWork;
     }
 
-    public Task HandleAsync(
+    public async Task HandleAsync(
         AppointmentCancelledEvent domainEvent,
         CancellationToken cancellationToken = default)
     {
@@ -31,6 +37,24 @@ public sealed class LogAppointmentCancelledHandler
             domainEvent.PatientId,
             domainEvent.DoctorId);
 
-        return Task.CompletedTask;
+        var details = JsonSerializer.Serialize(new
+        {
+            domainEvent.AppointmentId,
+            domainEvent.PatientId,
+            domainEvent.DoctorId,
+            domainEvent.ScheduledTime,
+            domainEvent.CancellationReason
+        });
+
+        var entry = new AuditLogEntry(
+            "AppointmentCancelled",
+            "Appointment",
+            domainEvent.AppointmentId,
+            domainEvent.OccurredOn,
+            details,
+            null);
+
+        await _auditLogRepo.AddAsync(entry, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

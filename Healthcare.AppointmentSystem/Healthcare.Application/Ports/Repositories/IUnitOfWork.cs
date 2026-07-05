@@ -44,6 +44,12 @@ public interface IUnitOfWork
     /// Gets the payment repository.
     /// </summary>
     IPaymentRepository Payments { get; }
+
+    /// <summary>
+    /// Gets the audit log repository.
+    /// </summary>
+    IAuditLogRepository AuditLogs { get; }
+
     /// <summary>
     /// Saves all changes made in this unit of work to the underlying data store.
     /// </summary>

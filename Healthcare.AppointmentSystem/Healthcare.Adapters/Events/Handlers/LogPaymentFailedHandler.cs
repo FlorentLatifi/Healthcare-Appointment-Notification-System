@@ -1,22 +1,29 @@
-﻿using Healthcare.Application.Ports.Events;
+﻿using Healthcare.Application.Ports.Repositories;
+using Healthcare.Application.Ports.Events;
+using Healthcare.Domain.Entities;
 using Healthcare.Domain.Events;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace Healthcare.Adapters.Events.Handlers;
 
-/// <summary>
-/// Logs payment failure to audit trail.
-/// </summary>
 public sealed class LogPaymentFailedHandler : IDomainEventHandler<PaymentFailedEvent>
 {
     private readonly ILogger<LogPaymentFailedHandler> _logger;
+    private readonly IAuditLogRepository _auditLogRepo;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public LogPaymentFailedHandler(ILogger<LogPaymentFailedHandler> logger)
+    public LogPaymentFailedHandler(
+        ILogger<LogPaymentFailedHandler> logger,
+        IAuditLogRepository auditLogRepo,
+        IUnitOfWork unitOfWork)
     {
         _logger = logger;
+        _auditLogRepo = auditLogRepo;
+        _unitOfWork = unitOfWork;
     }
 
-    public Task HandleAsync(
+    public async Task HandleAsync(
         PaymentFailedEvent domainEvent,
         CancellationToken cancellationToken = default)
     {
@@ -38,6 +45,22 @@ public sealed class LogPaymentFailedHandler : IDomainEventHandler<PaymentFailedE
         Console.WriteLine($"Failure Reason:  {domainEvent.FailureReason}");
         Console.WriteLine("═══════════════════════════════════════════════");
 
-        return Task.CompletedTask;
+        var details = JsonSerializer.Serialize(new
+        {
+            domainEvent.PaymentId,
+            domainEvent.AppointmentId,
+            domainEvent.FailureReason
+        });
+
+        var entry = new AuditLogEntry(
+            "PaymentFailed",
+            "Payment",
+            domainEvent.PaymentId,
+            domainEvent.OccurredOn,
+            details,
+            null);
+
+        await _auditLogRepo.AddAsync(entry, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }
