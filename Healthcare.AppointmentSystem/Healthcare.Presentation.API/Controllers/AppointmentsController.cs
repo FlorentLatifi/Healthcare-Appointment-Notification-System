@@ -1,9 +1,12 @@
-﻿using Healthcare.Application.Commands.BookAppointment;
+﻿using System.Security.Claims;
+using System.Text;
+using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Commands.CancelAppointment;
 using Healthcare.Application.Commands.ConfirmAppointment;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Repositories;
+using Healthcare.Application.Services;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Mvc;
@@ -259,6 +262,37 @@ public sealed class AppointmentsController : ControllerBase
 
         _logger.LogInformation("Appointment {AppointmentId} cancelled successfully", id);
         return Ok(ApiResponse.SuccessResponse("Appointment cancelled successfully"));
+    }
+
+    [HttpGet("{id}/calendar.ics")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetCalendarIcs(int id, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Exporting ICS calendar for appointment {AppointmentId}", id);
+
+        var appointment = await _unitOfWork.Appointments.GetByIdAsync(id, cancellationToken);
+        if (appointment == null)
+        {
+            _logger.LogWarning("Appointment {AppointmentId} not found", id);
+            return NotFound(ApiResponse.ErrorResponse(
+                $"Appointment with ID {id} not found", "Appointment not found"));
+        }
+
+        // Authorize: only the patient or doctor of this appointment may export
+        var userEmail = User.FindFirstValue(ClaimTypes.Email);
+        var isOwner = (appointment.Patient?.Email?.Value?.Equals(userEmail, StringComparison.OrdinalIgnoreCase) == true)
+                   || (appointment.Doctor?.Email?.Value?.Equals(userEmail, StringComparison.OrdinalIgnoreCase) == true);
+        if (!isOwner)
+        {
+            _logger.LogWarning("User {Email} not authorized to export ICS for appointment {AppointmentId}", userEmail, id);
+            return Forbid();
+        }
+
+        var icsContent = IcsCalendarService.GenerateAppointmentIcs(appointment);
+        return Content(icsContent, "text/calendar", Encoding.UTF8);
     }
 
     [HttpPut("{id}/complete")]

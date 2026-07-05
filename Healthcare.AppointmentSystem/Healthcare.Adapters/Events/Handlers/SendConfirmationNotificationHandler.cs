@@ -64,6 +64,16 @@ public sealed class SendConfirmationNotificationHandler
                 return;
             }
 
+            // Check patient's notification preferences
+            var prefs = appointment.Patient?.NotificationPreferences;
+            if (prefs != null && !prefs.EmailEnabled)
+            {
+                _logger.LogInformation(
+                    "Email notifications disabled for patient {PatientId}, skipping confirmation notification for appointment {AppointmentId}",
+                    appointment.PatientId, domainEvent.AppointmentId);
+                return;
+            }
+
             // Send notification
             await _notificationService.SendAppointmentConfirmationAsync(
                 appointment,

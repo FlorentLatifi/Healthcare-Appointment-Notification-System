@@ -77,6 +77,20 @@ public class PatientConfiguration : IEntityTypeConfiguration<Patient>
         builder.Property(p => p.ModifiedAt)
             .IsRequired(false);
 
+        // Value Object: NotificationPreferences (Owned Entity - same table)
+        builder.OwnsOne(p => p.NotificationPreferences, prefs =>
+        {
+            prefs.Property(n => n.EmailEnabled)
+                .IsRequired()
+                .HasDefaultValue(true)
+                .HasColumnName("NotificationPreferences_EmailEnabled");
+
+            prefs.Property(n => n.SmsEnabled)
+                .IsRequired()
+                .HasDefaultValue(false)
+                .HasColumnName("NotificationPreferences_SmsEnabled");
+        });
+
         // Value Object: Address (Owned Entity - same table)
         builder.OwnsOne(p => p.Address, address =>
         {

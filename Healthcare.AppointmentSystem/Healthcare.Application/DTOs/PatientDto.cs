@@ -65,6 +65,16 @@ public sealed class PatientDto
     public bool IsActive { get; set; }
 
     /// <summary>
+    /// Gets or sets whether email notifications are enabled.
+    /// </summary>
+    public bool EmailEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether SMS notifications are enabled.
+    /// </summary>
+    public bool SmsEnabled { get; set; }
+
+    /// <summary>
     /// Gets or sets when the patient was created.
     /// </summary>
     public DateTime CreatedAt { get; set; }

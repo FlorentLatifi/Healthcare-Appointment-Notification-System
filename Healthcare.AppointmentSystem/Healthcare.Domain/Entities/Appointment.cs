@@ -203,6 +203,8 @@ public sealed class Appointment : Entity
         // ── CREATE ENTITY ────────────────────────────────────────────────────
         var appointment = new Appointment(
             patient.Id, doctor.Id, scheduledTime, reason, doctor.ConsultationFee);
+        appointment.Patient = patient;
+        appointment.Doctor = doctor;
 
         // ── SINGLETON PATTERN ────────────────────────────────────────────────
         // Use injected generator (for testability) or fall back to global Instance.

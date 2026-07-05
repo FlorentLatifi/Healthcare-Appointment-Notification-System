@@ -209,6 +209,34 @@ public sealed class PatientsController : ControllerBase
     }
 
     /// <summary>
+    /// Updates the patient's notification preferences.
+    /// </summary>
+    [HttpPut("{id}/notification-preferences")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateNotificationPreferences(
+        int id,
+        [FromBody] UpdateNotificationPreferencesRequest request,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Updating notification preferences for patient {PatientId}", id);
+
+        var patient = await _unitOfWork.Patients.GetByIdAsync(id, cancellationToken);
+        if (patient == null)
+        {
+            _logger.LogWarning("Patient {PatientId} not found", id);
+            return NotFound(ApiResponse.ErrorResponse(
+                $"Patient with ID {id} not found", "Patient not found"));
+        }
+
+        patient.UpdateNotificationPreferences(request.EmailEnabled, request.SmsEnabled);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Notification preferences updated for patient {PatientId}", id);
+        return Ok(ApiResponse.SuccessResponse("Notification preferences updated successfully"));
+    }
+
+    /// <summary>
     /// Deletes a patient.
     /// </summary>
     /// <param name="id">The patient ID.</param>
@@ -257,6 +285,8 @@ public sealed class PatientsController : ControllerBase
             Gender = patient.Gender.ToString(),
             Address = patient.Address.GetFullAddress(),
             IsActive = patient.IsActive,
+            EmailEnabled = patient.NotificationPreferences.EmailEnabled,
+            SmsEnabled = patient.NotificationPreferences.SmsEnabled,
             CreatedAt = patient.CreatedAt
         };
     }

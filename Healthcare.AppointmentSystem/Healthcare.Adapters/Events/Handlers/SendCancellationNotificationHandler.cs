@@ -49,6 +49,16 @@ public sealed class SendCancellationNotificationHandler
                 return;
             }
 
+            // Check patient's notification preferences
+            var prefs = appointment.Patient?.NotificationPreferences;
+            if (prefs != null && !prefs.EmailEnabled)
+            {
+                _logger.LogInformation(
+                    "Email notifications disabled for patient {PatientId}, skipping cancellation notification for appointment {AppointmentId}",
+                    appointment.PatientId, domainEvent.AppointmentId);
+                return;
+            }
+
             await _notificationService.SendAppointmentCancellationAsync(
                 appointment,
                 cancellationToken);

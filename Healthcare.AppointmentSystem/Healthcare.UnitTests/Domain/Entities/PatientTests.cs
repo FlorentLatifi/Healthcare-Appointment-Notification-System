@@ -30,6 +30,15 @@ public class PatientTests
     private static Address CreateTestAddress()
         => Address.Create("123 Main St", "Pristina", "Kosovo", "10000", "Kosovo");
 
+    private static Patient CreateDefaultPatient()
+        => Patient.Create(
+            "John", "Doe",
+            CreateTestEmail(),
+            CreateTestPhone(),
+            new DateTime(1990, 5, 15),
+            Gender.Male,
+            CreateTestAddress());
+
     #endregion
 
     #region Creation Tests
@@ -641,6 +650,52 @@ public class PatientTests
         // Assert
         patient.Age.Should().Be(149);
         patient.IsSenior().Should().BeTrue();
+    }
+
+    #endregion
+
+    #region Notification Preferences Tests
+
+    [Fact]
+    public void Create_DefaultNotificationPreferences_EmailEnabledTrueSmsEnabledFalse()
+    {
+        var patient = CreateDefaultPatient();
+
+        patient.NotificationPreferences.EmailEnabled.Should().BeTrue();
+        patient.NotificationPreferences.SmsEnabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public void UpdateNotificationPreferences_ShouldUpdateBothFlags()
+    {
+        var patient = CreateDefaultPatient();
+
+        patient.UpdateNotificationPreferences(false, true);
+
+        patient.NotificationPreferences.EmailEnabled.Should().BeFalse();
+        patient.NotificationPreferences.SmsEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void UpdateNotificationPreferences_ShouldMarkEntityAsModified()
+    {
+        var patient = CreateDefaultPatient();
+        var before = patient.ModifiedAt;
+
+        patient.UpdateNotificationPreferences(false, false);
+
+        patient.ModifiedAt.Should().NotBe(before);
+    }
+
+    [Fact]
+    public void UpdateNotificationPreferences_ShouldAllowBothDisabled()
+    {
+        var patient = CreateDefaultPatient();
+
+        patient.UpdateNotificationPreferences(false, false);
+
+        patient.NotificationPreferences.EmailEnabled.Should().BeFalse();
+        patient.NotificationPreferences.SmsEnabled.Should().BeFalse();
     }
 
     #endregion

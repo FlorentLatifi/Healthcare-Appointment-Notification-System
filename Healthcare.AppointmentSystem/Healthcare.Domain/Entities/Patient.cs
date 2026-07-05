@@ -2,6 +2,8 @@
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
 
+// ReSharper disable once RedundantUsingDirective
+
 namespace Healthcare.Domain.Entities;
 
 /// <summary>
@@ -47,6 +49,11 @@ public sealed class Patient : Entity
     /// Gets the patient's residential address.
     /// </summary>
     public Address Address { get; private set; } = null!;
+
+    /// <summary>
+    /// Gets the patient's notification preferences.
+    /// </summary>
+    public NotificationPreferences NotificationPreferences { get; private set; } = null!;
 
     /// <summary>
     /// Gets a value indicating whether the patient account is active.
@@ -95,6 +102,7 @@ public sealed class Patient : Entity
         DateOfBirth = dateOfBirth;
         Gender = gender;
         Address = address;
+        NotificationPreferences = NotificationPreferences.Default();
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
     }
@@ -154,6 +162,15 @@ public sealed class Patient : Entity
         PhoneNumber = phoneNumber;
         Address = address;
 
+        MarkAsModified();
+    }
+
+    /// <summary>
+    /// Updates the patient's notification preferences.
+    /// </summary>
+    public void UpdateNotificationPreferences(bool emailEnabled, bool smsEnabled)
+    {
+        NotificationPreferences = NotificationPreferences.Create(emailEnabled, smsEnabled);
         MarkAsModified();
     }
 
