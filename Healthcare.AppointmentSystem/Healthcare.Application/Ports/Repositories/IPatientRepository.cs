@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Domain.Entities;
 
 namespace Healthcare.Application.Ports.Repositories;
@@ -34,9 +34,19 @@ public interface IPatientRepository
     Task<IEnumerable<Patient>> GetActiveAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets a paginated page of active patients with total count (DB-level pagination).
+    /// </summary>
+    Task<PagedResult<Patient>> GetPagedActiveAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Searches patients by name (first or last name contains search term).
     /// </summary>
     Task<IEnumerable<Patient>> SearchByNameAsync(string searchTerm, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Searches patients by name with pagination (DB-level pagination).
+    /// </summary>
+    Task<PagedResult<Patient>> GetPagedSearchByNameAsync(string searchTerm, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks if a patient with the given email exists.
