@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.ValueObjects;
@@ -65,6 +65,26 @@ public sealed class EFCorePatientRepository : IPatientRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<PagedResult<Patient>> GetPagedActiveAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Patients
+            .Where(p => p.IsActive)
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderBy(p => p.LastName).ThenBy(p => p.FirstName)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Patient>(items, pageNumber, pageSize, totalCount);
+    }
+
     public async Task<IEnumerable<Patient>> SearchByNameAsync(
         string searchTerm,
         CancellationToken cancellationToken = default)
@@ -76,6 +96,29 @@ public sealed class EFCorePatientRepository : IPatientRepository
                        p.LastName.ToLower().Contains(lowerSearch))
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<PagedResult<Patient>> GetPagedSearchByNameAsync(
+        string searchTerm,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var lowerSearch = searchTerm.ToLower();
+        var query = _context.Patients
+            .Where(p => p.FirstName.ToLower().Contains(lowerSearch) ||
+                       p.LastName.ToLower().Contains(lowerSearch))
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderBy(p => p.LastName).ThenBy(p => p.FirstName)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Patient>(items, pageNumber, pageSize, totalCount);
     }
 
     public async Task<bool> ExistsAsync(string email, CancellationToken cancellationToken = default)
