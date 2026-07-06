@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
@@ -19,9 +19,9 @@ namespace Healthcare.Presentation.API.Controllers;
 /// REST Endpoints:
 /// - POST   /api/patients          - Create new patient
 /// - GET    /api/patients/{id}     - Get patient by ID
-/// - GET    /api/patients          - Get all patients
-/// - GET    /api/patients/active   - Get active patients
-/// - GET    /api/patients/search?term={term} - Search by name
+/// - GET    /api/patients          - Get all patients (paginated)
+/// - GET    /api/patients/active   - Get active patients (paginated)
+/// - GET    /api/patients/search?term={term} - Search by name (paginated)
 /// - DELETE /api/patients/{id}     - Delete patient
 /// </remarks>
 [ApiController]
@@ -124,12 +124,6 @@ public sealed class PatientsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets all patients.
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>List of all patients.</returns>
-    /// <response code="200">Patients retrieved successfully.</response>
-    /// <summary>
     /// Gets paginated list of all patients.
     /// </summary>
     /// <param name="pageNumber">Page number (default: 1)</param>
@@ -165,55 +159,84 @@ public sealed class PatientsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets all active patients.
+    /// Gets paginated list of all active patients.
     /// </summary>
+    /// <param name="pageNumber">Page number (default: 1)</param>
+    /// <param name="pageSize">Items per page (default: 20, max: 100)</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>List of active patients.</returns>
+    /// <returns>Paginated list of active patients.</returns>
     /// <response code="200">Active patients retrieved successfully.</response>
     [HttpGet("active")]
-    [ProducesResponseType(typeof(ApiResponse<List<PatientDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetActivePatients(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<PatientDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetActivePatients(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Retrieving active patients");
+        _logger.LogInformation("Retrieving active patients - Page: {Page}, Size: {Size}", pageNumber, pageSize);
 
-        var patients = await _unitOfWork.Patients.GetActiveAsync(cancellationToken);
-        var dtos = patients.Select(MapToDto).ToList();
+        // Validate pagination
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
 
-        return Ok(ApiResponse<List<PatientDto>>.SuccessResponse(
-            dtos,
-            $"Retrieved {dtos.Count} active patient(s)"));
+        var pagedEntities = await _unitOfWork.Patients
+            .GetPagedActiveAsync(pageNumber, pageSize, cancellationToken);
+        var pagedResult = new PagedResult<PatientDto>(
+            pagedEntities.Items.Select(MapToDto),
+            pagedEntities.PageNumber,
+            pagedEntities.PageSize,
+            pagedEntities.TotalCount);
+
+        return Ok(ApiResponse<PagedResult<PatientDto>>.SuccessResponse(
+            pagedResult,
+            $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} active patient(s))"));
     }
 
     /// <summary>
-    /// Searches patients by name.
+    /// Searches patients by name with pagination.
     /// </summary>
     /// <param name="term">The search term.</param>
+    /// <param name="pageNumber">Page number (default: 1)</param>
+    /// <param name="pageSize">Items per page (default: 20, max: 100)</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>List of matching patients.</returns>
+    /// <returns>Paginated list of matching patients.</returns>
     /// <response code="200">Search completed successfully.</response>
     /// <response code="400">Search term is required.</response>
     [HttpGet("search")]
-    [ProducesResponseType(typeof(ApiResponse<List<PatientDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<PatientDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SearchPatients(
         [FromQuery] string term,
-        CancellationToken cancellationToken)
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(term))
         {
-            return BadRequest(ApiResponse<List<PatientDto>>.ErrorResponse(
+            return BadRequest(ApiResponse<PagedResult<PatientDto>>.ErrorResponse(
                 "Search term is required",
                 "Invalid search"));
         }
 
-        _logger.LogInformation("Searching patients with term: {Term}", term);
+        _logger.LogInformation("Searching patients with term: {Term} - Page: {Page}, Size: {Size}", term, pageNumber, pageSize);
 
-        var patients = await _unitOfWork.Patients.SearchByNameAsync(term, cancellationToken);
-        var dtos = patients.Select(MapToDto).ToList();
+        // Validate pagination
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
 
-        return Ok(ApiResponse<List<PatientDto>>.SuccessResponse(
-            dtos,
-            $"Found {dtos.Count} patient(s) matching '{term}'"));
+        var pagedEntities = await _unitOfWork.Patients
+            .GetPagedSearchByNameAsync(term, pageNumber, pageSize, cancellationToken);
+        var pagedResult = new PagedResult<PatientDto>(
+            pagedEntities.Items.Select(MapToDto),
+            pagedEntities.PageNumber,
+            pagedEntities.PageSize,
+            pagedEntities.TotalCount);
+
+        return Ok(ApiResponse<PagedResult<PatientDto>>.SuccessResponse(
+            pagedResult,
+            $"Found {pagedResult.TotalCount} patient(s) matching '{term}' - page {pageNumber} of {pagedResult.TotalPages}"));
     }
 
     /// <summary>
