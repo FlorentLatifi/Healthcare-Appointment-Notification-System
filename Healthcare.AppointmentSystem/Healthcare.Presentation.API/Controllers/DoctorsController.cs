@@ -1,17 +1,15 @@
 ﻿using Asp.Versioning;
+using Healthcare.Application.Commands.CreateDoctor;
+using Healthcare.Application.Commands.DeactivateDoctor;
+using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Caching;
-using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
-using Healthcare.Domain.Enums;
-using Healthcare.Domain.Events;
-using Healthcare.Domain.ValueObjects;
 using Healthcare.Presentation.API.Requests;
+using Healthcare.Presentation.API.Resources;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Mvc;
-using Healthcare.Application.Common;
-using Healthcare.Presentation.API.Resources;
 using Microsoft.Extensions.Localization;
 
 namespace Healthcare.Presentation.API.Controllers;
@@ -22,22 +20,25 @@ namespace Healthcare.Presentation.API.Controllers;
 [Produces("application/json")]
 public sealed class DoctorsController : ControllerBase
 {
+    private readonly ICommandHandler<CreateDoctorCommand, Result<int>> _createDoctorHandler;
+    private readonly ICommandHandler<DeactivateDoctorCommand, Result> _deactivateDoctorHandler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDoctorCacheService _cache;
-    private readonly IDomainEventDispatcher _eventDispatcher;
     private readonly IStringLocalizer<Messages> _localizer;
     private readonly ILogger<DoctorsController> _logger;
 
     public DoctorsController(
+        ICommandHandler<CreateDoctorCommand, Result<int>> createDoctorHandler,
+        ICommandHandler<DeactivateDoctorCommand, Result> deactivateDoctorHandler,
         IUnitOfWork unitOfWork,
         IDoctorCacheService cache,
-        IDomainEventDispatcher eventDispatcher,
         IStringLocalizer<Messages> localizer,
         ILogger<DoctorsController> logger)
     {
+        _createDoctorHandler = createDoctorHandler;
+        _deactivateDoctorHandler = deactivateDoctorHandler;
         _unitOfWork = unitOfWork;
         _cache = cache;
-        _eventDispatcher = eventDispatcher;
         _localizer = localizer;
         _logger = logger;
     }
@@ -51,50 +52,32 @@ public sealed class DoctorsController : ControllerBase
     {
         _logger.LogInformation("Creating doctor: {Email}", request.Email);
 
-        var existingDoctor = await _unitOfWork.Doctors
-                .GetByEmailAsync(request.Email, cancellationToken);
+        var command = new CreateDoctorCommand
+        {
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            PhoneNumber = request.PhoneNumber,
+            LicenseNumber = request.LicenseNumber,
+            Specialty = request.Specialty,
+            ConsultationFeeAmount = request.ConsultationFeeAmount,
+            ConsultationFeeCurrency = request.ConsultationFeeCurrency,
+            YearsOfExperience = request.YearsOfExperience
+        };
 
-            if (existingDoctor != null)
-            {
-                return BadRequest(ApiResponse<int>.ErrorResponse(
-                    $"A doctor with email '{request.Email}' already exists",
-                    "Doctor already exists"));
-            }
+        var result = await _createDoctorHandler.HandleAsync(command, cancellationToken);
 
-            var email = Email.Create(request.Email);
-            var phoneNumber = PhoneNumber.Create(request.PhoneNumber);
-            var consultationFee = Money.Create(
-                request.ConsultationFeeAmount,
-                request.ConsultationFeeCurrency);
+        if (result.IsFailure)
+        {
+            _logger.LogWarning("Failed to create doctor: {Error}", result.Error);
+            return BadRequest(ApiResponse<int>.ErrorResponse(result.Error, "Doctor already exists"));
+        }
 
-            if (!Enum.TryParse<Specialty>(request.Specialty, true, out var specialty))
-            {
-                return BadRequest(ApiResponse<int>.ErrorResponse(
-                    $"Invalid specialty: {request.Specialty}",
-                    "Invalid specialty"));
-            }
-
-            var doctor = Doctor.Create(
-                request.FirstName,
-                request.LastName,
-                email,
-                phoneNumber,
-                request.LicenseNumber,
-                consultationFee,
-                request.YearsOfExperience,
-                specialty);
-
-            await _unitOfWork.Doctors.AddAsync(doctor, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            await _eventDispatcher.DispatchAsync(
-                new DoctorCacheInvalidationNeededEvent(), cancellationToken);
-
-            _logger.LogInformation("Doctor {DoctorId} created successfully", doctor.Id);
-            return CreatedAtAction(
-                nameof(GetDoctorById),
-                new { id = doctor.Id },
-                ApiResponse<int>.SuccessResponse(doctor.Id, "Doctor created successfully"));
+        _logger.LogInformation("Doctor {DoctorId} created successfully", result.Value);
+        return CreatedAtAction(
+            nameof(GetDoctorById),
+            new { id = result.Value },
+            ApiResponse<int>.SuccessResponse(result.Value, "Doctor created successfully"));
     }
 
     [HttpGet("{id}")]
@@ -118,17 +101,6 @@ public sealed class DoctorsController : ControllerBase
         return Ok(ApiResponse<DoctorDto>.SuccessResponse(dto));
     }
 
-    /// <summary>
-    /// Deactivates a doctor (soft-delete). The record remains in the database
-    /// but IsActive is set to false (and IsAcceptingPatients to false),
-    /// preserving the historical/audit trail.
-    /// </summary>
-    /// <param name="id">The doctor ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Success or failure result.</returns>
-    /// <response code="204">Doctor deactivated successfully.</response>
-    /// <response code="400">Doctor is already deactivated.</response>
-    /// <response code="404">Doctor not found.</response>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
@@ -137,30 +109,14 @@ public sealed class DoctorsController : ControllerBase
     {
         _logger.LogInformation("Deactivating doctor {DoctorId}", id);
 
-        var doctor = await _unitOfWork.Doctors.GetByIdAsync(id, cancellationToken);
-        if (doctor == null)
-        {
-            _logger.LogWarning("Doctor {DoctorId} not found", id);
-            return NotFound(ApiResponse.ErrorResponse(
-                _localizer["DoctorNotFoundWithId", id],
-                _localizer["DoctorNotFound"]));
-        }
+        var command = new DeactivateDoctorCommand { DoctorId = id };
+        var result = await _deactivateDoctorHandler.HandleAsync(command, cancellationToken);
 
-        try
+        if (result.IsFailure)
         {
-            doctor.Deactivate();
+            _logger.LogWarning("Failed to deactivate doctor {DoctorId}: {Error}", id, result.Error);
+            return BadRequest(ApiResponse.ErrorResponse(result.Error, "Doctor already deactivated"));
         }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogWarning("Doctor {DoctorId} is already deactivated", id);
-            return BadRequest(ApiResponse.ErrorResponse(ex.Message, "Doctor already deactivated"));
-        }
-
-        await _unitOfWork.Doctors.UpdateAsync(doctor, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        await _eventDispatcher.DispatchAsync(
-            new DoctorCacheInvalidationNeededEvent(), cancellationToken);
 
         _logger.LogInformation("Doctor {DoctorId} deactivated successfully", id);
         return NoContent();

@@ -1,0 +1,161 @@
+using FluentAssertions;
+using Healthcare.Application.Commands.CreateDoctor;
+using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Events;
+using Healthcare.Application.Ports.Repositories;
+using Healthcare.Domain.Entities;
+using Healthcare.Domain.Enums;
+using Healthcare.Domain.Events;
+using Healthcare.Domain.ValueObjects;
+using Moq;
+using Xunit;
+
+namespace Healthcare.UnitTests.Application.Commands;
+
+public class CreateDoctorHandlerTests
+{
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IDoctorRepository> _doctorRepoMock;
+    private readonly Mock<IDomainEventDispatcher> _eventDispatcherMock;
+    private readonly CreateDoctorHandler _handler;
+
+    public CreateDoctorHandlerTests()
+    {
+        _doctorRepoMock = new Mock<IDoctorRepository>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _unitOfWorkMock.Setup(u => u.Doctors).Returns(_doctorRepoMock.Object);
+        _eventDispatcherMock = new Mock<IDomainEventDispatcher>();
+        _handler = new CreateDoctorHandler(_unitOfWorkMock.Object, _eventDispatcherMock.Object);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithValidCommand_ShouldCreateDoctorAndDispatchEvent()
+    {
+        _doctorRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Doctor?)null);
+
+        var command = new CreateDoctorCommand
+        {
+            FirstName = "Jane",
+            LastName = "Smith",
+            Email = "dr.smith@test.com",
+            PhoneNumber = "+355672345678",
+            LicenseNumber = "LIC-12345",
+            Specialty = "Cardiology",
+            ConsultationFeeAmount = 100m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 10
+        };
+
+        var result = await _handler.HandleAsync(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+
+        _doctorRepoMock.Verify(r => r.AddAsync(It.IsAny<Doctor>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _eventDispatcherMock.Verify(d => d.DispatchAsync(
+            It.IsAny<DoctorCacheInvalidationNeededEvent>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithDuplicateEmail_ShouldReturnFailure()
+    {
+        var existingDoctor = Doctor.Create(
+            "Existing",
+            "Doctor",
+            Email.Create("dr.smith@test.com"),
+            PhoneNumber.Create("+355672345678"),
+            "LIC-99999",
+            Money.Create(100m, "USD"),
+            5,
+            Specialty.Cardiology);
+
+        _doctorRepoMock.Setup(r => r.GetByEmailAsync("dr.smith@test.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingDoctor);
+
+        var command = new CreateDoctorCommand
+        {
+            FirstName = "Jane",
+            LastName = "Smith",
+            Email = "dr.smith@test.com",
+            PhoneNumber = "+355672345678",
+            LicenseNumber = "LIC-12345",
+            Specialty = "Cardiology",
+            ConsultationFeeAmount = 100m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 10
+        };
+
+        var result = await _handler.HandleAsync(command, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("already exists");
+        result.Error.Should().Contain("dr.smith@test.com");
+
+        _doctorRepoMock.Verify(r => r.AddAsync(It.IsAny<Doctor>(), It.IsAny<CancellationToken>()), Times.Never);
+        _eventDispatcherMock.Verify(d => d.DispatchAsync(
+            It.IsAny<DoctorCacheInvalidationNeededEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithInvalidSpecialty_ShouldReturnFailure()
+    {
+        _doctorRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Doctor?)null);
+
+        var command = new CreateDoctorCommand
+        {
+            FirstName = "Jane",
+            LastName = "Smith",
+            Email = "dr.smith@test.com",
+            PhoneNumber = "+355672345678",
+            LicenseNumber = "LIC-12345",
+            Specialty = "NotARealSpecialty",
+            ConsultationFeeAmount = 100m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 10
+        };
+
+        var result = await _handler.HandleAsync(command, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Invalid specialty");
+
+        _doctorRepoMock.Verify(r => r.AddAsync(It.IsAny<Doctor>(), It.IsAny<CancellationToken>()), Times.Never);
+        _eventDispatcherMock.Verify(d => d.DispatchAsync(
+            It.IsAny<DoctorCacheInvalidationNeededEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithInvalidEmail_ShouldReturnFailure()
+    {
+        _doctorRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Doctor?)null);
+
+        var command = new CreateDoctorCommand
+        {
+            FirstName = "Jane",
+            LastName = "Smith",
+            Email = "not-an-email",
+            PhoneNumber = "+355672345678",
+            LicenseNumber = "LIC-12345",
+            Specialty = "Cardiology",
+            ConsultationFeeAmount = 100m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 10
+        };
+
+        var result = await _handler.HandleAsync(command, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Invalid input");
+
+        _doctorRepoMock.Verify(r => r.AddAsync(It.IsAny<Doctor>(), It.IsAny<CancellationToken>()), Times.Never);
+        _eventDispatcherMock.Verify(d => d.DispatchAsync(
+            It.IsAny<DoctorCacheInvalidationNeededEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+}

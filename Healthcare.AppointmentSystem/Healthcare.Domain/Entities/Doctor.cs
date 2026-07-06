@@ -15,7 +15,7 @@ namespace Healthcare.Domain.Entities;
 /// </remarks>
 public sealed class Doctor : Entity
 {
-    private readonly List<Specialty> _specialties = new();
+    private readonly List<DoctorSpecialty> _specialtyEntries = new();
     private readonly List<DoctorWorkingHours> _weeklySchedule = new();
 
     /// <summary>
@@ -46,7 +46,13 @@ public sealed class Doctor : Entity
     /// <summary>
     /// Gets the doctor's specialties.
     /// </summary>
-    public IReadOnlyCollection<Specialty> Specialties => _specialties.AsReadOnly();
+    public IReadOnlyCollection<Specialty> Specialties =>
+        _specialtyEntries.Select(e => e.Specialty).ToList().AsReadOnly();
+
+    /// <summary>
+    /// Gets the doctor's specialty entries (for EF Core OwnsMany mapping).
+    /// </summary>
+    public IReadOnlyCollection<DoctorSpecialty> SpecialtyEntries => _specialtyEntries.AsReadOnly();
 
     /// <summary>
     /// Gets the doctor's weekly working schedule.
@@ -154,7 +160,7 @@ public sealed class Doctor : Entity
             consultationFee,
             yearsOfExperience);
 
-        doctor._specialties.Add(primarySpecialty);
+        doctor._specialtyEntries.Add(DoctorSpecialty.Create(primarySpecialty));
 
         return doctor;
     }
@@ -164,17 +170,17 @@ public sealed class Doctor : Entity
     /// </summary>
     public void AddSpecialty(Specialty specialty)
     {
-        if (_specialties.Contains(specialty))
+        if (_specialtyEntries.Any(e => e.Specialty == specialty))
         {
             throw new InvalidOperationException($"Doctor already has {specialty} specialty.");
         }
 
-        if (_specialties.Count >= 3)
+        if (_specialtyEntries.Count >= 3)
         {
             throw new InvalidOperationException("Doctor cannot have more than 3 specialties.");
         }
 
-        _specialties.Add(specialty);
+        _specialtyEntries.Add(DoctorSpecialty.Create(specialty));
         MarkAsModified();
     }
 
@@ -183,17 +189,18 @@ public sealed class Doctor : Entity
     /// </summary>
     public void RemoveSpecialty(Specialty specialty)
     {
-        if (_specialties.Count <= 1)
+        if (_specialtyEntries.Count <= 1)
         {
             throw new InvalidOperationException("Doctor must have at least one specialty.");
         }
 
-        if (!_specialties.Contains(specialty))
+        var entry = _specialtyEntries.FirstOrDefault(e => e.Specialty == specialty);
+        if (entry is null)
         {
             throw new InvalidOperationException($"Doctor does not have {specialty} specialty.");
         }
 
-        _specialties.Remove(specialty);
+        _specialtyEntries.Remove(entry);
         MarkAsModified();
     }
 
@@ -382,7 +389,7 @@ public sealed class Doctor : Entity
     /// <summary>
     /// Checks if the doctor has a specific specialty.
     /// </summary>
-    public bool HasSpecialty(Specialty specialty) => _specialties.Contains(specialty);
+    public bool HasSpecialty(Specialty specialty) => _specialtyEntries.Any(e => e.Specialty == specialty);
 
     /// <summary>
     /// Checks if the doctor is experienced (10+ years).

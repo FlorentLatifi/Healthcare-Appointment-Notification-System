@@ -83,6 +83,11 @@ public sealed class Appointment : Entity
     public DateTime? CancelledAt { get; private set; }
 
     /// <summary>
+    /// Gets the date and time when the reminder was sent for this appointment.
+    /// </summary>
+    public DateTime? RemindedAt { get; private set; }
+
+    /// <summary>
     /// Gets the consultation fee for this appointment.
     /// </summary>
     public Money ConsultationFee { get; private set; } = null!;
@@ -356,6 +361,18 @@ public sealed class Appointment : Entity
             PatientId,
             DoctorId,
             ScheduledTime.Value));
+    }
+
+    /// <summary>
+    /// Marks the appointment as having had its reminder sent.
+    /// Also sets RemindedAt even when notification delivery was skipped
+    /// (e.g. patient disabled email), so the background job doesn't
+    /// reprocess the same appointment on every tick.
+    /// </summary>
+    public void MarkReminderSent()
+    {
+        RemindedAt = DateTime.UtcNow;
+        MarkAsModified();
     }
 
     /// <summary>

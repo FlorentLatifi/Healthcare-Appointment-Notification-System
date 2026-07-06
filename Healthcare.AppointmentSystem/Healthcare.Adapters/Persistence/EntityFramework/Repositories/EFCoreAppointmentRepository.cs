@@ -185,7 +185,8 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
             .Include(a => a.Doctor)
             .Where(a => a.Status == AppointmentStatus.Confirmed &&
                        a.ScheduledTime.Value > now &&
-                       a.ScheduledTime.Value <= twentyFourHoursFromNow)
+                       a.ScheduledTime.Value <= twentyFourHoursFromNow &&
+                       a.RemindedAt == null)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }

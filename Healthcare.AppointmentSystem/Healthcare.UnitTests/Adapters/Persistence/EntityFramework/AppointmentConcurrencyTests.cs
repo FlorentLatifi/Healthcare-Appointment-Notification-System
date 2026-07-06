@@ -7,7 +7,7 @@ using Healthcare.Domain.Services;
 using Healthcare.UnitTests.Helpers;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
+
 
 namespace Healthcare.UnitTests.Adapters.Persistence.EntityFramework;
 
@@ -66,9 +66,6 @@ public sealed class AppointmentConcurrencyTests
             await seedCtx.Database.EnsureCreatedAsync();
             seedCtx.Doctors.Add(doctor);
             seedCtx.Patients.Add(patient);
-            seedCtx.Entry(doctor).Property<string>("_specialtiesJson").CurrentValue =
-                System.Text.Json.JsonSerializer.Serialize(
-                    new List<int> { (int)Specialty.GeneralPractice });
             await seedCtx.SaveChangesAsync();
 
             var appointment = Appointment.Create(patient, doctor, appointmentTime,

@@ -1,6 +1,9 @@
 using FluentAssertions;
 using Healthcare.Adapters.Caching;
 using Healthcare.Adapters.Events.Handlers;
+using Healthcare.Application.Commands.CreateDoctor;
+using Healthcare.Application.Commands.DeactivateDoctor;
+using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Caching;
 using Healthcare.Application.Ports.Events;
@@ -14,7 +17,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Healthcare.Application.Common;
 using Healthcare.Presentation.API.Controllers;
 using Healthcare.Presentation.API.Requests;
 
@@ -99,9 +101,10 @@ public sealed class DoctorCacheTests
         var loggerMock = new Mock<ILogger<DoctorsController>>();
 
         var controller = new DoctorsController(
+            new Mock<ICommandHandler<CreateDoctorCommand, Result<int>>>().Object,
+            new Mock<ICommandHandler<DeactivateDoctorCommand, Result>>().Object,
             unitOfWorkMock.Object,
             cache,
-            dispatcherMock.Object,
             new Mock<IStringLocalizer<Messages>>().Object,
             loggerMock.Object);
 
@@ -112,7 +115,7 @@ public sealed class DoctorCacheTests
     }
 
     [Fact]
-    public async Task CreateDoctor_InvalidatesCache()
+    public async Task CreateDoctor_CallsHandlerAndReturns201()
     {
         var repoMock = new Mock<IDoctorRepository>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
@@ -121,21 +124,20 @@ public sealed class DoctorCacheTests
         repoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Doctor?)null);
 
+        var createHandlerMock = new Mock<ICommandHandler<CreateDoctorCommand, Result<int>>>();
+        createHandlerMock.Setup(h => h.HandleAsync(
+                It.IsAny<CreateDoctorCommand>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<int>.Success(42));
+
         var cache = new InMemoryDoctorCacheService(new Mock<ILogger<InMemoryDoctorCacheService>>().Object);
-        var dispatcherMock = new Mock<IDomainEventDispatcher>();
         var loggerMock = new Mock<ILogger<DoctorsController>>();
 
-        var initialDtos = new List<DoctorDto>
-        {
-            new() { Id = 1, FirstName = "Existing", LastName = "Doctor", Email = "existing@test.com" }
-        };
-        await cache.SetAsync("all", initialDtos);
-        await cache.SetAsync("active", initialDtos);
-
         var controller = new DoctorsController(
+            createHandlerMock.Object,
+            new Mock<ICommandHandler<DeactivateDoctorCommand, Result>>().Object,
             unitOfWorkMock.Object,
             cache,
-            dispatcherMock.Object,
             new Mock<IStringLocalizer<Messages>>().Object,
             loggerMock.Object);
 
@@ -151,10 +153,11 @@ public sealed class DoctorCacheTests
             ConsultationFeeCurrency = "USD",
             YearsOfExperience = 5
         };
-        await controller.CreateDoctor(request, CancellationToken.None);
+        var response = await controller.CreateDoctor(request, CancellationToken.None);
 
-        dispatcherMock.Verify(d => d.DispatchAsync(
-            It.IsAny<DoctorCacheInvalidationNeededEvent>(),
+        response.Should().BeOfType<CreatedAtActionResult>();
+        createHandlerMock.Verify(h => h.HandleAsync(
+            It.IsAny<CreateDoctorCommand>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -176,7 +179,7 @@ public sealed class DoctorCacheTests
     }
 
     [Fact]
-    public async Task DeleteDoctor_InvalidatesCache()
+    public async Task DeleteDoctor_CallsHandlerAndReturns204()
     {
         var repoMock = new Mock<IDoctorRepository>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
@@ -186,21 +189,28 @@ public sealed class DoctorCacheTests
         repoMock.Setup(r => r.GetByIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(doctor);
 
+        var deactivateHandlerMock = new Mock<ICommandHandler<DeactivateDoctorCommand, Result>>();
+        deactivateHandlerMock.Setup(h => h.HandleAsync(
+                It.IsAny<DeactivateDoctorCommand>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+
         var cache = new InMemoryDoctorCacheService(new Mock<ILogger<InMemoryDoctorCacheService>>().Object);
-        var dispatcherMock = new Mock<IDomainEventDispatcher>();
         var loggerMock = new Mock<ILogger<DoctorsController>>();
 
         var controller = new DoctorsController(
+            new Mock<ICommandHandler<CreateDoctorCommand, Result<int>>>().Object,
+            deactivateHandlerMock.Object,
             unitOfWorkMock.Object,
             cache,
-            dispatcherMock.Object,
             new Mock<IStringLocalizer<Messages>>().Object,
             loggerMock.Object);
 
-        await controller.DeleteDoctor(1, CancellationToken.None);
+        var response = await controller.DeleteDoctor(1, CancellationToken.None);
 
-        dispatcherMock.Verify(d => d.DispatchAsync(
-            It.IsAny<DoctorCacheInvalidationNeededEvent>(),
+        response.Should().BeOfType<NoContentResult>();
+        deactivateHandlerMock.Verify(h => h.HandleAsync(
+            It.IsAny<DeactivateDoctorCommand>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

@@ -71,4 +71,10 @@ public interface IUnitOfWork
     /// Rolls back the current transaction.
     /// </summary>
     Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resets the change tracker, detaching all tracked entities.
+    /// Used for retry scenarios after a failed SaveChangesAsync.
+    /// </summary>
+    void ResetChangeTracker();
 }

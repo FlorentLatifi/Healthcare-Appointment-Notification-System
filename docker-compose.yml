@@ -1,0 +1,67 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./Healthcare.AppointmentSystem
+      dockerfile: Healthcare.Presentation.API/Dockerfile
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=HealthcareDb;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=true;MultipleActiveResultSets=true"
+      Jwt__Secret: ${JWT_SECRET:?JWT_SECRET is required}
+      Jwt__Issuer: "HealthcareAPI"
+      Jwt__Audience: "HealthcareClients"
+      Redis__ConnectionString: "redis:6379,abortConnect=false,connectTimeout=5000,syncTimeout=5000"
+      Redis__InstanceName: "HealthcareApp:"
+      Stripe__SecretKey: ${STRIPE_SECRET_KEY}
+      Stripe__PublishableKey: ${STRIPE_PUBLISHABLE_KEY}
+      AllowedOrigins__0: "http://localhost:5173"
+      SeedDemoData: "true"
+    ports:
+      - "5171:8080"
+    volumes:
+      - api_logs:/app/logs
+
+  frontend:
+    build:
+      context: ./healthcare-frontend
+    depends_on:
+      - api
+    environment:
+      VITE_API_BASE_URL: http://localhost:5171/api/v1
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./healthcare-frontend/src:/app/src
+      - ./healthcare-frontend/index.html:/app/index.html
+
+volumes:
+  sqlserver_data:
+  api_logs:

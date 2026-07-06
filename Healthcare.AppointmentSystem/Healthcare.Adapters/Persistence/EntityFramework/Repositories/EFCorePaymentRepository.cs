@@ -1,9 +1,9 @@
-﻿using System.Text.Json;
-using Healthcare.Application.Common;
+﻿using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
+using Healthcare.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
 namespace Healthcare.Adapters.Persistence.EntityFramework.Repositories;
@@ -133,56 +133,16 @@ public sealed class EFCorePaymentRepository : IPaymentRepository
 
     public async Task<List<SpecialtyRevenueResult>> GetRevenueBySpecialtyAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
     {
-        var doctorRevenue = await _context.Payments
+        return await _context.Payments
             .Join(_context.Appointments, p => p.AppointmentId, a => a.Id, (p, a) => new { p, a })
             .Where(x => x.p.Status == PaymentStatus.Succeeded &&
                         x.p.PaidAt >= from &&
                         x.p.PaidAt < to)
-            .GroupBy(x => x.a.DoctorId)
-            .Select(g => new
-            {
-                DoctorId = g.Key,
-                Revenue = g.Sum(x => x.p.Amount.Amount)
-            })
+            .Join(_context.Set<DoctorSpecialty>(), x => x.a.DoctorId, ds => EF.Property<int>(ds, "DoctorId"), (x, ds) => new { x.p, ds })
+            .GroupBy(x => x.ds.Specialty)
+            .Select(g => new SpecialtyRevenueResult(
+                Enum.GetName(typeof(Specialty), g.Key) ?? "Unknown",
+                g.Sum(x => x.p.Amount.Amount)))
             .ToListAsync(cancellationToken);
-
-        var doctorIds = doctorRevenue.Select(d => d.DoctorId).Distinct().ToList();
-        var doctors = await _context.Doctors
-            .Where(d => doctorIds.Contains(d.Id))
-            .Select(d => new { d.Id, SpecialtiesJson = EF.Property<string>(d, "_specialtiesJson") })
-            .ToListAsync(cancellationToken);
-
-        var specialtyLookup = doctors
-            .SelectMany(d =>
-            {
-                var specialties = DeserializeSpecialties(d.SpecialtiesJson);
-                var revenue = doctorRevenue.First(r => r.DoctorId == d.Id).Revenue;
-                return specialties.Select(s => new SpecialtyRevenueResult(s, revenue));
-            })
-            .GroupBy(r => r.Specialty)
-            .Select(g => new SpecialtyRevenueResult(g.Key, g.Sum(r => r.Revenue)))
-            .ToList();
-
-        return specialtyLookup;
-    }
-
-    private static List<string> DeserializeSpecialties(string json)
-    {
-        try
-        {
-            var values = JsonSerializer.Deserialize<List<int>>(json);
-            if (values is null || values.Count == 0)
-                return new List<string> { "Unknown" };
-
-            return values
-                .Select(v => Enum.IsDefined(typeof(Specialty), v)
-                    ? Enum.GetName(typeof(Specialty), v) ?? "Unknown"
-                    : "Unknown")
-                .ToList();
-        }
-        catch
-        {
-            return new List<string> { "Unknown" };
-        }
     }
 }

@@ -24,6 +24,7 @@ using Healthcare.Adapters.Payments;
 using Healthcare.Application.Ports.Payments;
 using Healthcare.Adapters.Caching;
 using Healthcare.Application.Ports.Caching;
+using Healthcare.Adapters.Services;
 
 
 namespace Healthcare.Adapters;
@@ -430,8 +431,12 @@ public static class AdapterServiceExtensions
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<IAuthenticationService, JwtAuthenticationService>();
 
-        services.AddSingleton<IAppointmentCodeGenerator>(
-            _ => AppointmentCodeGenerator.Instance);
+        // Redis-backed code generator for multi-instance safety
+        services.AddSingleton<IAppointmentCodeGenerator>(provider =>
+        {
+            var redis = provider.GetRequiredService<IConnectionMultiplexer>();
+            return new RedisAppointmentCodeGenerator(redis);
+        });
 
         // PAYMENT GATEWAY
         services.AddStripePaymentGateway(configuration);

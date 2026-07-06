@@ -110,7 +110,8 @@ public sealed class InMemoryAppointmentRepository : InMemoryRepository<Appointme
         return FindAsync(a =>
             a.Status == AppointmentStatus.Confirmed &&
             a.ScheduledTime.Value > now &&
-            a.ScheduledTime.Value <= twentyFourHoursFromNow);
+            a.ScheduledTime.Value <= twentyFourHoursFromNow &&
+            a.RemindedAt == null);
     }
 
     public Task AddAsync(Appointment appointment, CancellationToken cancellationToken = default)

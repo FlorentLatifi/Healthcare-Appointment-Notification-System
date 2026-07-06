@@ -6,6 +6,7 @@ using Healthcare.Application.Strategies.Pricing;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Services;
 using Healthcare.Domain.ValueObjects;
+using Microsoft.EntityFrameworkCore;
 
 namespace Healthcare.Application.Commands.BookAppointment;
 
@@ -91,43 +92,67 @@ public sealed class BookAppointmentHandler
                     $"at {scheduledTime.ToDisplayString()}.");
 
             // 6. Create appointment entity
-            // ── SINGLETON PATTERN ──────────────────────────────────────────────────
-               // _codeGenerator is backed by AppointmentCodeGenerator.Instance (Singleton)
-              // ONE instance serves ALL requests — unique codes guaranteed application-wide.
-            Appointment appointment;
-            try
-            {
-                appointment = Appointment.Create(
-                    patient, doctor, scheduledTime, command.Reason, _codeGenerator);
-            }
-            catch (Exception ex)
-            {
-                return Result<int>.Failure(ex.Message);
-            }
-
-            // ── STRATEGY PATTERN ────────────────────────────────
-            // Select strategy based on appointment type
-            // PricingContext executes it and returns final price
+            // ── CODE GENERATION ─────────────────────────────────
+            // In production, _codeGenerator is RedisAppointmentCodeGenerator
+            // (safe across multiple API instances via atomic INCR).
+            // For in-memory/testing, it's AppointmentCodeGenerator.Instance.
             var strategy = PricingStrategySelector.Select(command.AppointmentType);
             var pricingContext = new PricingContext(strategy);
             var finalPrice = pricingContext.ExecutePricing(
                 doctor.ConsultationFee.Amount);
 
-            // Apply the calculated price to the appointment
-            appointment.ApplyPricingStrategy(
-                finalPrice,
-                doctor.ConsultationFee.Currency);
-            // ── END STRATEGY ────────────────────────────────────
+            // 7. Persist with retry on reference code collision
+            Appointment? createdAppointment = null;
+            for (int attempt = 1; attempt <= 2; attempt++)
+            {
+                Appointment appointment;
+                try
+                {
+                    appointment = Appointment.Create(
+                        patient, doctor, scheduledTime, command.Reason, _codeGenerator);
+                }
+                catch (Exception ex)
+                {
+                    return Result<int>.Failure(ex.Message);
+                }
 
-            // 7. Persist
-            await _unitOfWork.Appointments.AddAsync(appointment, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                appointment.ApplyPricingStrategy(
+                    finalPrice,
+                    doctor.ConsultationFee.Currency);
+
+                await _unitOfWork.Appointments.AddAsync(appointment, cancellationToken);
+
+                try
+                {
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    createdAppointment = appointment;
+                    break;
+                }
+                catch (DbUpdateException ex) when (attempt == 1 && IsReferenceCodeDuplicate(ex))
+                {
+                    _unitOfWork.ResetChangeTracker();
+                    // Retry once with a freshly generated code
+                }
+                catch (DbUpdateException ex) when (attempt == 2 && IsReferenceCodeDuplicate(ex))
+                {
+                    return Result<int>.Failure(
+                        "A unique appointment reference code could not be generated. Please try again.");
+                }
+            }
 
             // 8. Dispatch domain events (Observer Pattern)
             await _eventDispatcher.DispatchAsync(
-                appointment.DomainEvents, cancellationToken);
-            appointment.ClearDomainEvents();
+                createdAppointment!.DomainEvents, cancellationToken);
+            createdAppointment.ClearDomainEvents();
 
-            return Result<int>.Success(appointment.Id);
+            return Result<int>.Success(createdAppointment.Id);
+    }
+
+    private static bool IsReferenceCodeDuplicate(DbUpdateException ex)
+    {
+        var message = ex.InnerException?.Message ?? ex.Message;
+        return message.Contains("IX_Appointments_ReferenceCode") ||
+               (message.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase) &&
+                message.Contains("ReferenceCode", StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using FluentAssertions;
 using Healthcare.Adapters.Persistence.EntityFramework.Configurations;
 using Healthcare.Domain.Entities;
@@ -26,7 +25,6 @@ public sealed class EFCoreDoctorScheduleTests
         doctor.SetWorkingHours(DayOfWeek.Monday, new TimeOnly(9, 0), new TimeOnly(13, 0));
 
         context.Doctors.Add(doctor);
-        SetSpecialtiesJson(context, doctor);
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
 
@@ -49,11 +47,89 @@ public sealed class EFCoreDoctorScheduleTests
         monday.IsWorkingDay.Should().BeTrue();
     }
 
-    private static void SetSpecialtiesJson(TestDoctorDbContext context, Doctor doctor)
+    [Fact]
+    public async Task DoctorSpecialties_RoundTripsCorrectly()
     {
-        var specialtyInts = doctor.Specialties.Select(s => (int)s).ToList();
-        var json = JsonSerializer.Serialize(specialtyInts);
-        context.Entry(doctor).Property<string>("_specialtiesJson").CurrentValue = json;
+        await using var database = await CreateDatabaseAsync();
+        var context = database.Context;
+
+        var doctor = TestDataBuilder.ADoctor()
+            .WithEmail("specialties.test@doctor.com")
+            .WithLicense("LIC-SPEC-001")
+            .WithSpecialty(Specialty.Cardiology)
+            .Build();
+
+        context.Doctors.Add(doctor);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var reloaded = await context.Doctors
+            .Include(d => d.SpecialtyEntries)
+            .FirstOrDefaultAsync(d => d.Id == doctor.Id);
+
+        reloaded.Should().NotBeNull();
+        reloaded!.Specialties.Should().HaveCount(1);
+        reloaded.Specialties.Should().Contain(Specialty.Cardiology);
+    }
+
+    [Fact]
+    public async Task DoctorSpecialties_MultipleSpecialtiesRoundTripCorrectly()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var context = database.Context;
+
+        var doctor = TestDataBuilder.ADoctor()
+            .WithEmail("multi.specialties@doctor.com")
+            .WithLicense("LIC-MULTI-001")
+            .WithSpecialty(Specialty.GeneralPractice)
+            .Build();
+
+        doctor.AddSpecialty(Specialty.Cardiology);
+
+        context.Doctors.Add(doctor);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var reloaded = await context.Doctors
+            .Include(d => d.SpecialtyEntries)
+            .FirstOrDefaultAsync(d => d.Id == doctor.Id);
+
+        reloaded.Should().NotBeNull();
+        reloaded!.Specialties.Should().HaveCount(2);
+        reloaded.Specialties.Should().Contain(Specialty.GeneralPractice);
+        reloaded.Specialties.Should().Contain(Specialty.Cardiology);
+    }
+
+    [Fact]
+    public async Task GetBySpecialtyAsync_ReturnsOnlyMatchingDoctors()
+    {
+        await using var database = await CreateDatabaseAsync();
+        var context = database.Context;
+
+        var cardiologist = TestDataBuilder.ADoctor()
+            .WithEmail("cardio@doctor.com")
+            .WithLicense("LIC-CARDIO-001")
+            .WithSpecialty(Specialty.Cardiology)
+            .Build();
+
+        var gp = TestDataBuilder.ADoctor()
+            .WithEmail("gp@doctor.com")
+            .WithLicense("LIC-GP-001")
+            .WithSpecialty(Specialty.GeneralPractice)
+            .Build();
+
+        context.Doctors.AddRange(cardiologist, gp);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var cardioResults = await context.Doctors
+            .Include(d => d.SpecialtyEntries)
+            .Where(d => d.SpecialtyEntries.Any(e => e.Specialty == Specialty.Cardiology))
+            .AsNoTracking()
+            .ToListAsync();
+
+        cardioResults.Should().HaveCount(1);
+        cardioResults[0].Email.Value.Should().Be("cardio@doctor.com");
     }
 
     private static async Task<TestDatabase> CreateDatabaseAsync()

@@ -78,12 +78,6 @@ public class DoctorConfiguration : IEntityTypeConfiguration<Doctor>
                 .HasColumnName("ConsultationFee_Currency");
         });
 
-        // Collection: Specialties (stored as JSON)
-        builder.Property<string>("_specialtiesJson")
-            .HasColumnName("Specialties")
-            .IsRequired()
-            .HasMaxLength(500);
-
         // Indexes
         builder.HasIndex(d => d.Email)
             .IsUnique()
@@ -99,8 +93,14 @@ public class DoctorConfiguration : IEntityTypeConfiguration<Doctor>
         // Ignore domain events
         builder.Ignore(d => d.DomainEvents);
 
-        // Ignore Specialties collection (we use backing field _specialtiesJson)
-        builder.Ignore(d => d.Specialties);
+        // Owned Collection: Specialties
+        builder.OwnsMany(d => d.SpecialtyEntries, specialty =>
+        {
+            specialty.WithOwner().HasForeignKey("DoctorId");
+            specialty.ToTable("DoctorSpecialties");
+            specialty.HasKey("Id");
+            specialty.Property(s => s.Specialty).IsRequired().HasConversion<int>();
+        });
 
         // Owned Collection: WeeklySchedule
         builder.OwnsMany(d => d.WeeklySchedule, schedule =>

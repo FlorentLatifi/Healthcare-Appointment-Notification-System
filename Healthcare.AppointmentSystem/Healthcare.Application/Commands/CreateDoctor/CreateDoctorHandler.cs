@@ -1,0 +1,83 @@
+using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Events;
+using Healthcare.Application.Ports.Repositories;
+using Healthcare.Domain.Entities;
+using Healthcare.Domain.Enums;
+using Healthcare.Domain.Events;
+using Healthcare.Domain.ValueObjects;
+
+namespace Healthcare.Application.Commands.CreateDoctor;
+
+public sealed class CreateDoctorHandler : ICommandHandler<CreateDoctorCommand, Result<int>>
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IDomainEventDispatcher _eventDispatcher;
+
+    public CreateDoctorHandler(IUnitOfWork unitOfWork, IDomainEventDispatcher eventDispatcher)
+    {
+        _unitOfWork = unitOfWork;
+        _eventDispatcher = eventDispatcher;
+    }
+
+    public async Task<Result<int>> HandleAsync(
+        CreateDoctorCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var existingDoctor = await _unitOfWork.Doctors
+            .GetByEmailAsync(command.Email, cancellationToken);
+
+        if (existingDoctor is not null)
+        {
+            return Result<int>.Failure($"A doctor with email '{command.Email}' already exists");
+        }
+
+        Email email;
+        PhoneNumber phoneNumber;
+        Money consultationFee;
+        Specialty specialty;
+
+        try
+        {
+            email = Email.Create(command.Email);
+            phoneNumber = PhoneNumber.Create(command.PhoneNumber);
+            consultationFee = Money.Create(
+                command.ConsultationFeeAmount,
+                command.ConsultationFeeCurrency);
+
+            if (!Enum.TryParse<Specialty>(command.Specialty, true, out specialty))
+            {
+                return Result<int>.Failure($"Invalid specialty: {command.Specialty}");
+            }
+        }
+        catch (Exception ex)
+        {
+            return Result<int>.Failure($"Invalid input: {ex.Message}");
+        }
+
+        Doctor doctor;
+        try
+        {
+            doctor = Doctor.Create(
+                command.FirstName,
+                command.LastName,
+                email,
+                phoneNumber,
+                command.LicenseNumber,
+                consultationFee,
+                command.YearsOfExperience,
+                specialty);
+        }
+        catch (Exception ex)
+        {
+            return Result<int>.Failure($"Failed to create doctor: {ex.Message}");
+        }
+
+        await _unitOfWork.Doctors.AddAsync(doctor, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _eventDispatcher.DispatchAsync(
+            new DoctorCacheInvalidationNeededEvent(), cancellationToken);
+
+        return Result<int>.Success(doctor.Id);
+    }
+}

@@ -121,11 +121,11 @@ public sealed class InMemoryUnitOfWork : IUnitOfWork
             }
 
             _isInTransaction = false;
-            // In real EF Core: await _dbContext.Database.CurrentTransaction.RollbackAsync(cancellationToken)
-
-            // Note: In-memory cannot truly rollback - data is already changed
-            // This is a simulation for consistency with the interface
             return Task.CompletedTask;
         }
+    }
+
+    public void ResetChangeTracker()
+    {
     }
 }

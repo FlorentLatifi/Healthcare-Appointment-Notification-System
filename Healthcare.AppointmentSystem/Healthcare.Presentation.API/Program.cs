@@ -3,6 +3,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Healthcare.Adapters;
 using Healthcare.Presentation.API.HealthChecks;
+using Healthcare.Presentation.API.Services;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Commands.CancelAppointment;
@@ -10,6 +11,8 @@ using Healthcare.Application.Commands.CompleteAppointment;
 using Healthcare.Application.Commands.ConfirmAppointment;
 using Healthcare.Application.Commands.MarkNoShowAppointment;
 using Healthcare.Application.Commands.CreatePatient;
+using Healthcare.Application.Commands.CreateDoctor;
+using Healthcare.Application.Commands.DeactivateDoctor;
 using Healthcare.Application.Common;
 using Healthcare.Presentation.API.Filters;
 using Healthcare.Presentation.API.Middleware;
@@ -27,8 +30,10 @@ using Healthcare.Application.DTOs;
 using Healthcare.Adapters.Factories;
 using Healthcare.Application.Ports.Factories;
 using Healthcare.Application.Ports.Facades;
+using Healthcare.Application.Ports.Payments;
 using Healthcare.Application.Services;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Healthcare.Presentation.API.Resources;
@@ -143,6 +148,8 @@ try
     builder.Services.AddScoped<ICommandHandler<CompleteAppointmentCommand, Result>, CompleteAppointmentHandler>();
     builder.Services.AddScoped<ICommandHandler<MarkNoShowAppointmentCommand, Result>, MarkNoShowAppointmentHandler>();
     builder.Services.AddScoped<ICommandHandler<CreatePatientCommand, Result<int>>, CreatePatientHandler>();
+    builder.Services.AddScoped<ICommandHandler<CreateDoctorCommand, Result<int>>, CreateDoctorHandler>();
+    builder.Services.AddScoped<ICommandHandler<DeactivateDoctorCommand, Result>, DeactivateDoctorHandler>();
     builder.Services.AddScoped<ICommandHandler<ProcessPaymentCommand, Result<int>>, ProcessPaymentHandler>();
     builder.Services.AddScoped<ICommandHandler<RefundPaymentCommand, Result>, RefundPaymentHandler>();
 
@@ -156,6 +163,9 @@ try
     builder.Services.AddScoped<IQueryHandler<GetAppointmentsByPatientQuery, Result<IEnumerable<AppointmentDto>>>, GetAppointmentsByPatientHandler>();
     // ── FACADE PATTERN (Structural) ──────────────────────────
     builder.Services.AddScoped<IAppointmentFacade, AppointmentFacade>();
+
+    // ── PAYMENT RECONCILIATION SERVICE ──────────────────────
+    builder.Services.AddScoped<IPaymentReconciliationService, PaymentReconciliationService>();
     // ─────────────────────────────────────────────────────────
     // ============================================
     // HEALTH CHECKS
@@ -198,6 +208,42 @@ try
     builder.Services.AddAuthorization();
 
     // ============================================
+    // FORWARDED HEADERS (trusted proxy support)
+    // ============================================
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+        var trustedProxies = builder.Configuration.GetSection("TrustedProxies").Get<string[]>();
+        if (trustedProxies is not null)
+        {
+            foreach (var proxy in trustedProxies)
+            {
+                if (System.Net.IPAddress.TryParse(proxy, out var ip))
+                {
+                    options.KnownProxies.Add(ip);
+                }
+            }
+        }
+
+        var trustedNetworks = builder.Configuration.GetSection("TrustedNetworks").Get<string[]>();
+        if (trustedNetworks is not null)
+        {
+            foreach (var network in trustedNetworks)
+            {
+                // Parse CIDR "10.0.0.0/8" — ASP.NET supports it natively
+                var parts = network.Split('/');
+                if (parts.Length == 2
+                    && System.Net.IPAddress.TryParse(parts[0], out var networkIp)
+                    && int.TryParse(parts[1], out var prefixLength))
+                {
+                    options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(networkIp, prefixLength));
+                }
+            }
+        }
+    });
+
+    // ============================================
     // RATE LIMITING
     // ============================================
     var globalRateLimit = builder.Configuration.GetValue<int>("RateLimiting:GlobalPermitLimit", 100);
@@ -208,9 +254,7 @@ try
     {
         options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
         {
-            var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString()
-                ?? httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
-                ?? "unknown";
+            var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
             return RateLimitPartition.GetFixedWindowLimiter(
                 partitionKey: ipAddress,
@@ -225,9 +269,7 @@ try
 
         options.AddPolicy("AuthPolicy", httpContext =>
         {
-            var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString()
-                ?? httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
-                ?? "unknown";
+            var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
             return RateLimitPartition.GetFixedWindowLimiter(
                 partitionKey: ipAddress,
@@ -323,6 +365,23 @@ try
     });
 
     // ============================================
+    // BACKGROUND SERVICES
+    // ============================================
+    builder.Services.Configure<ReminderSettings>(
+        builder.Configuration.GetSection("ReminderSettings"));
+    builder.Services.AddHostedService<AppointmentReminderBackgroundService>();
+
+    // ============================================
+    // DATABASE SEEDING (dev/demo only)
+    // ============================================
+    var seedDemoData = builder.Configuration.GetValue<bool>("SeedDemoData");
+    if (seedDemoData)
+    {
+        Log.Information("SeedDemoData is enabled — registering DatabaseSeeder.");
+        builder.Services.AddHostedService<DatabaseSeeder>();
+    }
+
+    // ============================================
     // BUILD APP
     // ============================================
     var app = builder.Build();
@@ -330,6 +389,7 @@ try
     // ============================================
     // MIDDLEWARE PIPELINE
     // ============================================
+    app.UseForwardedHeaders();
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseMiddleware<CorrelationIdMiddleware>();
 

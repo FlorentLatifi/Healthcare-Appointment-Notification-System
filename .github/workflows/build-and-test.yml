@@ -27,9 +27,15 @@ jobs:
     - name: Run Tests (Release)
       run: dotnet test Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln --no-build -c Release --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
     
-    - name: Check for vulnerable packages
-      run: dotnet list package --vulnerable --include-transitive Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln
-      continue-on-error: true
+    - name: Check for High/Critical vulnerabilities
+      run: |
+        output=$(dotnet list package --vulnerable --include-transitive Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln 2>&1)
+        echo "$output"
+        if echo "$output" | grep -Eq "High|Critical"; then
+          echo "❌ High or Critical severity vulnerabilities found!"
+          exit 1
+        fi
+        echo "✅ No High or Critical vulnerabilities detected."
     
     - name: Upload test results
       if: always()

@@ -66,6 +66,9 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
         builder.Property(a => a.CancelledAt)
             .IsRequired(false);
 
+        builder.Property(a => a.RemindedAt)
+            .IsRequired(false);
+
         builder.Property(a => a.CreatedAt)
             .IsRequired();
 

@@ -113,4 +113,9 @@ public sealed class EFCoreUnitOfWork : IUnitOfWork
             _currentTransaction = null;
         }
     }
+
+    public void ResetChangeTracker()
+    {
+        _context.ChangeTracker.Clear();
+    }
 }

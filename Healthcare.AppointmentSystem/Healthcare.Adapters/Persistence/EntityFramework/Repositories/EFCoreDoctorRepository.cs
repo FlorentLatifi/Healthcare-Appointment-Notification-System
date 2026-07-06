@@ -3,19 +3,9 @@ using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 
 namespace Healthcare.Adapters.Persistence.EntityFramework.Repositories;
 
-/// <summary>
-/// Entity Framework Core implementation of IDoctorRepository.
-/// </summary>
-/// <remarks>
-/// Special Handling: Specialties Collection
-/// - Specialties are stored as JSON string in database
-/// - Converted to List on read, from List on write
-/// - This approach keeps the database schema simple while preserving collection
-/// </remarks>
 public sealed class EFCoreDoctorRepository : IDoctorRepository
 {
     private readonly HealthcareDbContext _context;
@@ -27,100 +17,56 @@ public sealed class EFCoreDoctorRepository : IDoctorRepository
 
     public async Task<Doctor?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var doctor = await _context.Doctors
+        return await _context.Doctors
+            .Include(d => d.SpecialtyEntries)
             .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
-
-        if (doctor != null)
-        {
-            LoadSpecialties(doctor);
-        }
-
-        return doctor;
     }
 
     public async Task<Doctor?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = Email.Create(email);
 
-        var doctor = await _context.Doctors
+        return await _context.Doctors
+            .Include(d => d.SpecialtyEntries)
             .FirstOrDefaultAsync(d => d.Email == normalizedEmail, cancellationToken);
-
-        if (doctor != null)
-        {
-            LoadSpecialties(doctor);
-        }
-
-        return doctor;
     }
 
     public async Task<IEnumerable<Doctor>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var doctors = await _context.Doctors
+        return await _context.Doctors
+            .Include(d => d.SpecialtyEntries)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
-
-        foreach (var doctor in doctors)
-        {
-            LoadSpecialties(doctor);
-        }
-
-        return doctors;
     }
 
     public async Task<IEnumerable<Doctor>> GetActiveAsync(CancellationToken cancellationToken = default)
     {
-        var doctors = await _context.Doctors
+        return await _context.Doctors
+            .Include(d => d.SpecialtyEntries)
             .Where(d => d.IsActive)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
-
-        foreach (var doctor in doctors)
-        {
-            LoadSpecialties(doctor);
-        }
-
-        return doctors;
     }
 
     public async Task<IEnumerable<Doctor>> GetAcceptingPatientsAsync(
         CancellationToken cancellationToken = default)
     {
-        var doctors = await _context.Doctors
+        return await _context.Doctors
+            .Include(d => d.SpecialtyEntries)
             .Where(d => d.IsActive && d.IsAcceptingPatients)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
-
-        foreach (var doctor in doctors)
-        {
-            LoadSpecialties(doctor);
-        }
-
-        return doctors;
     }
 
     public async Task<IEnumerable<Doctor>> GetBySpecialtyAsync(
         Specialty specialty,
         CancellationToken cancellationToken = default)
     {
-        // Load all doctors and filter in memory
-        // This is acceptable for small-medium datasets
-        // For large datasets, consider storing specialties in separate table
-        var doctors = await _context.Doctors
+        return await _context.Doctors
+            .Include(d => d.SpecialtyEntries)
+            .Where(d => d.SpecialtyEntries.Any(e => e.Specialty == specialty))
             .AsNoTracking()
             .ToListAsync(cancellationToken);
-
-        // Load specialties and filter
-        var filtered = new List<Doctor>();
-        foreach (var doctor in doctors)
-        {
-            LoadSpecialties(doctor);
-            if (doctor.Specialties.Contains(specialty))
-            {
-                filtered.Add(doctor);
-            }
-        }
-
-        return filtered;
     }
 
     public async Task<IEnumerable<Doctor>> SearchByNameAsync(
@@ -129,18 +75,12 @@ public sealed class EFCoreDoctorRepository : IDoctorRepository
     {
         var lowerSearch = searchTerm.ToLower();
 
-        var doctors = await _context.Doctors
+        return await _context.Doctors
+            .Include(d => d.SpecialtyEntries)
             .Where(d => d.FirstName.ToLower().Contains(lowerSearch) ||
                        d.LastName.ToLower().Contains(lowerSearch))
             .AsNoTracking()
             .ToListAsync(cancellationToken);
-
-        foreach (var doctor in doctors)
-        {
-            LoadSpecialties(doctor);
-        }
-
-        return doctors;
     }
 
     public async Task<bool> ExistsAsync(string email, CancellationToken cancellationToken = default)
@@ -153,13 +93,11 @@ public sealed class EFCoreDoctorRepository : IDoctorRepository
 
     public async Task AddAsync(Doctor doctor, CancellationToken cancellationToken = default)
     {
-        SaveSpecialties(doctor);
         await _context.Doctors.AddAsync(doctor, cancellationToken);
     }
 
     public Task UpdateAsync(Doctor doctor, CancellationToken cancellationToken = default)
     {
-        SaveSpecialties(doctor);
         _context.Doctors.Update(doctor);
         return Task.CompletedTask;
     }
@@ -173,45 +111,5 @@ public sealed class EFCoreDoctorRepository : IDoctorRepository
         {
             _context.Doctors.Remove(doctor);
         }
-    }
-
-    /// <summary>
-    /// Loads specialties from JSON string into the collection.
-    /// </summary>
-    private void LoadSpecialties(Doctor doctor)
-    {
-        var json = _context.Entry(doctor).Property<string>("_specialtiesJson").CurrentValue;
-
-        if (!string.IsNullOrEmpty(json))
-        {
-            var specialtyInts = JsonSerializer.Deserialize<List<int>>(json) ?? new List<int>();
-            var specialties = specialtyInts.Select(i => (Specialty)i).ToList();
-
-            // Use reflection to set private collection
-            var field = typeof(Doctor).GetField("_specialties",
-                System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance);
-
-            if (field != null)
-            {
-                var list = field.GetValue(doctor) as List<Specialty>;
-                if (list != null)
-                {
-                    list.Clear();
-                    list.AddRange(specialties);
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Saves specialties collection to JSON string.
-    /// </summary>
-    private void SaveSpecialties(Doctor doctor)
-    {
-        var specialtyInts = doctor.Specialties.Select(s => (int)s).ToList();
-        var json = JsonSerializer.Serialize(specialtyInts);
-
-        _context.Entry(doctor).Property<string>("_specialtiesJson").CurrentValue = json;
     }
 }
