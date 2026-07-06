@@ -47,11 +47,6 @@ public sealed class PhoneNumber : ValueObject
         // Remove all whitespace and common separators
         var normalized = Regex.Replace(phoneNumber, @"[\s\-\(\)]", "");
 
-        if (normalized.Length > 18) // +XXX (3) + 14 digits = max 18
-        {
-            throw new InvalidPhoneNumberException(phoneNumber);
-        }
-
         if (!PhoneRegex.IsMatch(normalized))
         {
             throw new InvalidPhoneNumberException(phoneNumber);

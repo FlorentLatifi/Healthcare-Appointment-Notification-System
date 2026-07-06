@@ -1,4 +1,5 @@
-﻿using Healthcare.Application.Ports.Repositories;
+﻿using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -50,6 +51,27 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<PagedResult<Appointment>> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Appointments
+            .Include(a => a.Patient)
+            .Include(a => a.Doctor)
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(a => a.ScheduledTime)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Appointment>(items, pageNumber, pageSize, totalCount);
+    }
+
     public async Task<IEnumerable<Appointment>> GetByPatientIdAsync(
         int patientId,
         CancellationToken cancellationToken = default)
@@ -63,6 +85,29 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<PagedResult<Appointment>> GetPagedByPatientIdAsync(
+        int patientId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Appointments
+            .Include(a => a.Patient)
+            .Include(a => a.Doctor)
+            .Where(a => a.PatientId == patientId)
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(a => a.ScheduledTime)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Appointment>(items, pageNumber, pageSize, totalCount);
+    }
+
     public async Task<IEnumerable<Appointment>> GetByDoctorIdAsync(
         int doctorId,
         CancellationToken cancellationToken = default)
@@ -74,6 +119,29 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
             .AsNoTracking()
             .OrderByDescending(a => a.ScheduledTime)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<PagedResult<Appointment>> GetPagedByDoctorIdAsync(
+        int doctorId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Appointments
+            .Include(a => a.Patient)
+            .Include(a => a.Doctor)
+            .Where(a => a.DoctorId == doctorId)
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(a => a.ScheduledTime)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Appointment>(items, pageNumber, pageSize, totalCount);
     }
 
     public async Task<IEnumerable<Appointment>> GetByDoctorAndDateAsync(

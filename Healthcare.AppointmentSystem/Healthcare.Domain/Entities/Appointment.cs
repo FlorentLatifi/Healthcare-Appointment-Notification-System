@@ -178,10 +178,28 @@ public sealed class Appointment : Entity
                 "Cannot book appointment - patient account is inactive.");
         }
 
+        if (reason.Trim().Length < 10)
+        {
+            throw new ArgumentException(
+                "Appointment reason must be at least 10 characters.", nameof(reason));
+        }
+
+        if (!patient.IsActive)
+        {
+            throw new InvalidOperationException(
+                "Cannot book appointment - patient account is inactive.");
+        }
+
         if (!doctor.IsActive)
         {
             throw new InvalidOperationException(
                 "Cannot book appointment - doctor is not active.");
+        }
+
+        if (!doctor.IsAcceptingPatients)
+        {
+            throw new InvalidOperationException(
+                "Doctor is not accepting patients.");
         }
 
         // ── CREATE ENTITY ────────────────────────────────────────────────────

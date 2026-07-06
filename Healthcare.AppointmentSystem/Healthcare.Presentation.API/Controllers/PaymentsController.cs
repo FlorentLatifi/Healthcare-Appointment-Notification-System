@@ -346,13 +346,13 @@ public sealed class PaymentsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        // TODO: Paginimi aktualisht bëhet in-memory (Skip/Take mbi IEnumerable<Payment>
-        // të kthyer nga GetAllAsync). Duhet migruar në DB-level kur repository-t
-        // të mbështesin IQueryable (Skip/Take përpara ToListAsync).
-        var payments = await _unitOfWork.Payments.GetAllAsync(cancellationToken);
-        var dtos = payments.Select(MapToDto);
-
-        var pagedResult = PagedResult<PaymentDto>.Create(dtos, pageNumber, pageSize);
+        var pagedEntities = await _unitOfWork.Payments
+            .GetPagedAsync(pageNumber, pageSize, cancellationToken);
+        var pagedResult = new PagedResult<PaymentDto>(
+            pagedEntities.Items.Select(MapToDto),
+            pagedEntities.PageNumber,
+            pagedEntities.PageSize,
+            pagedEntities.TotalCount);
 
         return Ok(ApiResponse<PagedResult<PaymentDto>>.SuccessResponse(
             pagedResult,

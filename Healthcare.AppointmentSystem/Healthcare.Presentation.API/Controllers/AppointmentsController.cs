@@ -8,7 +8,6 @@ using Healthcare.Application.DTOs;
 using Healthcare.Application.Mappings;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Queries.GetAppointment;
-using Healthcare.Application.Queries.GetAppointmentsByPatient;
 using Healthcare.Application.Services;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
@@ -30,7 +29,6 @@ public sealed class AppointmentsController : ControllerBase
     private readonly ICommandHandler<CompleteAppointmentCommand, Result> _completeAppointmentHandler;
     private readonly ICommandHandler<MarkNoShowAppointmentCommand, Result> _markNoShowAppointmentHandler;
     private readonly IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>> _getAppointmentHandler;
-    private readonly IQueryHandler<GetAppointmentsByPatientQuery, Result<IEnumerable<AppointmentDto>>> _getAppointmentsByPatientHandler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AppointmentsController> _logger;
     private readonly IAppointmentFacade _facade;
@@ -40,7 +38,6 @@ public sealed class AppointmentsController : ControllerBase
         ICommandHandler<CompleteAppointmentCommand, Result> completeAppointmentHandler,
         ICommandHandler<MarkNoShowAppointmentCommand, Result> markNoShowAppointmentHandler,
         IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>> getAppointmentHandler,
-        IQueryHandler<GetAppointmentsByPatientQuery, Result<IEnumerable<AppointmentDto>>> getAppointmentsByPatientHandler,
         IUnitOfWork unitOfWork,
         ILogger<AppointmentsController> logger,
         IAppointmentFacade facade)
@@ -49,7 +46,6 @@ public sealed class AppointmentsController : ControllerBase
         _completeAppointmentHandler = completeAppointmentHandler;
         _markNoShowAppointmentHandler = markNoShowAppointmentHandler;
         _getAppointmentHandler = getAppointmentHandler;
-        _getAppointmentsByPatientHandler = getAppointmentsByPatientHandler;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _facade = facade;
@@ -122,13 +118,13 @@ public sealed class AppointmentsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        // TODO: Paginimi aktualisht bëhet in-memory (Skip/Take mbi IEnumerable<Appointment>
-        // të kthyer nga GetAllAsync). Duhet migruar në DB-level (IQueryable.Skip/Take
-        // përpara ToListAsync) kur repository-t të mbështesin queryable.
-        var appointments = await _unitOfWork.Appointments.GetAllAsync(cancellationToken);
-        var mappedList = appointments.Select(AppointmentMapper.ToDto);
-
-        var pagedResult = PagedResult<AppointmentDto>.Create(mappedList, pageNumber, pageSize);
+        var pagedEntities = await _unitOfWork.Appointments
+            .GetPagedAsync(pageNumber, pageSize, cancellationToken);
+        var pagedResult = new PagedResult<AppointmentDto>(
+            pagedEntities.Items.Select(AppointmentMapper.ToDto),
+            pagedEntities.PageNumber,
+            pagedEntities.PageSize,
+            pagedEntities.TotalCount);
 
         return Ok(ApiResponse<PagedResult<AppointmentDto>>.SuccessResponse(
             pagedResult,
@@ -153,17 +149,13 @@ public sealed class AppointmentsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var query = new GetAppointmentsByPatientQuery(patientId);
-        var result = await _getAppointmentsByPatientHandler.HandleAsync(query, cancellationToken);
-
-        if (result.IsFailure)
-        {
-            return BadRequest(ApiResponse<PagedResult<AppointmentDto>>.ErrorResponse(
-                result.Error, "Failed to retrieve appointments"));
-        }
-
-        // TODO: shih koment mbi paginimin in-memory te GetAllAppointments.
-        var pagedResult = PagedResult<AppointmentDto>.Create(result.Value, pageNumber, pageSize);
+        var pagedEntities = await _unitOfWork.Appointments
+            .GetPagedByPatientIdAsync(patientId, pageNumber, pageSize, cancellationToken);
+        var pagedResult = new PagedResult<AppointmentDto>(
+            pagedEntities.Items.Select(AppointmentMapper.ToDto),
+            pagedEntities.PageNumber,
+            pagedEntities.PageSize,
+            pagedEntities.TotalCount);
 
         return Ok(ApiResponse<PagedResult<AppointmentDto>>.SuccessResponse(
             pagedResult,
@@ -188,12 +180,13 @@ public sealed class AppointmentsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        // TODO: shih koment mbi paginimin in-memory te GetAllAppointments.
-        var appointments = await _unitOfWork.Appointments
-                .GetByDoctorIdAsync(doctorId, cancellationToken);
-        var mappedList = appointments.Select(AppointmentMapper.ToDto);
-
-        var pagedResult = PagedResult<AppointmentDto>.Create(mappedList, pageNumber, pageSize);
+        var pagedEntities = await _unitOfWork.Appointments
+            .GetPagedByDoctorIdAsync(doctorId, pageNumber, pageSize, cancellationToken);
+        var pagedResult = new PagedResult<AppointmentDto>(
+            pagedEntities.Items.Select(AppointmentMapper.ToDto),
+            pagedEntities.PageNumber,
+            pagedEntities.PageSize,
+            pagedEntities.TotalCount);
 
         return Ok(ApiResponse<PagedResult<AppointmentDto>>.SuccessResponse(
             pagedResult,

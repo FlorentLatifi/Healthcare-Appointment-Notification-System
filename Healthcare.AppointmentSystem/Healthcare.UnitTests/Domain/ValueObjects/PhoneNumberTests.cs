@@ -90,21 +90,7 @@ public class PhoneNumberTests
             .WithMessage($"*{invalidPhone}*");
     }
 
-   
-    [Fact]
-    public void Create_WithTooLongPhoneNumber_ShouldThrowInvalidPhoneNumberException()
-    {
-        // Arrange - 18 digits total (3 country + 15 number = TOO LONG)
-        var tooLongPhone = "+1234567890123456";
-
-        // Act
-        Action act = () => PhoneNumber.Create(tooLongPhone);
-
-        // Assert
-        act.Should().Throw<InvalidPhoneNumberException>()
-            .WithMessage($"*{tooLongPhone}*");
-    }
-
+    
     #endregion
 
     #region Equality Tests

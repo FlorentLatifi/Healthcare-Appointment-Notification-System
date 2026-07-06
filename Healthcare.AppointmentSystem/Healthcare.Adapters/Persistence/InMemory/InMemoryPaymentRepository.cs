@@ -1,4 +1,5 @@
-﻿using Healthcare.Application.Ports.Repositories;
+﻿using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -43,6 +44,18 @@ public sealed class InMemoryPaymentRepository : InMemoryRepository<Payment>, IPa
     public Task<IEnumerable<Payment>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return base.GetAllAsync();
+    }
+
+    public async Task<PagedResult<Payment>> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var all = await base.GetAllAsync();
+        var list = all.OrderByDescending(p => p.CreatedAt).ToList();
+        var totalCount = list.Count;
+        var items = list.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedResult<Payment>(items, pageNumber, pageSize, totalCount);
     }
 
     public Task AddAsync(Payment payment, CancellationToken cancellationToken = default)

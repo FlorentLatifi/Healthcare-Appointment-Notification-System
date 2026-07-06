@@ -1,4 +1,5 @@
-﻿using Healthcare.Application.Ports.Repositories;
+﻿using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -33,14 +34,52 @@ public sealed class InMemoryAppointmentRepository : InMemoryRepository<Appointme
         return base.GetAllAsync();
     }
 
+    public async Task<PagedResult<Appointment>> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var all = await base.GetAllAsync();
+        var list = all.OrderByDescending(a => a.ScheduledTime.Value).ToList();
+        var totalCount = list.Count;
+        var items = list.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedResult<Appointment>(items, pageNumber, pageSize, totalCount);
+    }
+
     public Task<IEnumerable<Appointment>> GetByPatientIdAsync(int patientId, CancellationToken cancellationToken = default)
     {
         return FindAsync(a => a.PatientId == patientId);
     }
 
+    public async Task<PagedResult<Appointment>> GetPagedByPatientIdAsync(
+        int patientId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var all = await FindAsync(a => a.PatientId == patientId);
+        var list = all.OrderByDescending(a => a.ScheduledTime.Value).ToList();
+        var totalCount = list.Count;
+        var items = list.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedResult<Appointment>(items, pageNumber, pageSize, totalCount);
+    }
+
     public Task<IEnumerable<Appointment>> GetByDoctorIdAsync(int doctorId, CancellationToken cancellationToken = default)
     {
         return FindAsync(a => a.DoctorId == doctorId);
+    }
+
+    public async Task<PagedResult<Appointment>> GetPagedByDoctorIdAsync(
+        int doctorId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var all = await FindAsync(a => a.DoctorId == doctorId);
+        var list = all.OrderByDescending(a => a.ScheduledTime.Value).ToList();
+        var totalCount = list.Count;
+        var items = list.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedResult<Appointment>(items, pageNumber, pageSize, totalCount);
     }
 
     public Task<IEnumerable<Appointment>> GetByDoctorAndDateAsync(

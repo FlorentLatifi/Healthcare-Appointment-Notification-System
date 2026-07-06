@@ -1,4 +1,5 @@
-﻿using Healthcare.Application.Ports.Repositories;
+﻿using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +37,24 @@ public sealed class EFCorePatientRepository : IPatientRepository
         return await _context.Patients
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<PagedResult<Patient>> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Patients.AsNoTracking();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderBy(p => p.LastName).ThenBy(p => p.FirstName)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Patient>(items, pageNumber, pageSize, totalCount);
     }
 
     public async Task<IEnumerable<Patient>> GetActiveAsync(CancellationToken cancellationToken = default)

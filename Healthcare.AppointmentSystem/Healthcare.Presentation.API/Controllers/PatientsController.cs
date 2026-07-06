@@ -151,10 +151,13 @@ public sealed class PatientsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var patients = await _unitOfWork.Patients.GetAllAsync(cancellationToken);
-        var dtos = patients.Select(MapToDto);
-
-        var pagedResult = PagedResult<PatientDto>.Create(dtos, pageNumber, pageSize);
+        var pagedEntities = await _unitOfWork.Patients
+            .GetPagedAsync(pageNumber, pageSize, cancellationToken);
+        var pagedResult = new PagedResult<PatientDto>(
+            pagedEntities.Items.Select(MapToDto),
+            pagedEntities.PageNumber,
+            pagedEntities.PageSize,
+            pagedEntities.TotalCount);
 
         return Ok(ApiResponse<PagedResult<PatientDto>>.SuccessResponse(
             pagedResult,

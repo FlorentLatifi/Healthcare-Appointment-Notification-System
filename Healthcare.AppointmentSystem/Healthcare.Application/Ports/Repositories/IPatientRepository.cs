@@ -1,4 +1,5 @@
-﻿using Healthcare.Domain.Entities;
+﻿using Healthcare.Application.Common;
+using Healthcare.Domain.Entities;
 
 namespace Healthcare.Application.Ports.Repositories;
 
@@ -21,6 +22,11 @@ public interface IPatientRepository
     /// Gets all patients in the system.
     /// </summary>
     Task<IEnumerable<Patient>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a paginated page of all patients with total count (DB-level pagination).
+    /// </summary>
+    Task<PagedResult<Patient>> GetPagedAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets all active patients.

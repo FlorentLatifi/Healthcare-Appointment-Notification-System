@@ -1,4 +1,5 @@
-﻿using Healthcare.Application.Queries.Analytics;
+﻿using Healthcare.Application.Common;
+using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 
@@ -35,6 +36,11 @@ public interface IAppointmentRepository
     Task<IEnumerable<Appointment>> GetAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets a paginated page of all appointments with total count (DB-level pagination).
+    /// </summary>
+    Task<PagedResult<Appointment>> GetPagedAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets all appointments for a specific patient.
     /// </summary>
     /// <param name="patientId">The patient ID.</param>
@@ -43,12 +49,22 @@ public interface IAppointmentRepository
     Task<IEnumerable<Appointment>> GetByPatientIdAsync(int patientId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets a paginated page of appointments for a patient with total count (DB-level pagination).
+    /// </summary>
+    Task<PagedResult<Appointment>> GetPagedByPatientIdAsync(int patientId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets all appointments for a specific doctor.
     /// </summary>
     /// <param name="doctorId">The doctor ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A collection of appointments for the doctor.</returns>
     Task<IEnumerable<Appointment>> GetByDoctorIdAsync(int doctorId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a paginated page of appointments for a doctor with total count (DB-level pagination).
+    /// </summary>
+    Task<PagedResult<Appointment>> GetPagedByDoctorIdAsync(int doctorId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets all appointments for a doctor on a specific date.

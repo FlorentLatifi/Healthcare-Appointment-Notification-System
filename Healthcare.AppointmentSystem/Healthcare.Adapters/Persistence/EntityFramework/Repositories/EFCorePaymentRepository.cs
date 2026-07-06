@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
@@ -62,6 +63,26 @@ public sealed class EFCorePaymentRepository : IPaymentRepository
             .Include(p => p.Appointment)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<PagedResult<Payment>> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Payments
+            .Include(p => p.Appointment)
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Payment>(items, pageNumber, pageSize, totalCount);
     }
 
     public async Task AddAsync(Payment payment, CancellationToken cancellationToken = default)

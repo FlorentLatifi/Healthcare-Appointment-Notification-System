@@ -15,7 +15,7 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLogEntry>
         builder.Property(a => a.EntityType).IsRequired().HasMaxLength(100);
         builder.Property(a => a.EntityId).IsRequired(false);
         builder.Property(a => a.OccurredOn).IsRequired();
-        builder.Property(a => a.Details).IsRequired().HasColumnType("nvarchar(max)");
+        builder.Property(a => a.Details).IsRequired();
         builder.Property(a => a.UserId).IsRequired(false);
         builder.Property(a => a.CreatedAt).IsRequired();
         builder.Property(a => a.ModifiedAt).IsRequired(false);

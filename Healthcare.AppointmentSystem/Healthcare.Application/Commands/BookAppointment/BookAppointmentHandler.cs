@@ -48,6 +48,10 @@ public sealed class BookAppointmentHandler
                 return Result<int>.Failure(
                     $"Doctor with ID {command.DoctorId} not found.");
 
+            if (!doctor.IsAcceptingPatients)
+                return Result<int>.Failure(
+                    $"Doctor {doctor.FullName} is not accepting patients.");
+
             // 3. Create AppointmentTime value object
             AppointmentTime scheduledTime;
             try
@@ -90,8 +94,16 @@ public sealed class BookAppointmentHandler
             // ── SINGLETON PATTERN ──────────────────────────────────────────────────
                // _codeGenerator is backed by AppointmentCodeGenerator.Instance (Singleton)
               // ONE instance serves ALL requests — unique codes guaranteed application-wide.
-               var appointment = Appointment.Create(
-                  patient, doctor, scheduledTime, command.Reason, _codeGenerator);
+            Appointment appointment;
+            try
+            {
+                appointment = Appointment.Create(
+                    patient, doctor, scheduledTime, command.Reason, _codeGenerator);
+            }
+            catch (Exception ex)
+            {
+                return Result<int>.Failure(ex.Message);
+            }
 
             // ── STRATEGY PATTERN ────────────────────────────────
             // Select strategy based on appointment type

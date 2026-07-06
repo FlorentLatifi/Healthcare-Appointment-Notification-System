@@ -288,6 +288,7 @@ public class BookAppointmentHandlerTests
 
         SetupPatientRepositoryMock(patient);
         SetupDoctorRepositoryMock(doctor);
+        SetupAppointmentRepositoryMock(new List<Appointment>());
 
         var command = new BookAppointmentCommand
         {
@@ -315,6 +316,7 @@ public class BookAppointmentHandlerTests
 
         SetupPatientRepositoryMock(patient);
         SetupDoctorRepositoryMock(doctor);
+        SetupAppointmentRepositoryMock(new List<Appointment>());
 
         var command = new BookAppointmentCommand
         {

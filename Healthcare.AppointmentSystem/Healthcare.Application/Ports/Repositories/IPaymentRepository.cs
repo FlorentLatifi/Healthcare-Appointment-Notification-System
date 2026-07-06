@@ -1,4 +1,5 @@
-﻿using Healthcare.Application.Queries.Analytics;
+﻿using Healthcare.Application.Common;
+using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 
@@ -44,6 +45,11 @@ public interface IPaymentRepository
     /// Gets all payments.
     /// </summary>
     Task<IEnumerable<Payment>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a paginated page of all payments with total count (DB-level pagination).
+    /// </summary>
+    Task<PagedResult<Payment>> GetPagedAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Adds a new payment to the repository.
