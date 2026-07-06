@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 
@@ -42,12 +42,40 @@ public sealed class InMemoryPatientRepository : InMemoryRepository<Patient>, IPa
         return FindAsync(p => p.IsActive);
     }
 
+    public async Task<PagedResult<Patient>> GetPagedActiveAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var all = await FindAsync(p => p.IsActive);
+        var list = all.OrderBy(p => p.LastName).ThenBy(p => p.FirstName).ToList();
+        var totalCount = list.Count;
+        var items = list.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedResult<Patient>(items, pageNumber, pageSize, totalCount);
+    }
+
     public Task<IEnumerable<Patient>> SearchByNameAsync(string searchTerm, CancellationToken cancellationToken = default)
     {
         var lowerSearch = searchTerm.ToLowerInvariant();
         return FindAsync(p =>
             p.FirstName.ToLowerInvariant().Contains(lowerSearch) ||
             p.LastName.ToLowerInvariant().Contains(lowerSearch));
+    }
+
+    public async Task<PagedResult<Patient>> GetPagedSearchByNameAsync(
+        string searchTerm,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var lowerSearch = searchTerm.ToLowerInvariant();
+        var all = await FindAsync(p =>
+            p.FirstName.ToLowerInvariant().Contains(lowerSearch) ||
+            p.LastName.ToLowerInvariant().Contains(lowerSearch));
+        var list = all.OrderBy(p => p.LastName).ThenBy(p => p.FirstName).ToList();
+        var totalCount = list.Count;
+        var items = list.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedResult<Patient>(items, pageNumber, pageSize, totalCount);
     }
 
     public Task<bool> ExistsAsync(string email, CancellationToken cancellationToken = default)
