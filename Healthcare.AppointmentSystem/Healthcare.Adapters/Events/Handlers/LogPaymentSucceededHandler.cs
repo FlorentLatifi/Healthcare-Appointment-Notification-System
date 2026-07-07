@@ -38,17 +38,6 @@ public sealed class LogPaymentSucceededHandler : IDomainEventHandler<PaymentSucc
             domainEvent.Amount.Currency,
             domainEvent.TransactionId.Value);
 
-        Console.WriteLine("═══════════════════════════════════════════════");
-        Console.WriteLine("💰 PAYMENT SUCCEEDED - AUDIT LOG");
-        Console.WriteLine("═══════════════════════════════════════════════");
-        Console.WriteLine($"Event ID:        {domainEvent.EventId}");
-        Console.WriteLine($"Occurred On:     {domainEvent.OccurredOn:yyyy-MM-dd HH:mm:ss} UTC");
-        Console.WriteLine($"Payment ID:      {domainEvent.PaymentId}");
-        Console.WriteLine($"Appointment ID:  {domainEvent.AppointmentId}");
-        Console.WriteLine($"Amount:          {domainEvent.Amount.ToDisplayString()}");
-        Console.WriteLine($"Transaction ID:  {domainEvent.TransactionId.Value}");
-        Console.WriteLine("═══════════════════════════════════════════════");
-
         var details = JsonSerializer.Serialize(new
         {
             domainEvent.PaymentId,

@@ -193,7 +193,7 @@ public sealed class JwtAuthenticationServiceTests
     }
 
     [Fact]
-    public async Task RefreshTokenAsync_Rotation_OldTokenInvalidAfterNewTokenIssued()
+    public async Task RefreshTokenAsync_Rotation_ReuseRevokesEntireFamily()
     {
         var user = CreateTestUser();
         _userRepoMock.Setup(r => r.GetByUsernameAsync("testuser", It.IsAny<CancellationToken>()))
@@ -213,7 +213,89 @@ public sealed class JwtAuthenticationServiceTests
         reuseOld.IsFailure.Should().BeTrue("old token should be invalid after rotation");
 
         var reuseNew = await _service.RefreshTokenAsync(newRefreshToken);
-        reuseNew.IsSuccess.Should().BeTrue("new token should still be valid");
+        reuseNew.IsFailure.Should().BeTrue("new token should also be invalid because family was revoked on reuse");
+    }
+
+    [Fact]
+    public async Task LoginAsync_ReturnsFamilyId()
+    {
+        var user = CreateTestUser();
+        _userRepoMock.Setup(r => r.GetByUsernameAsync("testuser", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _passwordHasherMock.Setup(p => p.VerifyPassword("password", user.PasswordHash))
+            .Returns(true);
+
+        var result = await _service.LoginAsync("testuser", "password");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.FamilyId.Should().NotBe(Guid.Empty);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_MaintainsFamilyId()
+    {
+        var user = CreateTestUser();
+        _userRepoMock.Setup(r => r.GetByUsernameAsync("testuser", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _passwordHasherMock.Setup(p => p.VerifyPassword("password", user.PasswordHash))
+            .Returns(true);
+        _userRepoMock.Setup(r => r.GetByIdAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        var loginResult = await _service.LoginAsync("testuser", "password");
+        var originalFamilyId = loginResult.Value.FamilyId;
+
+        var refreshResult = await _service.RefreshTokenAsync(loginResult.Value.RefreshToken);
+
+        refreshResult.IsSuccess.Should().BeTrue();
+        refreshResult.Value.FamilyId.Should().Be(originalFamilyId);
+    }
+
+    [Fact]
+    public async Task RevokeFamilyAsync_BlocksSubsequentRefresh()
+    {
+        var user = CreateTestUser();
+        _userRepoMock.Setup(r => r.GetByUsernameAsync("testuser", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _passwordHasherMock.Setup(p => p.VerifyPassword("password", user.PasswordHash))
+            .Returns(true);
+        _userRepoMock.Setup(r => r.GetByIdAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        var loginResult = await _service.LoginAsync("testuser", "password");
+        var familyId = loginResult.Value.FamilyId;
+
+        await _service.RevokeFamilyAsync(familyId);
+
+        var refreshResult = await _service.RefreshTokenAsync(loginResult.Value.RefreshToken);
+        refreshResult.IsFailure.Should().BeTrue();
+        refreshResult.Error.Should().Contain("Session has been revoked");
+    }
+
+    [Fact]
+    public async Task RevokeAllUserSessionsAsync_RevokesAllActiveSessions()
+    {
+        var userSessionRepoMock = new Mock<IUserSessionRepository>();
+        _unitOfWorkMock.Setup(u => u.UserSessions).Returns(userSessionRepoMock.Object);
+
+        var user = CreateTestUser();
+        var family1 = Guid.NewGuid();
+        var family2 = Guid.NewGuid();
+
+        var sessions = new List<UserSession>
+        {
+            new(user.Id, family1, "Agent1", "127.0.0.1"),
+            new(user.Id, family2, "Agent2", "127.0.0.2")
+        };
+
+        userSessionRepoMock.Setup(r => r.GetActiveByUserIdAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(sessions);
+
+        var result = await _service.RevokeAllUserSessionsAsync(user.Id);
+
+        result.IsSuccess.Should().BeTrue();
+        sessions.All(s => s.IsRevoked).Should().BeTrue();
+        userSessionRepoMock.Verify(r => r.UpdateAsync(It.IsAny<UserSession>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]

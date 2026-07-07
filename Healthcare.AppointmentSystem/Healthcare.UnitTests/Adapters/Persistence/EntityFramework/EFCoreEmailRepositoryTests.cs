@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Healthcare.UnitTests.Adapters.Persistence.EntityFramework;
 
+[Trait("Category", "Integration")]
 public sealed class EFCoreEmailRepositoryTests
 {
     [Fact]

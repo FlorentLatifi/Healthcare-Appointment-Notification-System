@@ -37,7 +37,8 @@ public class MarkNoShowAppointmentHandlerTests
             doctorRepo,
             userRepo,
             paymentRepo,
-            auditLogRepo);
+            auditLogRepo,
+            Mock.Of<IUserSessionRepository>());
 
         var mockLogger = new Mock<ILogger<DomainEventDispatcher>>();
         var serviceProvider = CreateServiceProvider();

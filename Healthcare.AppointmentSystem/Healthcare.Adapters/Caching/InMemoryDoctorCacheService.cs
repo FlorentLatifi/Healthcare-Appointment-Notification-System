@@ -27,10 +27,10 @@ public sealed class InMemoryDoctorCacheService : IDoctorCacheService, IDisposabl
         public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
     }
 
-    public InMemoryDoctorCacheService(ILogger<InMemoryDoctorCacheService> logger)
+    public InMemoryDoctorCacheService(ILogger<InMemoryDoctorCacheService> logger, TimeSpan? defaultTtl = null)
     {
         _logger = logger;
-        _defaultTtl = TimeSpan.FromMinutes(5);
+        _defaultTtl = defaultTtl ?? TimeSpan.FromMinutes(5);
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase

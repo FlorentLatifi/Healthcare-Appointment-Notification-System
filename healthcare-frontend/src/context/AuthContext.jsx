@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import apiClient, { setTokenGetter } from '../services/apiClient';
+import apiClient, { setTokenGetter, setTokenSetter, onAuthCleared } from '../services/apiClient';
 
 const AuthContext = createContext(null);
 
@@ -15,6 +15,16 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     setTokenGetter(getToken);
   }, [getToken]);
+
+  useEffect(() => {
+    setTokenSetter(setToken);
+    onAuthCleared(() => {
+      setToken(null);
+      setUser(null);
+      setPatientId(null);
+      setDoctorId(null);
+    });
+  }, [setToken]);
 
   useEffect(() => {
     const restoreSession = async () => {

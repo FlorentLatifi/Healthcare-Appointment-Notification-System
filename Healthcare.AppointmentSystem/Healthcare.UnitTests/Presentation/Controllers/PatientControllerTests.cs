@@ -2,6 +2,7 @@ using FluentAssertions;
 using Healthcare.Adapters.Persistence.InMemory;
 using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -37,17 +38,20 @@ public class PatientControllerTests
             doctorRepo,
             userRepo,
             paymentRepo,
-            auditLogRepo);
+            auditLogRepo,
+            Mock.Of<IUserSessionRepository>());
 
         var handlerMock = new Mock<ICommandHandler<CreatePatientCommand, Result<int>>>();
         var localizerMock = new Mock<IStringLocalizer<Messages>>();
         var loggerMock = new Mock<ILogger<PatientsController>>();
+        var eventDispatcherMock = new Mock<IDomainEventDispatcher>();
 
         _controller = new PatientsController(
             handlerMock.Object,
             _unitOfWork,
             localizerMock.Object,
-            loggerMock.Object);
+            loggerMock.Object,
+            eventDispatcherMock.Object);
     }
 
     [Fact]

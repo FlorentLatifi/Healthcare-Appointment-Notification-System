@@ -3,6 +3,7 @@ using Healthcare.Adapters.Events;
 using Healthcare.Adapters.Persistence.InMemory;
 using Healthcare.Application.Commands.ConfirmAppointment;
 using Healthcare.Application.Ports.Events;
+using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.Services;
@@ -53,7 +54,8 @@ public class ConfirmAppointmentHandlerTests
             doctorRepo,
             userRepo,
             paymentRepo,
-            auditLogRepo);
+            auditLogRepo,
+            Mock.Of<IUserSessionRepository>());
 
         // Event dispatcher
         var loggerMock = new Mock<ILogger<DomainEventDispatcher>>();

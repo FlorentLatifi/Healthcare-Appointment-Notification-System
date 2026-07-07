@@ -384,10 +384,11 @@ public sealed class AppointmentsController : ControllerBase
                 $"Appointment with ID {id} not found", "Appointment not found"));
         }
 
-        await _unitOfWork.Appointments.DeleteAsync(id, cancellationToken);
+        appointment.Delete();
+        await _unitOfWork.Appointments.UpdateAsync(appointment, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Appointment {AppointmentId} deleted successfully", id);
+        _logger.LogInformation("Appointment {AppointmentId} soft-deleted successfully", id);
         return NoContent();
     }
 

@@ -1,6 +1,8 @@
 using Asp.Versioning;
 using Healthcare.Adapters.Authentication;
 using Healthcare.Application.Ports.Authentication;
+using Healthcare.Application.Ports.Repositories;
+using Healthcare.Domain.Entities;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Authorization;
@@ -17,15 +19,18 @@ namespace Healthcare.Presentation.API.Controllers;
 public sealed class AuthController : ControllerBase
 {
     private readonly IAuthenticationService _authService;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly JwtSettings _jwtSettings;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IAuthenticationService authService,
+        IUnitOfWork unitOfWork,
         JwtSettings jwtSettings,
         ILogger<AuthController> logger)
     {
         _authService = authService;
+        _unitOfWork = unitOfWork;
         _jwtSettings = jwtSettings;
         _logger = logger;
     }
@@ -142,6 +147,21 @@ public sealed class AuthController : ControllerBase
 
         _logger.LogInformation("User {Username} logged in successfully", request.Username);
 
+        var userIdClaim = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler()
+            .ReadJwtToken(result.Value.AccessToken)
+            .Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+
+        if (int.TryParse(userIdClaim, out var userId))
+        {
+            var session = new UserSession(
+                userId,
+                result.Value.FamilyId,
+                Request.Headers.UserAgent.ToString(),
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+            await _unitOfWork.UserSessions.AddAsync(session, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
         SetRefreshCookie(result.Value.RefreshToken);
 
         var response = BuildLoginResponse(result.Value);
@@ -181,6 +201,22 @@ public sealed class AuthController : ControllerBase
                 "Token refresh failed"));
         }
 
+        var userIdClaim = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler()
+            .ReadJwtToken(result.Value.AccessToken)
+            .Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+
+        if (int.TryParse(userIdClaim, out var userId))
+        {
+            var sessions = await _unitOfWork.UserSessions.GetActiveByUserIdAsync(userId, cancellationToken);
+            var session = sessions.FirstOrDefault(s => s.FamilyId == result.Value.FamilyId);
+            if (session != null)
+            {
+                session.MarkUsed();
+                await _unitOfWork.UserSessions.UpdateAsync(session, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+        }
+
         SetRefreshCookie(result.Value.RefreshToken);
 
         var response = BuildLoginResponse(result.Value);
@@ -199,6 +235,8 @@ public sealed class AuthController : ControllerBase
     {
         _logger.LogInformation("Logout requested");
 
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
         var refreshToken = Request.Cookies["refreshToken"];
         if (!string.IsNullOrEmpty(refreshToken))
         {
@@ -212,6 +250,20 @@ public sealed class AuthController : ControllerBase
                 return BadRequest(ApiResponse.ErrorResponse(
                     result.Error,
                     "Logout failed"));
+            }
+        }
+
+        if (int.TryParse(userIdClaim, out var userId))
+        {
+            var sessions = await _unitOfWork.UserSessions.GetActiveByUserIdAsync(userId, cancellationToken);
+            foreach (var session in sessions)
+            {
+                session.Revoke();
+                await _unitOfWork.UserSessions.UpdateAsync(session, cancellationToken);
+            }
+            if (sessions.Count > 0)
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
         }
 

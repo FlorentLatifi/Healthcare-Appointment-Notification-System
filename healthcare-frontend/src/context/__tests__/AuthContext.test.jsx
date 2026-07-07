@@ -7,6 +7,8 @@ const mockPost = vi.fn();
 vi.mock('../../services/apiClient', () => ({
   default: { post: (...args) => mockPost(...args) },
   setTokenGetter: vi.fn(),
+  setTokenSetter: vi.fn(),
+  onAuthCleared: vi.fn(),
 }));
 
 function TestConsumer() {

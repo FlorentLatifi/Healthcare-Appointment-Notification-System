@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using Testcontainers.MsSql;
 using Testcontainers.Redis;
@@ -58,7 +59,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             services.AddSingleton<IHealthcareRepositoryFactory>(sp =>
             {
                 var context = sp.GetRequiredService<HealthcareDbContext>();
-                return new EFCoreRepositoryFactory(context);
+                var logger = sp.GetRequiredService<ILogger<EFCoreRepositoryFactory>>();
+                return new EFCoreRepositoryFactory(context, logger);
             });
 
             services.RemoveAll<IConnectionMultiplexer>();

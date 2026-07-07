@@ -130,10 +130,7 @@ public static class AdapterServiceExtensions
     {
         // Persistence Adapters (In-Memory)
         // Singleton: All requests share same data (simulates database)
-        services.AddSingleton<IAppointmentRepository, InMemoryAppointmentRepository>();
-        services.AddSingleton<IPatientRepository, InMemoryPatientRepository>();
-        services.AddSingleton<IDoctorRepository, InMemoryDoctorRepository>();
-        services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
+        services.AddCoreInMemoryRepositories();
         services.AddSingleton<IUserRepository, InMemoryUserRepository>();
         services.AddSingleton<IAuditLogRepository, InMemoryAuditLogRepository>();
 
@@ -206,10 +203,7 @@ public static class AdapterServiceExtensions
         EmailSettings emailSettings)
     {
         // Persistence (still in-memory for now)
-        services.AddSingleton<IAppointmentRepository, InMemoryAppointmentRepository>();
-        services.AddSingleton<IPatientRepository, InMemoryPatientRepository>();
-        services.AddSingleton<IDoctorRepository, InMemoryDoctorRepository>();
-        services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
+        services.AddCoreInMemoryRepositories();
 
         // Email Notification Adapter
         services.AddSingleton(emailSettings);
@@ -245,10 +239,7 @@ public static class AdapterServiceExtensions
         EmailSettings emailSettings)
     {
         // Persistence
-        services.AddSingleton<IAppointmentRepository, InMemoryAppointmentRepository>();
-        services.AddSingleton<IPatientRepository, InMemoryPatientRepository>();
-        services.AddSingleton<IDoctorRepository, InMemoryDoctorRepository>();
-        services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
+        services.AddCoreInMemoryRepositories();
 
         // Composite Notification (Console + Email)
         services.AddSingleton(emailSettings);
@@ -296,10 +287,7 @@ public static class AdapterServiceExtensions
         FakeTimeProvider? fakeTimeProvider = null)
     {
         // Persistence
-        services.AddSingleton<IAppointmentRepository, InMemoryAppointmentRepository>();
-        services.AddSingleton<IPatientRepository, InMemoryPatientRepository>();
-        services.AddSingleton<IDoctorRepository, InMemoryDoctorRepository>();
-        services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
+        services.AddCoreInMemoryRepositories();
 
         // Notification Adapters (Console only for testing)
         services.AddScoped<INotificationService, ConsoleNotificationAdapter>();
@@ -425,6 +413,7 @@ public static class AdapterServiceExtensions
         services.AddScoped<IUserRepository, EFCoreUserRepository>();
         services.AddScoped<IPaymentRepository, EFCorePaymentRepository>();
         services.AddScoped<IAuditLogRepository, EFCoreAuditLogRepository>();
+        services.AddScoped<IUserSessionRepository, EFCoreUserSessionRepository>();
         services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
 
         // ✅ AUTHENTICATION SERVICES (Simplified - JWT registered in Program.cs)
@@ -460,6 +449,16 @@ public static class AdapterServiceExtensions
         return services;
     }
 
+    private static IServiceCollection AddCoreInMemoryRepositories(
+        this IServiceCollection services)
+    {
+        services.AddSingleton<IAppointmentRepository, InMemoryAppointmentRepository>();
+        services.AddSingleton<IPatientRepository, InMemoryPatientRepository>();
+        services.AddSingleton<IDoctorRepository, InMemoryDoctorRepository>();
+        services.AddSingleton<IUserSessionRepository, InMemoryUserSessionRepository>();
+        services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
+        return services;
+    }
 
     private static void RegisterEventHandlers(IServiceCollection services)
     {
@@ -490,6 +489,10 @@ public static class AdapterServiceExtensions
         // Doctor Cache Invalidation Handlers
         services.AddScoped<IDomainEventHandler<DoctorCacheInvalidationNeededEvent>,
             InvalidateDoctorCacheHandler>();
+
+        // Read-Access Audit Handlers
+        services.AddScoped<IDomainEventHandler<PatientRecordAccessedEvent>,
+            LogPatientRecordAccessedHandler>();
 
         // Audit Log Handlers
 
@@ -541,27 +544,5 @@ public static class AdapterServiceExtensions
         services.AddSingleton(timeProvider);
         return services;
     }
-
-    /// <summary>
-    /// Clears all in-memory data (useful for testing).
-    /// </summary>
-    /// <remarks>
-    /// WARNING: Only use in tests!
-    /// This clears ALL data from in-memory repositories.
-    /// 
-    /// Usage in test setup:
-    /// services.ClearInMemoryData();
-    /// </remarks>
-    public static IServiceCollection ClearInMemoryData(this IServiceCollection services)
-    {
-        var provider = services.BuildServiceProvider();
-
-        // This would require adding Clear() method to repositories
-        // For now, just rebuild the service provider
-        // In production, this isn't needed (real DB handles isolation)
-
-        return services;
-    }
-
 
 }

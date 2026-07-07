@@ -2,6 +2,7 @@
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Adapters.Persistence.EntityFramework;
 using Healthcare.Adapters.Persistence.EntityFramework.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace Healthcare.Adapters.Factories;
 
@@ -24,32 +25,31 @@ namespace Healthcare.Adapters.Factories;
 public sealed class EFCoreRepositoryFactory : IHealthcareRepositoryFactory
 {
     private readonly HealthcareDbContext _context;
+    private readonly ILogger<EFCoreRepositoryFactory> _logger;
 
     public string FactoryName => "EFCore";
 
-    public EFCoreRepositoryFactory(HealthcareDbContext context)
+    public EFCoreRepositoryFactory(HealthcareDbContext context, ILogger<EFCoreRepositoryFactory> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public IAppointmentRepository CreateAppointmentRepository()
     {
-        Console.WriteLine(
-            "[EFCoreRepositoryFactory] Creating EFCoreAppointmentRepository");
+        _logger.LogDebug("[EFCoreRepositoryFactory] Creating EFCoreAppointmentRepository");
         return new EFCoreAppointmentRepository(_context);
     }
 
     public IPatientRepository CreatePatientRepository()
     {
-        Console.WriteLine(
-            "[EFCoreRepositoryFactory] Creating EFCorePatientRepository");
+        _logger.LogDebug("[EFCoreRepositoryFactory] Creating EFCorePatientRepository");
         return new EFCorePatientRepository(_context);
     }
 
     public IDoctorRepository CreateDoctorRepository()
     {
-        Console.WriteLine(
-            "[EFCoreRepositoryFactory] Creating EFCoreDoctorRepository");
+        _logger.LogDebug("[EFCoreRepositoryFactory] Creating EFCoreDoctorRepository");
         return new EFCoreDoctorRepository(_context);
     }
 }

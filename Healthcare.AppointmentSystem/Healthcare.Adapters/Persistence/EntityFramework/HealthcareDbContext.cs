@@ -1,44 +1,69 @@
-﻿using Healthcare.Domain.Entities;
+﻿using Healthcare.Adapters.Events;
+using Healthcare.Domain.Common;
+using Healthcare.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace Healthcare.Adapters.Persistence.EntityFramework;
 
-/// <summary>
-/// Entity Framework DbContext for Healthcare system.
-/// </summary>
-/// <remarks>
-/// Design Pattern: Unit of Work (EF Core implements this pattern)
-/// 
-/// This DbContext:
-/// - Manages database connection
-/// - Tracks entity changes
-/// - Coordinates transaction lifecycle
-/// - Maps domain entities to database tables
-/// 
-/// Configuration Strategy:
-/// - Uses Fluent API for entity configuration (separate configuration classes)
-/// - Maintains clean separation between Domain and Infrastructure
-/// - Converts Value Objects to database primitives
-/// </remarks>
 public class HealthcareDbContext : DbContext
 {
+    private readonly OutboxSettings? _outboxSettings;
+
     public HealthcareDbContext(DbContextOptions<HealthcareDbContext> options)
         : base(options)
     {
     }
 
-    // DbSets for entities
+    public HealthcareDbContext(DbContextOptions<HealthcareDbContext> options, OutboxSettings outboxSettings)
+        : base(options)
+    {
+        _outboxSettings = outboxSettings;
+    }
+
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<Doctor> Doctors => Set<Doctor>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<AuditLogEntry> AuditLogs => Set<AuditLogEntry>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        // Apply all entity configurations from current assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(HealthcareDbContext).Assembly);
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        if (_outboxSettings?.UseOutboxForDomainEvents == true)
+        {
+            var outboxRows = new List<OutboxMessage>();
+
+            foreach (var entry in ChangeTracker.Entries<Entity>())
+            {
+                var entity = entry.Entity;
+                if (entity.DomainEvents.Count == 0)
+                    continue;
+
+                foreach (var domainEvent in entity.DomainEvents)
+                {
+                    var eventType = domainEvent.GetType().AssemblyQualifiedName!;
+                    var payload = JsonSerializer.Serialize(domainEvent, domainEvent.GetType());
+                    outboxRows.Add(new OutboxMessage(eventType, payload, domainEvent.OccurredOn));
+                }
+
+                entity.ClearDomainEvents();
+            }
+
+            if (outboxRows.Count > 0)
+            {
+                OutboxMessages.AddRange(outboxRows);
+            }
+        }
+
+        return await base.SaveChangesAsync(cancellationToken);
     }
 }

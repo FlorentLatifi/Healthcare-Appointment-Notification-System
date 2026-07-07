@@ -69,6 +69,20 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
         builder.Property(a => a.RemindedAt)
             .IsRequired(false);
 
+        // Soft-delete
+        builder.Property(a => a.IsDeleted)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(a => a.DeletedAt)
+            .IsRequired(false);
+
+        // Global query filter: exclude soft-deleted appointments from all queries
+        builder.HasQueryFilter(a => !a.IsDeleted);
+
+        builder.HasIndex(a => a.IsDeleted)
+            .HasDatabaseName("IX_Appointments_IsDeleted");
+
         builder.Property(a => a.CreatedAt)
             .IsRequired();
 

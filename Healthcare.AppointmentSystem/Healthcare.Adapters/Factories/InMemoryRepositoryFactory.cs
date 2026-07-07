@@ -1,6 +1,7 @@
 ﻿using Healthcare.Application.Ports.Factories;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Adapters.Persistence.InMemory;
+using Microsoft.Extensions.Logging;
 
 namespace Healthcare.Adapters.Factories;
 
@@ -23,26 +24,30 @@ namespace Healthcare.Adapters.Factories;
 /// </remarks>
 public sealed class InMemoryRepositoryFactory : IHealthcareRepositoryFactory
 {
+    private readonly ILogger<InMemoryRepositoryFactory> _logger;
+
     public string FactoryName => "InMemory";
+
+    public InMemoryRepositoryFactory(ILogger<InMemoryRepositoryFactory> logger)
+    {
+        _logger = logger;
+    }
 
     public IAppointmentRepository CreateAppointmentRepository()
     {
-        Console.WriteLine(
-            "[InMemoryRepositoryFactory] Creating InMemoryAppointmentRepository");
+        _logger.LogDebug("[InMemoryRepositoryFactory] Creating InMemoryAppointmentRepository");
         return new InMemoryAppointmentRepository();
     }
 
     public IPatientRepository CreatePatientRepository()
     {
-        Console.WriteLine(
-            "[InMemoryRepositoryFactory] Creating InMemoryPatientRepository");
+        _logger.LogDebug("[InMemoryRepositoryFactory] Creating InMemoryPatientRepository");
         return new InMemoryPatientRepository();
     }
 
     public IDoctorRepository CreateDoctorRepository()
     {
-        Console.WriteLine(
-            "[InMemoryRepositoryFactory] Creating InMemoryDoctorRepository");
+        _logger.LogDebug("[InMemoryRepositoryFactory] Creating InMemoryDoctorRepository");
         return new InMemoryDoctorRepository();
     }
 }

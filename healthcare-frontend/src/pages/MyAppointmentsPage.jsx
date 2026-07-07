@@ -3,15 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
-
-const STATUS_COLORS = {
-  Scheduled: { bg: '#dbeafe', color: '#1e40af' },
-  Confirmed: { bg: '#d1fae5', color: '#065f46' },
-  InProgress: { bg: '#fef3c7', color: '#92400e' },
-  Completed: { bg: '#e0e7ff', color: '#3730a3' },
-  Cancelled: { bg: '#fee2e2', color: '#991b1b' },
-  NoShow: { bg: '#f3e8ff', color: '#6b21a8' },
-};
+import { STATUS_COLORS } from '../theme';
 
 const s = {
   wrapper: { maxWidth: 800, margin: '40px auto', padding: '0 16px' },

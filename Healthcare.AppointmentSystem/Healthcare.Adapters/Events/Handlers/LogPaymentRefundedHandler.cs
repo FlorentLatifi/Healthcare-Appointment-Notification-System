@@ -38,17 +38,6 @@ public sealed class LogPaymentRefundedHandler : IDomainEventHandler<PaymentRefun
             domainEvent.Amount.Currency,
             domainEvent.RefundTransactionId.Value);
 
-        Console.WriteLine("═══════════════════════════════════════════════");
-        Console.WriteLine("🔄 PAYMENT REFUNDED - AUDIT LOG");
-        Console.WriteLine("═══════════════════════════════════════════════");
-        Console.WriteLine($"Event ID:             {domainEvent.EventId}");
-        Console.WriteLine($"Occurred On:          {domainEvent.OccurredOn:yyyy-MM-dd HH:mm:ss} UTC");
-        Console.WriteLine($"Payment ID:           {domainEvent.PaymentId}");
-        Console.WriteLine($"Appointment ID:       {domainEvent.AppointmentId}");
-        Console.WriteLine($"Refund Amount:        {domainEvent.Amount.ToDisplayString()}");
-        Console.WriteLine($"Refund Transaction:   {domainEvent.RefundTransactionId.Value}");
-        Console.WriteLine("═══════════════════════════════════════════════");
-
         var details = JsonSerializer.Serialize(new
         {
             domainEvent.PaymentId,

@@ -38,7 +38,8 @@ public sealed class EFCoreUnitOfWork : IUnitOfWork
         IDoctorRepository doctors,
         IUserRepository users,
         IPaymentRepository payments,
-        IAuditLogRepository auditLogs)
+        IAuditLogRepository auditLogs,
+        IUserSessionRepository userSessions)
     {
         _context = context;
         Appointments = appointments;
@@ -47,6 +48,7 @@ public sealed class EFCoreUnitOfWork : IUnitOfWork
         Users = users;
         Payments = payments;
         AuditLogs = auditLogs;
+        UserSessions = userSessions;
     }
 
     public IAppointmentRepository Appointments { get; }
@@ -55,6 +57,7 @@ public sealed class EFCoreUnitOfWork : IUnitOfWork
     public IUserRepository Users { get; }
     public IPaymentRepository Payments { get; }
     public IAuditLogRepository AuditLogs { get; }
+    public IUserSessionRepository UserSessions { get; }
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         // SaveChanges automatically wraps in transaction

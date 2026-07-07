@@ -9,6 +9,7 @@ using Xunit;
 
 namespace Healthcare.UnitTests.Presentation;
 
+[Collection("RateLimitingSequential")]
 public class RateLimitingTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> _factory;

@@ -25,6 +25,8 @@ public sealed class JwtAuthenticationService : IAuthenticationService
     private readonly ConcurrentDictionary<string, string> _memoryStore;
 
     private const string RefreshTokenKeyPrefix = "refresh_token:";
+    private const string ConsumedTokenKeyPrefix = "refresh_token:consumed:";
+    private const string FamilyRevokedKeyPrefix = "refresh_token:family:revoked:";
 
     public JwtAuthenticationService(
         IUnitOfWork unitOfWork,
@@ -111,9 +113,10 @@ public sealed class JwtAuthenticationService : IAuthenticationService
                 return Result<LoginResult>.Failure("Account is deactivated.");
             }
 
+            var familyId = Guid.NewGuid();
             var accessToken = GenerateJwtToken(user);
             var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationInMinutes);
-            var refreshToken = await GenerateAndStoreRefreshTokenAsync(user.Id.ToString());
+            var refreshToken = await GenerateAndStoreRefreshTokenAsync(user.Id.ToString(), familyId);
 
             _logger.LogInformation("User {Username} logged in successfully", username);
 
@@ -121,7 +124,8 @@ public sealed class JwtAuthenticationService : IAuthenticationService
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresAt = expiresAt
+                ExpiresAt = expiresAt,
+                FamilyId = familyId
             });
         }
         catch (Exception ex)
@@ -138,29 +142,43 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         try
         {
             var tokenHash = HashToken(refreshToken);
-            var userId = await ConsumeRefreshTokenAsync(tokenHash);
+            var storedValue = await ConsumeRefreshTokenAsync(tokenHash);
 
-            if (userId == null)
+            if (storedValue == null)
             {
+                var consumedFamilyId = await GetConsumedFamilyIdAsync(tokenHash);
+                if (consumedFamilyId != null)
+                {
+                    _logger.LogWarning("Refresh token reuse detected for family {FamilyId}; revoking entire family", consumedFamilyId);
+                    await RevokeFamilyInStoreAsync(consumedFamilyId.Value);
+                }
+
                 _logger.LogWarning("Refresh token reuse or invalid token attempted");
                 return Result<LoginResult>.Failure("Invalid or expired refresh token.");
             }
 
-            if (!int.TryParse(userId, out var parsedUserId))
+            var parts = storedValue.Split('|');
+            if (parts.Length != 2 || !int.TryParse(parts[0], out var parsedUserId) || !Guid.TryParse(parts[1], out var familyId))
             {
                 return Result<LoginResult>.Failure("Invalid refresh token data.");
+            }
+
+            if (await IsFamilyRevokedAsync(familyId))
+            {
+                _logger.LogWarning("Refresh failed: Family {FamilyId} has been revoked", familyId);
+                return Result<LoginResult>.Failure("Session has been revoked.");
             }
 
             var user = await _unitOfWork.Users.GetByIdAsync(parsedUserId, cancellationToken);
             if (user == null || !user.IsActive)
             {
-                _logger.LogWarning("Refresh failed: User {UserId} not found or inactive", userId);
+                _logger.LogWarning("Refresh failed: User {UserId} not found or inactive", parsedUserId);
                 return Result<LoginResult>.Failure("User account not found or deactivated.");
             }
 
             var accessToken = GenerateJwtToken(user);
             var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationInMinutes);
-            var newRefreshToken = await GenerateAndStoreRefreshTokenAsync(user.Id.ToString());
+            var newRefreshToken = await GenerateAndStoreRefreshTokenAsync(user.Id.ToString(), familyId);
 
             _logger.LogInformation("Token refreshed for user {Username}", user.Username);
 
@@ -168,7 +186,8 @@ public sealed class JwtAuthenticationService : IAuthenticationService
             {
                 AccessToken = accessToken,
                 RefreshToken = newRefreshToken,
-                ExpiresAt = expiresAt
+                ExpiresAt = expiresAt,
+                FamilyId = familyId
             });
         }
         catch (Exception ex)
@@ -234,6 +253,50 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         }
     }
 
+    public async Task<Result> RevokeFamilyAsync(Guid familyId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await RevokeFamilyInStoreAsync(familyId);
+            _logger.LogInformation("Family {FamilyId} revoked successfully", familyId);
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to revoke family {FamilyId}", familyId);
+            throw;
+        }
+    }
+
+    public async Task<Result> RevokeAllUserSessionsAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var activeSessions = await _unitOfWork.UserSessions.GetActiveByUserIdAsync(userId, cancellationToken);
+            var familiesToRevoke = activeSessions.Select(s => s.FamilyId).Distinct().ToList();
+
+            foreach (var familyId in familiesToRevoke)
+            {
+                await RevokeFamilyInStoreAsync(familyId);
+            }
+
+            foreach (var session in activeSessions)
+            {
+                session.Revoke();
+                await _unitOfWork.UserSessions.UpdateAsync(session, cancellationToken);
+            }
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("All {Count} sessions revoked for user {UserId}", activeSessions.Count, userId);
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to revoke all sessions for user {UserId}", userId);
+            throw;
+        }
+    }
+
     private string GenerateJwtToken(User user)
     {
         var key = Encoding.UTF8.GetBytes(_jwtSettings.Secret);
@@ -276,11 +339,12 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
-    private async Task<string> GenerateAndStoreRefreshTokenAsync(string userId)
+    private async Task<string> GenerateAndStoreRefreshTokenAsync(string userId, Guid familyId)
     {
         var refreshToken = GenerateRefreshTokenValue();
         var tokenHash = HashToken(refreshToken);
         var ttl = TimeSpan.FromDays(_jwtSettings.RefreshTokenExpirationInDays);
+        var value = $"{userId}|{familyId}";
 
         if (_redisDb != null)
         {
@@ -288,7 +352,7 @@ public sealed class JwtAuthenticationService : IAuthenticationService
             {
                 await _redisDb.StringSetAsync(
                     $"{RefreshTokenKeyPrefix}{tokenHash}",
-                    userId,
+                    value,
                     ttl);
             }
             catch (RedisConnectionException ex)
@@ -304,7 +368,7 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         }
         else
         {
-            _memoryStore.TryAdd(tokenHash, userId);
+            _memoryStore.TryAdd(tokenHash, value);
             _ = ScheduleMemoryCleanup(tokenHash, ttl);
         }
 
@@ -320,13 +384,19 @@ public sealed class JwtAuthenticationService : IAuthenticationService
                 var script = @"
                     local val = redis.call('GET', KEYS[1])
                     if val then
+                        redis.call('SET', KEYS[2], val, 'EX', KEYS[3])
                         redis.call('DEL', KEYS[1])
                         return val
                     end
                     return nil";
 
+                var ttl = _jwtSettings.RefreshTokenExpirationInDays * 86400;
                 var key = $"{RefreshTokenKeyPrefix}{tokenHash}";
-                var result = await _redisDb.ScriptEvaluateAsync(script, new RedisKey[] { key });
+                var consumedKey = $"{ConsumedTokenKeyPrefix}{tokenHash}";
+                var result = await _redisDb.ScriptEvaluateAsync(
+                    script,
+                    new RedisKey[] { key, consumedKey },
+                    new RedisValue[] { ttl });
                 return result.IsNull ? null : (string?)result;
             }
             catch (RedisConnectionException ex)
@@ -341,12 +411,102 @@ public sealed class JwtAuthenticationService : IAuthenticationService
             }
         }
 
-        if (_memoryStore.TryRemove(tokenHash, out var userId))
+        if (_memoryStore.TryRemove(tokenHash, out var value))
         {
-            return userId;
+            _memoryStore.TryAdd($"{ConsumedTokenKeyPrefix}{tokenHash}", value);
+            _ = ScheduleMemoryCleanup($"{ConsumedTokenKeyPrefix}{tokenHash}",
+                TimeSpan.FromDays(_jwtSettings.RefreshTokenExpirationInDays));
+            return value;
         }
 
         return null;
+    }
+
+    private async Task<Guid?> GetConsumedFamilyIdAsync(string tokenHash)
+    {
+        if (_redisDb != null)
+        {
+            try
+            {
+                var consumedKey = $"{ConsumedTokenKeyPrefix}{tokenHash}";
+                var consumedValue = await _redisDb.StringGetAsync(consumedKey);
+                if (consumedValue.HasValue)
+                {
+                    var parts = consumedValue.ToString().Split('|');
+                    if (parts.Length == 2 && Guid.TryParse(parts[1], out var familyId))
+                        return familyId;
+                }
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for consumed-marker lookup");
+            }
+            catch (RedisTimeoutException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for consumed-marker lookup");
+            }
+            return null;
+        }
+
+        if (_memoryStore.TryGetValue($"{ConsumedTokenKeyPrefix}{tokenHash}", out var memValue))
+        {
+            var parts = memValue.Split('|');
+            if (parts.Length == 2 && Guid.TryParse(parts[1], out var familyId))
+                return familyId;
+        }
+
+        return null;
+    }
+
+    private async Task<bool> IsFamilyRevokedAsync(Guid familyId)
+    {
+        if (_redisDb != null)
+        {
+            try
+            {
+                var revokedKey = $"{FamilyRevokedKeyPrefix}{familyId}";
+                return await _redisDb.KeyExistsAsync(revokedKey);
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for family-revoked check");
+            }
+            catch (RedisTimeoutException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for family-revoked check");
+            }
+        }
+
+        return _memoryStore.ContainsKey($"{FamilyRevokedKeyPrefix}{familyId}");
+    }
+
+    private async Task RevokeFamilyInStoreAsync(Guid familyId)
+    {
+        var ttl = TimeSpan.FromDays(_jwtSettings.RefreshTokenExpirationInDays);
+
+        if (_redisDb != null)
+        {
+            try
+            {
+                var revokedKey = $"{FamilyRevokedKeyPrefix}{familyId}";
+                await _redisDb.StringSetAsync(revokedKey, "1", ttl);
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for family revocation");
+                throw;
+            }
+            catch (RedisTimeoutException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for family revocation");
+                throw;
+            }
+        }
+        else
+        {
+            _memoryStore.TryAdd($"{FamilyRevokedKeyPrefix}{familyId}", "1");
+            _ = ScheduleMemoryCleanup($"{FamilyRevokedKeyPrefix}{familyId}", ttl);
+        }
     }
 
     private async Task DeleteRefreshTokenAsync(string tokenHash)
@@ -375,9 +535,9 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         }
     }
 
-    private async Task ScheduleMemoryCleanup(string tokenHash, TimeSpan ttl)
+    private async Task ScheduleMemoryCleanup(string key, TimeSpan ttl)
     {
         await Task.Delay(ttl);
-        _memoryStore.TryRemove(tokenHash, out _);
+        _memoryStore.TryRemove(key, out _);
     }
 }

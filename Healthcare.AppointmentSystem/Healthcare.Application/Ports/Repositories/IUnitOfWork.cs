@@ -51,6 +51,11 @@ public interface IUnitOfWork
     IAuditLogRepository AuditLogs { get; }
 
     /// <summary>
+    /// Gets the user session repository.
+    /// </summary>
+    IUserSessionRepository UserSessions { get; }
+
+    /// <summary>
     /// Saves all changes made in this unit of work to the underlying data store.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>

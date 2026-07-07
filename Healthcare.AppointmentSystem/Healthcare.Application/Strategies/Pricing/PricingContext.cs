@@ -68,10 +68,6 @@ public sealed class PricingContext
 
         var result = _strategy.CalculatePrice(baseFee);
 
-        Console.WriteLine(
-            $"[PricingContext] Strategy: {_strategy.StrategyName} | " +
-            $"Base: {baseFee:C} | Final: {result:C}");
-
         return result;
     }
 }

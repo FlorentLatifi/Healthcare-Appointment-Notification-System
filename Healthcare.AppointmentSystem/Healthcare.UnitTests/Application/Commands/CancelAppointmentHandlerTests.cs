@@ -51,7 +51,8 @@ public class CancelAppointmentHandlerTests
             doctorRepo,
             userRepo,
             paymentRepo,
-            auditLogRepo);
+            auditLogRepo,
+            Mock.Of<IUserSessionRepository>());
 
         // Setup event dispatcher (with mock logger)
         var mockLogger = new Mock<ILogger<DomainEventDispatcher>>();

@@ -1,18 +1,23 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
-import DoctorsListPage from './pages/DoctorsListPage';
-import BookAppointmentPage from './pages/BookAppointmentPage';
-import MyAppointmentsPage from './pages/MyAppointmentsPage';
-import CreatePatientProfilePage from './pages/CreatePatientProfilePage';
-import DoctorDashboardPage from './pages/DoctorDashboardPage';
-import AdminDashboardPage from './pages/AdminDashboardPage';
-import ForbiddenPage from './pages/ForbiddenPage';
+
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const DoctorsListPage = lazy(() => import('./pages/DoctorsListPage'));
+const BookAppointmentPage = lazy(() => import('./pages/BookAppointmentPage'));
+const MyAppointmentsPage = lazy(() => import('./pages/MyAppointmentsPage'));
+const CreatePatientProfilePage = lazy(() => import('./pages/CreatePatientProfilePage'));
+const DoctorDashboardPage = lazy(() => import('./pages/DoctorDashboardPage'));
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
+const ForbiddenPage = lazy(() => import('./pages/ForbiddenPage'));
+
+const loadingStyle = { textAlign: 'center', padding: 40, color: '#888' };
 
 function ProtectedLayout({ children, allowedRoles }) {
   return (
@@ -27,8 +32,10 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Toaster position="top-right" />
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
+        <ErrorBoundary>
+          <Suspense fallback={<div style={loadingStyle}>Loading...</div>}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/403" element={<ForbiddenPage />} />
           <Route path="/dashboard" element={<ProtectedLayout><DashboardPage /></ProtectedLayout>} />
@@ -40,6 +47,8 @@ export default function App() {
           <Route path="/admin" element={<ProtectedLayout allowedRoles={['Admin']}><AdminDashboardPage /></ProtectedLayout>} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+        </Suspense>
+        </ErrorBoundary>
       </AuthProvider>
     </BrowserRouter>
   );

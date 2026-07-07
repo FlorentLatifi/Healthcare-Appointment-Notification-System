@@ -34,6 +34,7 @@ public sealed class InMemoryUnitOfWork : IUnitOfWork
     public IUserRepository Users { get; }
     public IPaymentRepository Payments { get; }
     public IAuditLogRepository AuditLogs { get; }
+    public IUserSessionRepository UserSessions { get; }
 
     /// <summary>
     /// Initializes a new instance with shared repository instances.
@@ -48,7 +49,8 @@ public sealed class InMemoryUnitOfWork : IUnitOfWork
         IDoctorRepository doctors,
         IUserRepository users,
         IPaymentRepository payments,
-        IAuditLogRepository auditLogs)
+        IAuditLogRepository auditLogs,
+        IUserSessionRepository userSessions)
     {
         Appointments = appointments;
         Patients = patients;
@@ -56,6 +58,7 @@ public sealed class InMemoryUnitOfWork : IUnitOfWork
         Users = users;
         Payments = payments;
         AuditLogs = auditLogs;
+        UserSessions = userSessions;
     }
 
     /// <summary>

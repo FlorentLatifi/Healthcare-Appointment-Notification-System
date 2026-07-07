@@ -51,4 +51,14 @@ public interface IAuthenticationService
     Task<Result<int>> ValidateTokenAsync(
         string token,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Revokes all refresh tokens in the given family and marks the UserSession as revoked.
+    /// </summary>
+    Task<Result> RevokeFamilyAsync(Guid familyId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Revokes all active sessions for a user (logs out everywhere).
+    /// </summary>
+    Task<Result> RevokeAllUserSessionsAsync(int userId, CancellationToken cancellationToken = default);
 }

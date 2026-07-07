@@ -58,16 +58,21 @@ public sealed class DoctorCacheTests
     [Fact]
     public async Task GetAsync_ExpiredEntry_ReturnsNull()
     {
+        var shortTtl = TimeSpan.FromMilliseconds(50);
         var shortTtlCache = new InMemoryDoctorCacheService(
-            new Mock<ILogger<InMemoryDoctorCacheService>>().Object);
+            new Mock<ILogger<InMemoryDoctorCacheService>>().Object,
+            shortTtl);
         var dtos = _testDoctors.Select(MapToDto).ToList();
 
         await shortTtlCache.SetAsync("key", dtos);
 
-        Thread.Sleep(200);
+        var hit = await shortTtlCache.GetAsync("key");
+        hit.Should().NotBeNull("entry was just set and should be valid");
+
+        await Task.Delay(100);
 
         var result = await shortTtlCache.GetAsync("key");
-        result.Should().NotBeNull("because TTL is 5 minutes - entry should still be valid");
+        result.Should().BeNull("TTL has elapsed and entry should have expired");
     }
 
     [Fact]

@@ -34,7 +34,7 @@ public class PaymentReconciliationServiceTests
         var auditLogRepo = new InMemoryAuditLogRepository();
 
         _unitOfWork = new InMemoryUnitOfWork(
-            appointmentRepo, patientRepo, doctorRepo, userRepo, paymentRepo, auditLogRepo);
+            appointmentRepo, patientRepo, doctorRepo, userRepo, paymentRepo, auditLogRepo, Mock.Of<IUserSessionRepository>());
 
         var loggerMockDispatcher = new Mock<ILogger<DomainEventDispatcher>>();
         var serviceProvider = new ServiceCollection().BuildServiceProvider();

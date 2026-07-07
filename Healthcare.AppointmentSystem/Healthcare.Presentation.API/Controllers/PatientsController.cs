@@ -2,7 +2,9 @@ using Asp.Versioning;
 using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
+using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
+using Healthcare.Domain.Events;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Resources;
 using Healthcare.Presentation.API.Responses;
@@ -34,17 +36,20 @@ public sealed class PatientsController : ControllerBase
     private readonly IUnitOfWork _unitOfWork;
     private readonly IStringLocalizer<Messages> _localizer;
     private readonly ILogger<PatientsController> _logger;
+    private readonly IDomainEventDispatcher _eventDispatcher;
 
     public PatientsController(
         ICommandHandler<CreatePatientCommand, Result<int>> createPatientHandler,
         IUnitOfWork unitOfWork,
         IStringLocalizer<Messages> localizer,
-        ILogger<PatientsController> logger)
+        ILogger<PatientsController> logger,
+        IDomainEventDispatcher eventDispatcher)
     {
         _createPatientHandler = createPatientHandler;
         _unitOfWork = unitOfWork;
         _localizer = localizer;
         _logger = logger;
+        _eventDispatcher = eventDispatcher;
     }
 
     /// <summary>
@@ -120,6 +125,23 @@ public sealed class PatientsController : ControllerBase
         }
 
         var dto = MapToDto(patient);
+
+        // ── Read-Access Audit ──────────────────────────────────────────────
+        // Skip audit for self-access (Patient role viewing own record) to
+        // avoid noisy logs. Only non-Patient roles (Doctor, Admin) and any
+        // access where the actor cannot be identified are logged.
+        var accessorRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        if (accessorRole != null && !accessorRole.Equals("Patient", StringComparison.OrdinalIgnoreCase))
+        {
+            var accessorIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            int? accessorId = int.TryParse(accessorIdClaim, out var uid) ? uid : null;
+
+            await _eventDispatcher.DispatchAsync(new PatientRecordAccessedEvent(
+                id,
+                accessorId,
+                "Patient profile viewed via GetPatientById API"), cancellationToken);
+        }
+
         return Ok(ApiResponse<PatientDto>.SuccessResponse(dto));
     }
 
