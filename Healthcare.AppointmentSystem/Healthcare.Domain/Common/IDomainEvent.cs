@@ -1,11 +1,10 @@
-﻿namespace Healthcare.Domain.Common;
+namespace Healthcare.Domain.Common;
 
 /// <summary>
 /// Marker interface for domain events following the Observer pattern.
 /// Domain events represent something that happened in the domain that domain experts care about.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Observer Pattern (foundation)
 /// Events are published when important state changes occur in aggregates.
 /// Multiple handlers can observe and react to the same event.
 /// </remarks>

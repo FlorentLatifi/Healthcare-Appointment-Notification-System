@@ -37,66 +37,66 @@ public sealed class ConfirmAppointmentHandler : ICommandHandler<ConfirmAppointme
         CancellationToken cancellationToken = default)
     {
         // 1. Fetch appointment
-            var appointment = await _unitOfWork.Appointments
-                .GetByIdAsync(command.AppointmentId, cancellationToken);
+        var appointment = await _unitOfWork.Appointments
+            .GetByIdAsync(command.AppointmentId, cancellationToken);
 
-            if (appointment is null)
+        if (appointment is null)
+        {
+            return Result.Failure($"Appointment with ID {command.AppointmentId} not found.");
+        }
+
+        string? overrideReason = null;
+
+        // 2. Payment-before-confirmation business rule. Only relevant for
+        //    the Pending -> Confirmed transition; for any other current
+        //    status we let appointment.Confirm() below reject it with its
+        //    own (more accurate) state-transition error.
+        if (appointment.Status == AppointmentStatus.Pending)
+        {
+            var payment = await _unitOfWork.Payments
+                .GetByAppointmentIdAsync(command.AppointmentId, cancellationToken);
+
+            var isPaid = payment is not null && payment.Status == PaymentStatus.Succeeded;
+
+            if (!isPaid)
             {
-                return Result.Failure($"Appointment with ID {command.AppointmentId} not found.");
-            }
-
-            string? overrideReason = null;
-
-            // 2. Payment-before-confirmation business rule. Only relevant for
-            //    the Pending -> Confirmed transition; for any other current
-            //    status we let appointment.Confirm() below reject it with its
-            //    own (more accurate) state-transition error.
-            if (appointment.Status == AppointmentStatus.Pending)
-            {
-                var payment = await _unitOfWork.Payments
-                    .GetByAppointmentIdAsync(command.AppointmentId, cancellationToken);
-
-                var isPaid = payment is not null && payment.Status == PaymentStatus.Succeeded;
-
-                if (!isPaid)
+                if (!command.OverridePaymentRequirement)
                 {
-                    if (!command.OverridePaymentRequirement)
-                    {
-                        return Result.Failure(
-                            "Appointment cannot be confirmed until payment is completed. " +
-                            "A Doctor or Admin may confirm without payment by explicitly " +
-                            "overriding this requirement with a reason.");
-                    }
-
-                    if (string.IsNullOrWhiteSpace(command.OverrideReason) ||
-                        command.OverrideReason.Trim().Length < 10)
-                    {
-                        return Result.Failure(
-                            "Overriding the payment requirement requires a reason of at least 10 characters.");
-                    }
-
-                    overrideReason = command.OverrideReason.Trim();
+                    return Result.Failure(
+                        "Appointment cannot be confirmed until payment is completed. " +
+                        "A Doctor or Admin may confirm without payment by explicitly " +
+                        "overriding this requirement with a reason.");
                 }
+
+                if (string.IsNullOrWhiteSpace(command.OverrideReason) ||
+                    command.OverrideReason.Trim().Length < 10)
+                {
+                    return Result.Failure(
+                        "Overriding the payment requirement requires a reason of at least 10 characters.");
+                }
+
+                overrideReason = command.OverrideReason.Trim();
             }
+        }
 
-            // 3. Confirm appointment (domain logic validates state transitions)
-            try
-            {
-                appointment.Confirm(overrideReason);
-            }
-            catch (Exception ex)
-            {
-                return Result.Failure($"Failed to confirm appointment: {ex.Message}");
-            }
+        // 3. Confirm appointment (domain logic validates state transitions)
+        try
+        {
+            appointment.Confirm(overrideReason);
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure($"Failed to confirm appointment: {ex.Message}");
+        }
 
-            // 4. Persist changes
-            await _unitOfWork.Appointments.UpdateAsync(appointment, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        // 4. Persist changes
+        await _unitOfWork.Appointments.UpdateAsync(appointment, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 5. Dispatch domain events
-            await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
-            appointment.ClearDomainEvents();
+        // 5. Dispatch domain events
+        await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
+        appointment.ClearDomainEvents();
 
-            return Result.Success();
+        return Result.Success();
     }
 }

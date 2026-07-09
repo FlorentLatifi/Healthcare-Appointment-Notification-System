@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Ports.Repositories;
+using Healthcare.Application.Ports.Repositories;
 
 namespace Healthcare.Adapters.Persistence.InMemory;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Adapters.Persistence.InMemory;
 /// In-memory implementation of Unit of Work pattern.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Unit of Work Pattern + Adapter Pattern
 /// 
 /// Purpose:
 /// - Coordinates multiple repository operations

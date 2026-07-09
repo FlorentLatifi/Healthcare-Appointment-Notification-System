@@ -78,44 +78,44 @@ public sealed class WebhooksController : ControllerBase
         switch (stripeEvent.Type)
         {
             case "payment_intent.succeeded":
-            {
-                var transactionId = paymentIntent.LatestChargeId ?? paymentIntent.Id;
-                var paymentMethod = paymentIntent.PaymentMethodTypes?.FirstOrDefault() ?? "card";
-
-                var result = await _reconciliationService.ReconcilePaymentAsync(
-                    appointmentId,
-                    paymentIntent.Id,
-                    succeeded: true,
-                    transactionId,
-                    paymentMethod,
-                    failureReason: null,
-                    cancellationToken);
-
-                if (result.IsFailure)
                 {
-                    _logger.LogWarning(
-                        "Payment reconciliation failed for PaymentIntent {PaymentIntentId}: {Error}",
-                        paymentIntent.Id, result.Error);
+                    var transactionId = paymentIntent.LatestChargeId ?? paymentIntent.Id;
+                    var paymentMethod = paymentIntent.PaymentMethodTypes?.FirstOrDefault() ?? "card";
+
+                    var result = await _reconciliationService.ReconcilePaymentAsync(
+                        appointmentId,
+                        paymentIntent.Id,
+                        succeeded: true,
+                        transactionId,
+                        paymentMethod,
+                        failureReason: null,
+                        cancellationToken);
+
+                    if (result.IsFailure)
+                    {
+                        _logger.LogWarning(
+                            "Payment reconciliation failed for PaymentIntent {PaymentIntentId}: {Error}",
+                            paymentIntent.Id, result.Error);
+                    }
+
+                    return Ok(new { reconciled = result.IsSuccess, paymentId = result.IsSuccess ? result.Value : (int?)null });
                 }
 
-                return Ok(new { reconciled = result.IsSuccess, paymentId = result.IsSuccess ? result.Value : (int?)null });
-            }
-
             case "payment_intent.payment_failed":
-            {
-                var failureReason = paymentIntent.LastPaymentError?.Message ?? "Unknown error";
+                {
+                    var failureReason = paymentIntent.LastPaymentError?.Message ?? "Unknown error";
 
-                var result = await _reconciliationService.ReconcilePaymentAsync(
-                    appointmentId,
-                    paymentIntent.Id,
-                    succeeded: false,
-                    transactionId: paymentIntent.Id,
-                    paymentMethod: "card",
-                    failureReason,
-                    cancellationToken);
+                    var result = await _reconciliationService.ReconcilePaymentAsync(
+                        appointmentId,
+                        paymentIntent.Id,
+                        succeeded: false,
+                        transactionId: paymentIntent.Id,
+                        paymentMethod: "card",
+                        failureReason,
+                        cancellationToken);
 
-                return Ok(new { reconciled = result.IsSuccess });
-            }
+                    return Ok(new { reconciled = result.IsSuccess });
+                }
 
             default:
                 _logger.LogInformation("Unhandled Stripe webhook event type: {Type}", stripeEvent.Type);

@@ -11,6 +11,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Moq;
 using System.Text.Json;
 
 namespace Healthcare.UnitTests.Adapters.Events;
@@ -181,6 +182,72 @@ public sealed class OutboxPatternTests
             processed.ProcessedAt.Should().NotBeNull();
             processed.Error.Should().BeNull();
         }
+    }
+
+    [Fact]
+    public async Task OutboxRelayService_ExhaustedRetries_LogsError()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<HealthcareDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        var outboxSettings = new OutboxSettings
+        {
+            UseOutboxForDomainEvents = true,
+            MaxRetryAttempts = 3,
+            BatchSize = 50,
+        };
+
+        var loggerMock = new Mock<ILogger<OutboxRelayService>>();
+        loggerMock.Setup(x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("permanently failed")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
+            .Verifiable();
+
+        var services = new ServiceCollection();
+        services.AddSingleton<HealthcareDbContext>(sp =>
+        {
+            var ctx = new HealthcareDbContext(options, outboxSettings);
+            ctx.Database.EnsureCreated();
+            return ctx;
+        });
+        services.AddSingleton(outboxSettings);
+        services.AddSingleton<IDomainEventDispatcher>(sp =>
+            new DomainEventDispatcher(sp, sp.GetRequiredService<ILogger<DomainEventDispatcher>>()));
+        services.AddSingleton<ILogger<DomainEventDispatcher>>(sp =>
+            LoggerFactory.Create(b => { }).CreateLogger<DomainEventDispatcher>());
+        services.AddSingleton<ILogger<OutboxRelayService>>(sp => loggerMock.Object);
+
+        var provider = services.BuildServiceProvider();
+        var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
+
+        await using (var writeCtx = new HealthcareDbContext(options, outboxSettings))
+        {
+            await writeCtx.Database.EnsureCreatedAsync();
+
+            var appointment = CreateConfirmedAppointment();
+            var domainEvent = appointment.DomainEvents.First();
+            var outboxMessage = new OutboxMessage(
+                domainEvent.GetType().AssemblyQualifiedName!,
+                "{bad json}", // will fail deserialization
+                DateTime.UtcNow);
+            outboxMessage.RetryCount = outboxSettings.MaxRetryAttempts - 1; // one more failure = exhaustion
+
+            writeCtx.OutboxMessages.Add(outboxMessage);
+            await writeCtx.SaveChangesAsync();
+        }
+
+        var relayLogger = provider.GetRequiredService<ILogger<OutboxRelayService>>();
+        var relay = new OutboxRelayService(scopeFactory, relayLogger, outboxSettings);
+        await InvokeProcessBatchAsync(relay);
+
+        loggerMock.Verify();
     }
 
     [Fact]

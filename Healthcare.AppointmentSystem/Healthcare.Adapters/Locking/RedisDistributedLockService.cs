@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Ports.Locking;
+using Healthcare.Application.Ports.Locking;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
@@ -8,7 +8,6 @@ namespace Healthcare.Adapters.Locking;
 /// Redis implementation of distributed locking.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Adapter Pattern
 /// 
 /// Uses Redis SET with NX (Not eXists) and PX (exPire milliseconds) options:
 /// SET lock_key unique_value NX PX 10000

@@ -1,10 +1,9 @@
-﻿namespace Healthcare.Presentation.API.Requests;
+namespace Healthcare.Presentation.API.Requests;
 
 /// <summary>
 /// Request model for booking a new appointment.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Data Transfer Object (DTO)
 /// 
 /// This DTO:
 /// - Receives data from HTTP POST request body
@@ -38,9 +37,9 @@ public sealed class BookAppointmentRequest
     /// <example>Annual checkup and blood pressure monitoring</example>
     public string Reason { get; set; } = string.Empty;
 
-  ///   <summary>
-/// The type of appointment for pricing purposes.
-/// Values: "Standard", "Insurance", "Emergency", "Vip"
-/// </summary>
-public string AppointmentType { get; set; } = "Standard";
+    ///   <summary>
+    /// The type of appointment for pricing purposes.
+    /// Values: "Standard", "Insurance", "Emergency", "Vip"
+    /// </summary>
+    public string AppointmentType { get; set; } = "Standard";
 }

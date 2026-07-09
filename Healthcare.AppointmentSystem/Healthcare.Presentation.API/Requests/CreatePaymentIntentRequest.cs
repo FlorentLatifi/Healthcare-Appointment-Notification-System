@@ -1,10 +1,9 @@
-﻿namespace Healthcare.Presentation.API.Requests;
+namespace Healthcare.Presentation.API.Requests;
 
 /// <summary>
 /// Request model for creating a payment intent.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Data Transfer Object (DTO)
 /// 
 /// This DTO:
 /// - Receives data from HTTP POST request

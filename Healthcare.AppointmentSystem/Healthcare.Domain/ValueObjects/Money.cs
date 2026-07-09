@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Common;
+using Healthcare.Domain.Common;
 
 namespace Healthcare.Domain.ValueObjects;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Domain.ValueObjects;
 /// Represents a monetary amount with currency as a value object.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Value Object Pattern
 /// 
 /// Money should never be represented as a simple decimal in domain logic.
 /// This value object ensures:

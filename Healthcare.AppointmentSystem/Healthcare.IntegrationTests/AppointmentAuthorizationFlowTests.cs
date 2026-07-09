@@ -289,10 +289,15 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
 
         var docPayload = new
         {
-            FirstName = "AuthTest", LastName = $"Doctor_{suffix}",
-            Email = $"auth.doctor.{suffix}@clinic.com", PhoneNumber = $"+38348{suffix}00",
-            LicenseNumber = $"MED-AT-{suffix}", Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m, ConsultationFeeCurrency = "USD", YearsOfExperience = 10
+            FirstName = "AuthTest",
+            LastName = $"Doctor_{suffix}",
+            Email = $"auth.doctor.{suffix}@clinic.com",
+            PhoneNumber = $"+38348{suffix}00",
+            LicenseNumber = $"MED-AT-{suffix}",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 10
         };
         var docResponse = await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
         docResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -309,10 +314,17 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
 
         var patPayload = new
         {
-            FirstName = "AuthTest", LastName = $"Patient_{suffix}",
-            Email = $"auth.patient.{suffix}@test.com", PhoneNumber = $"+38349{suffix}00",
-            DateOfBirth = "1990-01-01", Gender = "Male",
-            Street = "10 St", City = "City", State = "State", PostalCode = "10000", Country = "Country"
+            FirstName = "AuthTest",
+            LastName = $"Patient_{suffix}",
+            Email = $"auth.patient.{suffix}@test.com",
+            PhoneNumber = $"+38349{suffix}00",
+            DateOfBirth = "1990-01-01",
+            Gender = "Male",
+            Street = "10 St",
+            City = "City",
+            State = "State",
+            PostalCode = "10000",
+            Country = "Country"
         };
         var patResponse = await Client.PostAsJsonAsync("/api/v1/patients", patPayload);
         patResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -365,10 +377,17 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
         var createResponse = await Client.PostAsJsonAsync("/api/v1/patients", new
         {
-            FirstName = "Other", LastName = "Patient",
-            Email = $"other.patient.{suffix}@test.com", PhoneNumber = $"+38349{suffix}99",
-            DateOfBirth = "1990-01-01", Gender = "Male",
-            Street = "99 St", City = "City", State = "State", PostalCode = "10000", Country = "Country"
+            FirstName = "Other",
+            LastName = "Patient",
+            Email = $"other.patient.{suffix}@test.com",
+            PhoneNumber = $"+38349{suffix}99",
+            DateOfBirth = "1990-01-01",
+            Gender = "Male",
+            Street = "99 St",
+            City = "City",
+            State = "State",
+            PostalCode = "10000",
+            Country = "Country"
         });
         var result = await DeserializeResponse<int>(createResponse);
         var reloginToken = await LoginAsync(username, "SecurePass123!");
@@ -385,10 +404,15 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(adminToken);
         var docPayload = new
         {
-            FirstName = "Other", LastName = "Doctor",
-            Email = $"other.doc.{suffix}@clinic.com", PhoneNumber = $"+38348{suffix}99",
-            LicenseNumber = $"MED-OT-{suffix}", Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m, ConsultationFeeCurrency = "USD", YearsOfExperience = 5
+            FirstName = "Other",
+            LastName = "Doctor",
+            Email = $"other.doc.{suffix}@clinic.com",
+            PhoneNumber = $"+38348{suffix}99",
+            LicenseNumber = $"MED-OT-{suffix}",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 5
         };
         var docResponse = await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
         var docResult = await DeserializeResponse<int>(docResponse);

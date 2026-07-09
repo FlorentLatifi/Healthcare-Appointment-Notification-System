@@ -1,10 +1,9 @@
-﻿namespace Healthcare.Application.Ports.Repositories;
+namespace Healthcare.Application.Ports.Repositories;
 
 /// <summary>
 /// Unit of Work interface for managing transactions across multiple repositories.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Unit of Work Pattern
 /// 
 /// The Unit of Work maintains a list of objects affected by a business transaction
 /// and coordinates the writing out of changes and resolution of concurrency problems.

@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Ports.Pricing;
+using Healthcare.Domain.Ports.Pricing;
 
 namespace Healthcare.Application.Strategies.Pricing;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Application.Strategies.Pricing;
 /// Emergency pricing — patient pays a premium on top of the base fee.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Strategy Pattern (Behavioral)
 /// 
 /// The premium percentage is configurable via constructor.
 /// Default: 50% premium (emergency appointments cost 50% more).

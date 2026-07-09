@@ -24,26 +24,26 @@ public sealed class MarkNoShowAppointmentHandler : ICommandHandler<MarkNoShowApp
         var appointment = await _unitOfWork.Appointments
                 .GetByIdAsync(command.AppointmentId, cancellationToken);
 
-            if (appointment is null)
-            {
-                return Result.Failure($"Appointment with ID {command.AppointmentId} not found.");
-            }
+        if (appointment is null)
+        {
+            return Result.Failure($"Appointment with ID {command.AppointmentId} not found.");
+        }
 
-            try
-            {
-                appointment.MarkAsNoShow();
-            }
-            catch (Exception ex)
-            {
-                return Result.Failure($"Failed to mark appointment as no-show: {ex.Message}");
-            }
+        try
+        {
+            appointment.MarkAsNoShow();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure($"Failed to mark appointment as no-show: {ex.Message}");
+        }
 
-            await _unitOfWork.Appointments.UpdateAsync(appointment, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.Appointments.UpdateAsync(appointment, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
-            appointment.ClearDomainEvents();
+        await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
+        appointment.ClearDomainEvents();
 
-            return Result.Success();
+        return Result.Success();
     }
 }

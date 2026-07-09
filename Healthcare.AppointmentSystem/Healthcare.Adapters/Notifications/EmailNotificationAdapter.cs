@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Ports.Notifications;
+using Healthcare.Application.Ports.Notifications;
 using Healthcare.Domain.Entities;
 using MailKit.Net.Smtp;
 using MimeKit;
@@ -10,7 +10,6 @@ namespace Healthcare.Adapters.Notifications;
 /// Email notification adapter using SMTP.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Adapter Pattern + Strategy Pattern
 /// 
 /// This adapter:
 /// - Sends REAL emails via SMTP (MailKit library)
@@ -213,6 +212,44 @@ public sealed class EmailNotificationAdapter : INotificationService
             </html>";
 
         await SendEmailAsync(appointment.Patient.Email, subject, body, cancellationToken);
+    }
+
+    public async Task SendPasswordResetEmailAsync(
+        string email,
+        string resetLink,
+        CancellationToken cancellationToken = default)
+    {
+        var subject = "Password Reset - Healthcare Clinic";
+
+        var body = $@"
+            <html>
+            <body style='font-family: Arial, sans-serif;'>
+                <div style='background-color: #2196F3; color: white; padding: 20px; text-align: center;'>
+                    <h1>Password Reset</h1>
+                </div>
+                <div style='padding: 20px;'>
+                    <p>Dear user,</p>
+
+                    <p>We received a request to reset your password. Click the link below to set a new password:</p>
+
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <a href='{resetLink}'
+                           style='background-color: #2196F3; color: white; padding: 12px 24px;
+                                  text-decoration: none; border-radius: 4px; font-size: 16px;'>
+                            Reset Password
+                        </a>
+                    </div>
+
+                    <p>This link will expire in 60 minutes.</p>
+
+                    <p>If you did not request a password reset, please ignore this email.</p>
+
+                    <p>Best regards,<br/>Healthcare Clinic</p>
+                </div>
+            </body>
+            </html>";
+
+        await SendEmailAsync(email, subject, body, cancellationToken);
     }
 
     /// <summary>

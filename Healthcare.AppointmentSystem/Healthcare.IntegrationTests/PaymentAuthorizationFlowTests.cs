@@ -154,10 +154,15 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
 
         var docPayload = new
         {
-            FirstName = "Pay", LastName = $"Doctor_{suffix}",
-            Email = $"pay.doctor.{suffix}@clinic.com", PhoneNumber = $"+38348{suffix}10",
-            LicenseNumber = $"MED-PAY-{suffix}", Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m, ConsultationFeeCurrency = "USD", YearsOfExperience = 10
+            FirstName = "Pay",
+            LastName = $"Doctor_{suffix}",
+            Email = $"pay.doctor.{suffix}@clinic.com",
+            PhoneNumber = $"+38348{suffix}10",
+            LicenseNumber = $"MED-PAY-{suffix}",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 10
         };
         var docResponse = await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
         docResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -174,10 +179,17 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
 
         var patPayload = new
         {
-            FirstName = "Pay", LastName = $"Patient_{suffix}",
-            Email = $"pay.patient.{suffix}@test.com", PhoneNumber = $"+38349{suffix}10",
-            DateOfBirth = "1990-01-01", Gender = "Male",
-            Street = "20 St", City = "City", State = "State", PostalCode = "10000", Country = "Country"
+            FirstName = "Pay",
+            LastName = $"Patient_{suffix}",
+            Email = $"pay.patient.{suffix}@test.com",
+            PhoneNumber = $"+38349{suffix}10",
+            DateOfBirth = "1990-01-01",
+            Gender = "Male",
+            Street = "20 St",
+            City = "City",
+            State = "State",
+            PostalCode = "10000",
+            Country = "Country"
         };
         var patResponse = await Client.PostAsJsonAsync("/api/v1/patients", patPayload);
         patResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -238,10 +250,17 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
         var createResponse = await Client.PostAsJsonAsync("/api/v1/patients", new
         {
-            FirstName = "Other", LastName = "PayPatient",
-            Email = $"other.pay.patient.{suffix}@test.com", PhoneNumber = $"+38349{suffix}99",
-            DateOfBirth = "1990-01-01", Gender = "Male",
-            Street = "99 St", City = "City", State = "State", PostalCode = "10000", Country = "Country"
+            FirstName = "Other",
+            LastName = "PayPatient",
+            Email = $"other.pay.patient.{suffix}@test.com",
+            PhoneNumber = $"+38349{suffix}99",
+            DateOfBirth = "1990-01-01",
+            Gender = "Male",
+            Street = "99 St",
+            City = "City",
+            State = "State",
+            PostalCode = "10000",
+            Country = "Country"
         });
         var reloginToken = await LoginAsync(username, "SecurePass123!");
         SetAuthToken(reloginToken);
@@ -258,10 +277,15 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(adminToken);
         var docPayload = new
         {
-            FirstName = "Other", LastName = "PayDoctor",
-            Email = $"other.pay.doc.{suffix}@clinic.com", PhoneNumber = $"+38348{suffix}99",
-            LicenseNumber = $"MED-OP-{suffix}", Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m, ConsultationFeeCurrency = "USD", YearsOfExperience = 5
+            FirstName = "Other",
+            LastName = "PayDoctor",
+            Email = $"other.pay.doc.{suffix}@clinic.com",
+            PhoneNumber = $"+38348{suffix}99",
+            LicenseNumber = $"MED-OP-{suffix}",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 5
         };
         await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
         var token = await RegisterAndLoginAsync(username, $"other.pay.doc.user.{suffix}@test.com", "SecurePass123!", "Doctor");

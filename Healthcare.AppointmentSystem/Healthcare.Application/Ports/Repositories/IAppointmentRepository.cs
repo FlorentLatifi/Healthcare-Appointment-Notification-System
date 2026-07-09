@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -9,7 +9,6 @@ namespace Healthcare.Application.Ports.Repositories;
 /// Repository interface for Appointment aggregate.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Repository Pattern
 /// 
 /// The repository abstracts data access and provides a collection-like
 /// interface for accessing domain objects. It hides the details of how

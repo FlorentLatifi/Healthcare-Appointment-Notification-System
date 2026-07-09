@@ -25,32 +25,32 @@ public sealed class CancelAppointmentHandler : ICommandHandler<CancelAppointment
         CancellationToken cancellationToken = default)
     {
         // 1. Fetch appointment
-            var appointment = await _unitOfWork.Appointments
-                .GetByIdAsync(command.AppointmentId, cancellationToken);
+        var appointment = await _unitOfWork.Appointments
+            .GetByIdAsync(command.AppointmentId, cancellationToken);
 
-            if (appointment is null)
-            {
-                return Result.Failure($"Appointment with ID {command.AppointmentId} not found.");
-            }
+        if (appointment is null)
+        {
+            return Result.Failure($"Appointment with ID {command.AppointmentId} not found.");
+        }
 
-            // 2. Cancel appointment (domain logic validates)
-            try
-            {
-                appointment.Cancel(command.CancellationReason);
-            }
-            catch (Exception ex)
-            {
-                return Result.Failure($"Failed to cancel appointment: {ex.Message}");
-            }
+        // 2. Cancel appointment (domain logic validates)
+        try
+        {
+            appointment.Cancel(command.CancellationReason);
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure($"Failed to cancel appointment: {ex.Message}");
+        }
 
-            // 3. Persist changes
-            await _unitOfWork.Appointments.UpdateAsync(appointment, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        // 3. Persist changes
+        await _unitOfWork.Appointments.UpdateAsync(appointment, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 4. Dispatch domain events
-            await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
-            appointment.ClearDomainEvents();
+        // 4. Dispatch domain events
+        await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
+        appointment.ClearDomainEvents();
 
-            return Result.Success();
+        return Result.Success();
     }
 }

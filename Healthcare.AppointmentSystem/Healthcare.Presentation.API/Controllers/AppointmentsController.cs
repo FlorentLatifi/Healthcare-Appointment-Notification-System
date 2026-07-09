@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using System.Text;
-using Healthcare.Application.Builders;
 using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Commands.CancelAppointment;
 using Healthcare.Application.Commands.CompleteAppointment;
@@ -19,6 +18,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Healthcare.Application.Ports.Events;
 
+using Healthcare.Domain.Enums;
 using Healthcare.Domain.Events;
 using Healthcare.Presentation.API.Authorization;
 
@@ -73,51 +73,43 @@ public sealed class AppointmentsController : ControllerBase
         _logger.LogInformation("Booking appointment Patient:{PatientId} Doctor:{DoctorId}",
             request.PatientId, request.DoctorId);
 
-        try
+        var command = new BookAppointmentCommand
         {
-            var builder = new BookAppointmentCommandBuilder()
-                .ForPatient(request.PatientId)
-                .WithDoctor(request.DoctorId)
-                .At(request.ScheduledTime)
-                .BecauseOf(request.Reason);
-
-            var command = request.AppointmentType switch
+            PatientId = request.PatientId,
+            DoctorId = request.DoctorId,
+            ScheduledTime = request.ScheduledTime,
+            Reason = request.Reason,
+            AppointmentType = request.AppointmentType switch
             {
-                "Insurance" => builder.WithInsurance().Build(),
-                "Emergency" => builder.AsEmergency().Build(),
-                "Vip" => builder.AsVip().Build(),
-                _ => builder.AsStandard().Build()
-            };
-
-            var handlerResult = await _bookAppointmentHandler.HandleAsync(command, cancellationToken);
-
-            if (handlerResult.IsFailure)
-            {
-                _logger.LogWarning("Booking failed: {Error}", handlerResult.Error);
-                return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(
-                    handlerResult.Error, "Failed to book appointment"));
+                "Insurance" => AppointmentType.Insurance,
+                "Emergency" => AppointmentType.Emergency,
+                "Vip" => AppointmentType.Vip,
+                _ => AppointmentType.Standard
             }
+        };
 
-            var appointment = await _unitOfWork.Appointments
-                .GetByIdAsync(handlerResult.Value, cancellationToken);
+        var handlerResult = await _bookAppointmentHandler.HandleAsync(command, cancellationToken);
 
-            if (appointment is null)
-                return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(
-                    "Appointment created but could not be retrieved.", "Failed to book appointment"));
-
-            var dto = AppointmentMapper.ToDto(appointment);
-            return CreatedAtAction(
-                nameof(GetAppointmentById),
-                new { id = dto.Id },
-                ApiResponse<AppointmentDto>.SuccessResponse(
-                    dto, "Appointment booked successfully"));
-        }
-        catch (Exception ex)
+        if (handlerResult.IsFailure)
         {
-            _logger.LogWarning("Booking failed: {Error}", ex.Message);
+            _logger.LogWarning("Booking failed: {Error}", handlerResult.Error);
             return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(
-                $"Invalid request: {ex.Message}", "Failed to book appointment"));
+                handlerResult.Error, "Failed to book appointment"));
         }
+
+        var appointment = await _unitOfWork.Appointments
+            .GetByIdAsync(handlerResult.Value, cancellationToken);
+
+        if (appointment is null)
+            return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(
+                "Appointment created but could not be retrieved.", "Failed to book appointment"));
+
+        var dto = AppointmentMapper.ToDto(appointment);
+        return CreatedAtAction(
+            nameof(GetAppointmentById),
+            new { id = dto.Id },
+            ApiResponse<AppointmentDto>.SuccessResponse(
+                dto, "Appointment booked successfully"));
     }
 
     [HttpGet("{id}")]

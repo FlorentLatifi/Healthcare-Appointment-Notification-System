@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Ports.Events;
+using Healthcare.Application.Ports.Events;
 using Healthcare.Domain.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,7 +9,6 @@ namespace Healthcare.Adapters.Events;
 /// Dispatches domain events to their registered handlers.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Observer Pattern + Mediator Pattern + Adapter Pattern
 /// 
 /// How it works:
 /// 1. Domain entity raises event (e.g., AppointmentConfirmedEvent)

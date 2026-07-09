@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Ports.Common;
+using Healthcare.Application.Ports.Common;
 
 namespace Healthcare.Adapters.Common;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Adapters.Common;
 /// Production implementation of ITimeProvider using system time.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Adapter Pattern + Strategy Pattern
 /// 
 /// This is the REAL time provider for production.
 /// Returns actual DateTime.UtcNow and DateTime.Now.

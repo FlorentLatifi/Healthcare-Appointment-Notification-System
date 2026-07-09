@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Ports.Notifications;
+using Healthcare.Application.Ports.Notifications;
 using Healthcare.Domain.Entities;
 using Microsoft.Extensions.Logging;
 
@@ -8,7 +8,6 @@ namespace Healthcare.Adapters.Notifications;
 /// Composite notification adapter that sends via multiple channels.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Composite Pattern + Strategy Pattern
 /// 
 /// This adapter:
 /// - Combines multiple notification strategies
@@ -108,6 +107,41 @@ public sealed class CompositeNotificationAdapter : INotificationService
             service => service.SendAppointmentRescheduledAsync(appointment, oldTime, cancellationToken),
             "AppointmentRescheduled",
             appointment.Id);
+    }
+
+    public async Task SendPasswordResetEmailAsync(
+        string email,
+        string resetLink,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "Sending password reset email via {Count} channels to {Email}",
+            _notificationServices.Count(),
+            email);
+
+        var tasks = _notificationServices.Select(async service =>
+        {
+            try
+            {
+                await service.SendPasswordResetEmailAsync(email, resetLink, cancellationToken);
+                _logger.LogDebug(
+                    "Password reset email sent successfully via {ServiceType} to {Email}",
+                    service.GetType().Name,
+                    email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to send password reset email via {ServiceType} to {Email}",
+                    service.GetType().Name,
+                    email);
+            }
+        });
+
+        await Task.WhenAll(tasks);
+
+        _logger.LogInformation("Password reset email sending completed for {Email}", email);
     }
 
     /// <summary>

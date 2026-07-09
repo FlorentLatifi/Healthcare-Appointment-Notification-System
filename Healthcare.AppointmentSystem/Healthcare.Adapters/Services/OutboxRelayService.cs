@@ -77,9 +77,9 @@ public sealed class OutboxRelayService : BackgroundService
                 var eventType = Type.GetType(message.EventType);
                 if (eventType == null)
                 {
-                    _logger.LogWarning(
-                        "Cannot resolve event type '{EventType}' for outbox message {Id}",
-                        message.EventType, message.Id);
+                    _logger.LogError(
+                        "Outbox message {Id} permanently failed: cannot resolve event type '{EventType}'",
+                        message.Id, message.EventType);
                     message.Error = $"Unknown type: {message.EventType}";
                     message.RetryCount = _settings.MaxRetryAttempts;
                     continue;
@@ -100,10 +100,20 @@ public sealed class OutboxRelayService : BackgroundService
                 message.RetryCount++;
                 message.Error = $"{ex.GetType().Name}: {ex.Message}";
 
-                _logger.LogWarning(
-                    ex,
-                    "Outbox message {Id} failed (attempt {RetryCount}/{MaxRetries})",
-                    message.Id, message.RetryCount, _settings.MaxRetryAttempts);
+                if (message.RetryCount >= _settings.MaxRetryAttempts)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Outbox message {Id} permanently failed after {RetryCount} attempts (max: {MaxRetries})",
+                        message.Id, message.RetryCount, _settings.MaxRetryAttempts);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "Outbox message {Id} failed (attempt {RetryCount}/{MaxRetries})",
+                        message.Id, message.RetryCount, _settings.MaxRetryAttempts);
+                }
             }
         }
 

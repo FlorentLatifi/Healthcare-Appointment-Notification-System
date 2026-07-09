@@ -1,4 +1,4 @@
-﻿namespace Healthcare.Application.Common;
+namespace Healthcare.Application.Common;
 
 /// <summary>
 /// Defines a handler for a query.
@@ -6,7 +6,6 @@
 /// <typeparam name="TQuery">The type of query to handle.</typeparam>
 /// <typeparam name="TResponse">The type of data returned by the query.</typeparam>
 /// <remarks>
-/// Design Pattern: Query Pattern + Handler Pattern
 /// 
 /// Each query has exactly one handler that retrieves the requested data.
 /// Query handlers should be optimized for read performance and can bypass

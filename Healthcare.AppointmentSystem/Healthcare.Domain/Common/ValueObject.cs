@@ -1,11 +1,10 @@
-﻿namespace Healthcare.Domain.Common;
+namespace Healthcare.Domain.Common;
 
 /// <summary>
 /// Base class for value objects following DDD principles.
 /// Value objects are immutable and compared by their property values, not identity.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Value Object Pattern
 /// Value objects represent descriptive aspects of the domain with no conceptual identity.
 /// Two value objects are equal if all their properties are equal.
 /// </remarks>

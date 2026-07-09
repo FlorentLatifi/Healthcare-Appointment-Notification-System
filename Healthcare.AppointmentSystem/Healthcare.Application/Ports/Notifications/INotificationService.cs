@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Entities;
+using Healthcare.Domain.Entities;
 
 namespace Healthcare.Application.Ports.Notifications;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Application.Ports.Notifications;
 /// Service interface for sending notifications to patients and doctors.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Strategy Pattern + Adapter Pattern
 /// 
 /// This is a PORT in Hexagonal Architecture. Different ADAPTERS can implement
 /// this interface:
@@ -56,5 +55,16 @@ public interface INotificationService
     Task SendAppointmentRescheduledAsync(
         Appointment appointment,
         DateTime oldTime,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends a password reset email with the given reset link.
+    /// </summary>
+    /// <param name="email">The recipient email address.</param>
+    /// <param name="resetLink">The full password reset URL with embedded token.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task SendPasswordResetEmailAsync(
+        string email,
+        string resetLink,
         CancellationToken cancellationToken = default);
 }

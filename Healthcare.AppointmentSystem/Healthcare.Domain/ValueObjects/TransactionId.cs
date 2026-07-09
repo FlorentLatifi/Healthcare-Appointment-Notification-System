@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Common;
+using Healthcare.Domain.Common;
 
 namespace Healthcare.Domain.ValueObjects;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Domain.ValueObjects;
 /// Represents a payment gateway transaction ID (e.g., Stripe Payment Intent ID).
 /// </summary>
 /// <remarks>
-/// Design Pattern: Value Object Pattern
 /// 
 /// Ensures transaction IDs are always valid and consistent.
 /// Example: "pi_3QK5ZB2eZvKYlo2C0X8Z5X6Y" (Stripe format)

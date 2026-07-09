@@ -1,11 +1,10 @@
-﻿namespace Healthcare.Domain.Common;
+namespace Healthcare.Domain.Common;
 
 /// <summary>
 /// Base class for all domain entities.
 /// Entities have a unique identity and their equality is based on their ID, not their properties.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Domain Model Pattern + Observer Pattern (via domain events)
 /// Entities represent objects with a distinct identity that runs through time and different states.
 /// </remarks>
 public abstract class Entity

@@ -100,7 +100,8 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
             PatientId = s.PatientA_PatientId,
             DoctorId = s.DoctorA_DoctorId,
             ScheduledTime = NextWeekdayAt10Am().ToString("o"),
-            Reason = "Auth test appointment", AppointmentType = "Standard"
+            Reason = "Auth test appointment",
+            AppointmentType = "Standard"
         });
         s.AppointmentAB_Id = (await ExtractIdFromCreatedResponse(book1))!.Value;
 
@@ -110,7 +111,8 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
             PatientId = s.PatientB_PatientId,
             DoctorId = s.DoctorB_DoctorId,
             ScheduledTime = NextWeekdayAt10Am().AddDays(7).ToString("o"),
-            Reason = "Auth test appointment B", AppointmentType = "Standard"
+            Reason = "Auth test appointment B",
+            AppointmentType = "Standard"
         });
         s.AppointmentBA_Id = (await ExtractIdFromCreatedResponse(book2))!.Value;
 
@@ -150,11 +152,17 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
         SetBearer(token);
         var response = await _client.PostAsJsonAsync("/api/v1/patients", new
         {
-            FirstName = "Auth", LastName = "Test",
-            Email = $"{username}.pat@test.com", PhoneNumber = "+38349000001",
-            DateOfBirth = "1990-01-01", Gender = "Male",
-            Street = "1 Test St", City = "TestCity", State = "TestState",
-            PostalCode = "10000", Country = "TestCountry"
+            FirstName = "Auth",
+            LastName = "Test",
+            Email = $"{username}.pat@test.com",
+            PhoneNumber = "+38349000001",
+            DateOfBirth = "1990-01-01",
+            Gender = "Male",
+            Street = "1 Test St",
+            City = "TestCity",
+            State = "TestState",
+            PostalCode = "10000",
+            Country = "TestCountry"
         });
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var id = await ExtractIdFromCreatedResponse(response);
@@ -167,10 +175,15 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
         SetBearer(doctorToken);
         var response = await _client.PostAsJsonAsync("/api/v1/doctors", new
         {
-            FirstName = "Auth", LastName = $"Doc_{suffix}",
-            Email = $"doc.{suffix}@clinic.com", PhoneNumber = "+38348000001",
-            LicenseNumber = $"MED-AT-{suffix}", Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m, ConsultationFeeCurrency = "USD", YearsOfExperience = 10
+            FirstName = "Auth",
+            LastName = $"Doc_{suffix}",
+            Email = $"doc.{suffix}@clinic.com",
+            PhoneNumber = "+38348000001",
+            LicenseNumber = $"MED-AT-{suffix}",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 10
         });
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.Created, $"CreateDoctor failed: {body}");
@@ -215,10 +228,15 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
         SetBearer(adminToken);
         var response = await _client.PostAsJsonAsync("/api/v1/doctors", new
         {
-            FirstName = "Temp", LastName = $"Doc_{suffix}",
-            Email = $"temp.doc.{suffix}@clinic.com", PhoneNumber = "+38348000999",
-            LicenseNumber = $"MED-TMP-{suffix}", Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m, ConsultationFeeCurrency = "USD", YearsOfExperience = 5
+            FirstName = "Temp",
+            LastName = $"Doc_{suffix}",
+            Email = $"temp.doc.{suffix}@clinic.com",
+            PhoneNumber = "+38348000999",
+            LicenseNumber = $"MED-TMP-{suffix}",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 5
         });
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.Created, $"CreateTempDoctor failed: {body}");
@@ -236,7 +254,8 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
             PatientId = patientId,
             DoctorId = docId,
             ScheduledTime = time.ToString("o"),
-            Reason = "Auth test appointment testing", AppointmentType = "Standard"
+            Reason = "Auth test appointment testing",
+            AppointmentType = "Standard"
         });
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.Created, $"BookAppointment failed: {body}");
@@ -627,10 +646,15 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
         SetBearer(_seed.Admin_Token);
         var response = await _client.PostAsJsonAsync("/api/v1/doctors", new
         {
-            FirstName = "New", LastName = $"Doc_{suffix}",
-            Email = $"new.doc.{suffix}@clinic.com", PhoneNumber = "+38348000100",
-            LicenseNumber = $"MED-NW-{suffix}", Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m, ConsultationFeeCurrency = "USD", YearsOfExperience = 5
+            FirstName = "New",
+            LastName = $"Doc_{suffix}",
+            Email = $"new.doc.{suffix}@clinic.com",
+            PhoneNumber = "+38348000100",
+            LicenseNumber = $"MED-NW-{suffix}",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 5
         });
         response.StatusCode.Should().Be(HttpStatusCode.Created);
     }

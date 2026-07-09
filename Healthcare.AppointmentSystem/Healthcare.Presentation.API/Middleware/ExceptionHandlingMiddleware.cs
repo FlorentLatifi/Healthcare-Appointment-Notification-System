@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json;
 using Healthcare.Domain.Common;
 using Healthcare.Presentation.API.Responses;
@@ -10,7 +10,6 @@ namespace Healthcare.Presentation.API.Middleware;
 /// Global exception handling middleware.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Middleware Pattern + Chain of Responsibility
 /// 
 /// This middleware:
 /// - Catches ALL unhandled exceptions
@@ -82,6 +81,7 @@ public sealed class ExceptionHandlingMiddleware
         // Set appropriate status code based on exception type
         context.Response.StatusCode = exception switch
         {
+            DbUpdateConcurrencyException => (int)HttpStatusCode.Conflict,
             DbUpdateException => (int)HttpStatusCode.Conflict,
             DomainException => (int)HttpStatusCode.BadRequest,
             ArgumentException => (int)HttpStatusCode.InternalServerError,
@@ -97,9 +97,13 @@ public sealed class ExceptionHandlingMiddleware
             errorResponse.Code = domainEx.ErrorCode;
         }
 
-        // Override message for DbUpdateException so the caller gets a clear,
-        // actionable error instead of a raw SQL constraint message.
-        if (exception is DbUpdateException)
+        // Override message for concurrency exceptions so the caller gets a clear,
+        // actionable error instead of a raw SQL message.
+        if (exception is DbUpdateConcurrencyException)
+        {
+            errorResponse.Message = "The record was modified by another process. Reload and retry.";
+        }
+        else if (exception is DbUpdateException)
         {
             errorResponse.Message = "This record cannot be removed because related records exist.";
         }

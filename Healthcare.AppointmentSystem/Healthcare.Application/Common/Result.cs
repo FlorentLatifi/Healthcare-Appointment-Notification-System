@@ -1,10 +1,9 @@
-﻿namespace Healthcare.Application.Common;
+namespace Healthcare.Application.Common;
 
 /// <summary>
 /// Represents the result of an operation that can succeed or fail.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Result Pattern
 /// 
 /// This pattern is used instead of throwing exceptions for expected failures.
 /// It makes the API more explicit about what can go wrong and forces clients

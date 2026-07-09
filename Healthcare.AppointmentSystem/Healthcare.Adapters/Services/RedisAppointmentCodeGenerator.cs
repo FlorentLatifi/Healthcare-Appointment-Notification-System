@@ -52,16 +52,16 @@ public sealed class RedisAppointmentCodeGenerator : IAppointmentCodeGenerator
             var today = DateTime.UtcNow;
             var dateString = today.ToString("yyyyMMdd");
             var counterKey = $"appt-code-counter:{dateString}";
-            
+
             // Atomic increment at Redis server level
             var sequence = db.StringIncrement(counterKey);
-            
+
             // Set expiry on first creation (48 hours ensures cleanup)
             if (sequence == 1)
             {
                 db.KeyExpire(counterKey, TimeSpan.FromHours(48));
             }
-            
+
             // Format: APT-20260226-0001
             return $"APT-{dateString}-{sequence:D4}";
         }
@@ -87,7 +87,7 @@ public sealed class RedisAppointmentCodeGenerator : IAppointmentCodeGenerator
                 var today = DateTime.UtcNow;
                 var dateString = today.ToString("yyyyMMdd");
                 var counterKey = $"appt-code-counter:{dateString}";
-                
+
                 var value = db.StringGet(counterKey);
                 return value.IsNull ? 0 : (int)value;
             }

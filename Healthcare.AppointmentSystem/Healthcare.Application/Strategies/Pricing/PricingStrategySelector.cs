@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Enums;
+using Healthcare.Domain.Enums;
 using Healthcare.Domain.Ports.Pricing;
 
 namespace Healthcare.Application.Strategies.Pricing;
@@ -7,7 +7,6 @@ namespace Healthcare.Application.Strategies.Pricing;
 /// Selects the correct pricing strategy based on appointment type.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Strategy Pattern + Factory Method
 /// 
 /// This selector acts as a simple factory for strategies.
 /// It centralizes the decision of WHICH strategy to use,

@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Common;
+using Healthcare.Domain.Common;
 
 namespace Healthcare.Application.Ports.Events;
 
@@ -7,7 +7,6 @@ namespace Healthcare.Application.Ports.Events;
 /// </summary>
 /// <typeparam name="TEvent">The type of domain event to handle.</typeparam>
 /// <remarks>
-/// Design Pattern: Observer Pattern
 /// 
 /// Domain event handlers are OBSERVERS that react to domain events.
 /// Multiple handlers can observe the same event.

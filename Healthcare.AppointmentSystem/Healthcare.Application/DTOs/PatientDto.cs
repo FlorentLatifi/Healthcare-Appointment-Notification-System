@@ -65,6 +65,11 @@ public sealed class PatientDto
     public bool IsActive { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the patient's PII has been anonymized.
+    /// </summary>
+    public bool IsAnonymized { get; set; }
+
+    /// <summary>
     /// Gets or sets whether email notifications are enabled.
     /// </summary>
     public bool EmailEnabled { get; set; }

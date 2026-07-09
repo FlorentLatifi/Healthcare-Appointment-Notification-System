@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Ports.Pricing;
+using Healthcare.Domain.Ports.Pricing;
 
 namespace Healthcare.Application.Strategies.Pricing;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Application.Strategies.Pricing;
 /// VIP pricing — loyal patients receive a special discount.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Strategy Pattern (Behavioral)
 /// 
 /// Default: 20% discount for VIP patients.
 /// 

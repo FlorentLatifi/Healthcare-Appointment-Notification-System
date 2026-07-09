@@ -91,18 +91,23 @@ public sealed class DoctorCacheTests
     }
 
     [Fact]
-    public async Task SecondCallWithinTtl_DoesNotCallRepository()
+    public async Task GetAllDoctors_UsesRepositoryPagination_NotCache()
     {
         var repoMock = new Mock<IDoctorRepository>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
         unitOfWorkMock.Setup(u => u.Doctors).Returns(repoMock.Object);
 
         var allDoctors = _testDoctors;
-        repoMock.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(allDoctors);
+        repoMock.Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int pn, int ps, CancellationToken _) =>
+            {
+                var list = allDoctors.OrderBy(d => d.LastName).ThenBy(d => d.FirstName).ToList();
+                var totalCount = list.Count;
+                var items = list.Skip((pn - 1) * ps).Take(ps).ToList();
+                return new PagedResult<Doctor>(items, pn, ps, totalCount);
+            });
 
         var cache = new InMemoryDoctorCacheService(new Mock<ILogger<InMemoryDoctorCacheService>>().Object);
-        var dispatcherMock = new Mock<IDomainEventDispatcher>();
         var loggerMock = new Mock<ILogger<DoctorsController>>();
 
         var controller = new DoctorsController(
@@ -116,7 +121,7 @@ public sealed class DoctorCacheTests
         var firstResponse = await controller.GetAllDoctors(pageNumber: 1, pageSize: 20);
         var secondResponse = await controller.GetAllDoctors(pageNumber: 1, pageSize: 20);
 
-        repoMock.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
+        repoMock.Verify(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]

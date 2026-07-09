@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Domain.ValueObjects;
 
 namespace Healthcare.Application.Ports.Payments;
@@ -7,7 +7,6 @@ namespace Healthcare.Application.Ports.Payments;
 /// PORT for payment processing.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Adapter Pattern (Hexagonal Architecture)
 /// 
 /// This is a PORT (interface in Application layer).
 /// The ADAPTER (Stripe implementation) lives in Infrastructure/Adapters layer.

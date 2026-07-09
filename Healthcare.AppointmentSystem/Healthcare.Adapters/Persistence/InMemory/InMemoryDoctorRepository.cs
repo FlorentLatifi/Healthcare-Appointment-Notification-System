@@ -1,4 +1,5 @@
-﻿using Healthcare.Application.Ports.Repositories;
+﻿using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 
@@ -25,14 +26,50 @@ public sealed class InMemoryDoctorRepository : InMemoryRepository<Doctor>, IDoct
         return base.GetAllAsync();
     }
 
+    public async Task<PagedResult<Doctor>> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var all = await base.GetAllAsync();
+        var list = all.OrderBy(d => d.LastName).ThenBy(d => d.FirstName).ToList();
+        var totalCount = list.Count;
+        var items = list.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedResult<Doctor>(items, pageNumber, pageSize, totalCount);
+    }
+
     public Task<IEnumerable<Doctor>> GetActiveAsync(CancellationToken cancellationToken = default)
     {
         return FindAsync(d => d.IsActive);
     }
 
+    public async Task<PagedResult<Doctor>> GetPagedActiveAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var all = await FindAsync(d => d.IsActive);
+        var list = all.OrderBy(d => d.LastName).ThenBy(d => d.FirstName).ToList();
+        var totalCount = list.Count;
+        var items = list.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedResult<Doctor>(items, pageNumber, pageSize, totalCount);
+    }
+
     public Task<IEnumerable<Doctor>> GetAcceptingPatientsAsync(CancellationToken cancellationToken = default)
     {
         return FindAsync(d => d.IsActive && d.IsAcceptingPatients);
+    }
+
+    public async Task<PagedResult<Doctor>> GetPagedAcceptingPatientsAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var all = await FindAsync(d => d.IsActive && d.IsAcceptingPatients);
+        var list = all.OrderBy(d => d.LastName).ThenBy(d => d.FirstName).ToList();
+        var totalCount = list.Count;
+        var items = list.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedResult<Doctor>(items, pageNumber, pageSize, totalCount);
     }
 
     public Task<IEnumerable<Doctor>> GetBySpecialtyAsync(Specialty specialty, CancellationToken cancellationToken = default)

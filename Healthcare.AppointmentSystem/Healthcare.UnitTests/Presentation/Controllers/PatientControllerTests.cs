@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using FluentAssertions;
 using Healthcare.Adapters.Persistence.InMemory;
+using Healthcare.Application.Commands.AnonymizePatient;
 using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Events;
@@ -43,12 +44,14 @@ public class PatientControllerTests
             Mock.Of<IUserSessionRepository>());
 
         var handlerMock = new Mock<ICommandHandler<CreatePatientCommand, Result<int>>>();
+        var anonymizeHandlerMock = new Mock<ICommandHandler<AnonymizePatientCommand, Result>>();
         var localizerMock = new Mock<IStringLocalizer<Messages>>();
         var loggerMock = new Mock<ILogger<PatientsController>>();
         var eventDispatcherMock = new Mock<IDomainEventDispatcher>();
 
         _controller = new PatientsController(
             handlerMock.Object,
+            anonymizeHandlerMock.Object,
             _unitOfWork,
             localizerMock.Object,
             loggerMock.Object,

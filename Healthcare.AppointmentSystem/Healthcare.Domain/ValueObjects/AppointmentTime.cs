@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Common;
+using Healthcare.Domain.Common;
 
 namespace Healthcare.Domain.ValueObjects;
 
@@ -7,7 +7,6 @@ namespace Healthcare.Domain.ValueObjects;
 /// Doctor-specific working hours are validated separately by Doctor.IsAvailable.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Value Object Pattern
 /// 
 /// Global Business Rules (doctor-agnostic):
 /// 1. Must be in the future (cannot book appointments in the past)

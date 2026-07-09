@@ -21,19 +21,25 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln
 
+    - name: Check formatting
+      run: dotnet format Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln --verify-no-changes
+
     - name: Build (Release)
       run: dotnet build Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln --no-restore -c Release
 
     - name: Run Fast Unit Tests
       run: dotnet test Healthcare.AppointmentSystem/Healthcare.UnitTests/Healthcare.UnitTests.csproj --no-build -c Release --filter Category!=Integration --logger "trx;LogFileName=unit-test-results.trx" --collect:"XPlat Code Coverage"
 
-    - name: Check for High/Critical vulnerabilities
+    - name: Check for vulnerabilities
       run: |
         output=$(dotnet list package --vulnerable --include-transitive Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln 2>&1)
         echo "$output"
         if echo "$output" | grep -Eq "High|Critical"; then
           echo "❌ High or Critical severity vulnerabilities found!"
           exit 1
+        fi
+        if echo "$output" | grep -Eq "Moderate"; then
+          echo "⚠️  Moderate severity vulnerabilities found (not blocking — review above)."
         fi
         echo "✅ No High or Critical vulnerabilities detected."
 

@@ -6,7 +6,6 @@ namespace Healthcare.Application.Ports.Authentication;
 /// PORT for authentication services.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Port (Hexagonal Architecture)
 /// 
 /// This interface defines WHAT authentication can do,
 /// without knowing HOW it's implemented (JWT, OAuth, etc.)
@@ -61,4 +60,21 @@ public interface IAuthenticationService
     /// Revokes all active sessions for a user (logs out everywhere).
     /// </summary>
     Task<Result> RevokeAllUserSessionsAsync(int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Generates a short-lived single-use password reset token for the given user.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The raw reset token to include in the email link.</returns>
+    Task<string> GeneratePasswordResetTokenAsync(int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Validates and consumes a password reset token.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="token">The raw token from the reset link.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Success if the token is valid and consumed; failure otherwise.</returns>
+    Task<Result> ValidateAndConsumePasswordResetTokenAsync(int userId, string token, CancellationToken cancellationToken = default);
 }

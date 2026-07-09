@@ -1,4 +1,5 @@
-﻿using Healthcare.Application.Ports.Repositories;
+﻿using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
@@ -39,6 +40,26 @@ public sealed class EFCoreDoctorRepository : IDoctorRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<PagedResult<Doctor>> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Doctors
+            .Include(d => d.SpecialtyEntries)
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderBy(d => d.LastName).ThenBy(d => d.FirstName)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Doctor>(items, pageNumber, pageSize, totalCount);
+    }
+
     public async Task<IEnumerable<Doctor>> GetActiveAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Doctors
@@ -46,6 +67,27 @@ public sealed class EFCoreDoctorRepository : IDoctorRepository
             .Where(d => d.IsActive)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<PagedResult<Doctor>> GetPagedActiveAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Doctors
+            .Include(d => d.SpecialtyEntries)
+            .Where(d => d.IsActive)
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderBy(d => d.LastName).ThenBy(d => d.FirstName)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Doctor>(items, pageNumber, pageSize, totalCount);
     }
 
     public async Task<IEnumerable<Doctor>> GetAcceptingPatientsAsync(
@@ -56,6 +98,27 @@ public sealed class EFCoreDoctorRepository : IDoctorRepository
             .Where(d => d.IsActive && d.IsAcceptingPatients)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<PagedResult<Doctor>> GetPagedAcceptingPatientsAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Doctors
+            .Include(d => d.SpecialtyEntries)
+            .Where(d => d.IsActive && d.IsAcceptingPatients)
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderBy(d => d.LastName).ThenBy(d => d.FirstName)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Doctor>(items, pageNumber, pageSize, totalCount);
     }
 
     public async Task<IEnumerable<Doctor>> GetBySpecialtyAsync(

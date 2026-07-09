@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 
 namespace Healthcare.Application.Commands.ProcessPayment;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Application.Commands.ProcessPayment;
 /// Command to process a payment for an appointment.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Command Pattern + CQRS
 /// 
 /// This command represents the intention to charge a patient
 /// for their appointment consultation fee.

@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Ports.Pricing;
+using Healthcare.Domain.Ports.Pricing;
 
 namespace Healthcare.Application.Strategies.Pricing;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Application.Strategies.Pricing;
 /// Context class that holds and executes the active pricing strategy.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Strategy Pattern (Behavioral) — CONTEXT role
 /// 
 /// The Context:
 ///   1. Holds a reference to the current strategy

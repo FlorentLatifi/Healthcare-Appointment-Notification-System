@@ -55,6 +55,13 @@ public sealed class User : Entity
         MarkAsModified();
     }
 
+    public void SetPasswordHash(string passwordHash)
+    {
+        Guard.AgainstNullOrWhiteSpace(passwordHash, nameof(passwordHash));
+        PasswordHash = passwordHash;
+        MarkAsModified();
+    }
+
     public void Deactivate()
     {
         IsActive = false;

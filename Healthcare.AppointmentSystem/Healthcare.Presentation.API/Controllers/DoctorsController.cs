@@ -133,6 +133,18 @@ public sealed class DoctorsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Retrieves a paginated list of all doctors using DB-level pagination.
+    ///
+    /// CACHING STRATEGY: Unlike the previous approach (which cached the entire list
+    /// in IDoctorCacheService and paged in-memory), this endpoint delegates pagination
+    /// to the repository layer for DB-level Skip/Take. This matches the pattern used by
+    /// Appointments, Patients, and Payments controllers.
+    ///
+    /// IDoctorCacheService is retained for potential future use (e.g., individual page
+    /// caching or hot-list caching), and the InvalidateDoctorCacheHandler still clears
+    /// it on domain events to keep the option viable.
+    /// </summary>
     [HttpGet]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
@@ -147,26 +159,22 @@ public sealed class DoctorsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var cached = await _cache.GetAsync("all", cancellationToken);
-        IReadOnlyList<DoctorDto> dtos;
-        if (cached != null)
-        {
-            dtos = cached;
-        }
-        else
-        {
-            var doctors = await _unitOfWork.Doctors.GetAllAsync(cancellationToken);
-            dtos = doctors.Select(MapToDto).ToList();
-            await _cache.SetAsync("all", dtos, cancellationToken);
-        }
-
-        var pagedResult = PagedResult<DoctorDto>.Create(dtos, pageNumber, pageSize);
+        var pagedResult = await _unitOfWork.Doctors.GetPagedAsync(pageNumber, pageSize, cancellationToken);
+        var dtos = pagedResult.Items.Select(MapToDto).ToList();
+        var pagedDtos = new PagedResult<DoctorDto>(dtos, pagedResult.PageNumber, pagedResult.PageSize, pagedResult.TotalCount);
 
         return Ok(ApiResponse<PagedResult<DoctorDto>>.SuccessResponse(
-            pagedResult,
-            $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} items)"));
+            pagedDtos,
+            $"Retrieved page {pagedDtos.PageNumber} of {pagedDtos.TotalPages} ({pagedDtos.Items.Count()} items)"));
     }
 
+    /// <summary>
+    /// Retrieves a paginated list of active doctors using DB-level pagination.
+    ///
+    /// CACHING STRATEGY: Same as GetAllDoctors — DB-level pagination via the
+    /// repository layer, bypassing IDoctorCacheService for consistency with the
+    /// other listing endpoints.
+    /// </summary>
     [HttpGet("active")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
@@ -181,26 +189,22 @@ public sealed class DoctorsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var cached = await _cache.GetAsync("active", cancellationToken);
-        IReadOnlyList<DoctorDto> dtos;
-        if (cached != null)
-        {
-            dtos = cached;
-        }
-        else
-        {
-            var doctors = await _unitOfWork.Doctors.GetActiveAsync(cancellationToken);
-            dtos = doctors.Select(MapToDto).ToList();
-            await _cache.SetAsync("active", dtos, cancellationToken);
-        }
-
-        var pagedResult = PagedResult<DoctorDto>.Create(dtos, pageNumber, pageSize);
+        var pagedResult = await _unitOfWork.Doctors.GetPagedActiveAsync(pageNumber, pageSize, cancellationToken);
+        var dtos = pagedResult.Items.Select(MapToDto).ToList();
+        var pagedDtos = new PagedResult<DoctorDto>(dtos, pagedResult.PageNumber, pagedResult.PageSize, pagedResult.TotalCount);
 
         return Ok(ApiResponse<PagedResult<DoctorDto>>.SuccessResponse(
-            pagedResult,
-            $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} active doctor(s))"));
+            pagedDtos,
+            $"Retrieved page {pagedDtos.PageNumber} of {pagedDtos.TotalPages} ({pagedDtos.Items.Count()} active doctor(s))"));
     }
 
+    /// <summary>
+    /// Retrieves a paginated list of doctors accepting patients using DB-level pagination.
+    ///
+    /// CACHING STRATEGY: Same as GetAllDoctors — DB-level pagination via the
+    /// repository layer, bypassing IDoctorCacheService for consistency with the
+    /// other listing endpoints.
+    /// </summary>
     [HttpGet("accepting-patients")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
@@ -215,24 +219,13 @@ public sealed class DoctorsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var cached = await _cache.GetAsync("accepting-patients", cancellationToken);
-        IReadOnlyList<DoctorDto> dtos;
-        if (cached != null)
-        {
-            dtos = cached;
-        }
-        else
-        {
-            var doctors = await _unitOfWork.Doctors.GetAcceptingPatientsAsync(cancellationToken);
-            dtos = doctors.Select(MapToDto).ToList();
-            await _cache.SetAsync("accepting-patients", dtos, cancellationToken);
-        }
-
-        var pagedResult = PagedResult<DoctorDto>.Create(dtos, pageNumber, pageSize);
+        var pagedResult = await _unitOfWork.Doctors.GetPagedAcceptingPatientsAsync(pageNumber, pageSize, cancellationToken);
+        var dtos = pagedResult.Items.Select(MapToDto).ToList();
+        var pagedDtos = new PagedResult<DoctorDto>(dtos, pagedResult.PageNumber, pagedResult.PageSize, pagedResult.TotalCount);
 
         return Ok(ApiResponse<PagedResult<DoctorDto>>.SuccessResponse(
-            pagedResult,
-            $"Retrieved page {pageNumber} of {pagedResult.TotalPages} ({pagedResult.Items.Count()} doctor(s) accepting patients)"));
+            pagedDtos,
+            $"Retrieved page {pagedDtos.PageNumber} of {pagedDtos.TotalPages} ({pagedDtos.Items.Count()} doctor(s) accepting patients)"));
     }
 
     private static DoctorDto MapToDto(Doctor doctor)

@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Common;
+using Healthcare.Domain.Common;
 
 namespace Healthcare.Domain.ValueObjects;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Domain.ValueObjects;
 /// Represents a physical address as a value object.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Value Object Pattern
 /// 
 /// Addresses are immutable and compared by their complete address components.
 /// This is simplified - production systems might integrate with address

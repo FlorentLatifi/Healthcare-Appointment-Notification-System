@@ -1,10 +1,9 @@
-﻿namespace Healthcare.Application.Common;
+namespace Healthcare.Application.Common;
 
 /// <summary>
 /// Marker interface for commands (write operations).
 /// </summary>
 /// <remarks>
-/// Design Pattern: Command Pattern + CQRS
 /// 
 /// Commands represent intentions to change the system state.
 /// They are write operations that modify data.

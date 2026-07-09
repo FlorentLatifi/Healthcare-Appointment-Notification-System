@@ -102,7 +102,7 @@ public class CancelAppointmentHandlerTests
     {
         var futureDate = DateTime.Now.AddDays(7).Date;
 
-       
+
         while (futureDate.DayOfWeek == DayOfWeek.Saturday ||
                futureDate.DayOfWeek == DayOfWeek.Sunday)
         {

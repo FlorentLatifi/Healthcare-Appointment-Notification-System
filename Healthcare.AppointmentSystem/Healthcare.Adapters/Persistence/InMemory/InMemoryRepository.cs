@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Common;
+using Healthcare.Domain.Common;
 
 namespace Healthcare.Adapters.Persistence.InMemory;
 
@@ -7,7 +7,6 @@ namespace Healthcare.Adapters.Persistence.InMemory;
 /// </summary>
 /// <typeparam name="TEntity">The entity type (must inherit from Entity).</typeparam>
 /// <remarks>
-/// Design Pattern: Repository Pattern + Template Method Pattern
 /// 
 /// This base class provides:
 /// - Thread-safe in-memory storage

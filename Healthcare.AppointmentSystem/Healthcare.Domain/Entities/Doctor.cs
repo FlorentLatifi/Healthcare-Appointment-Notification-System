@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Common;
+using Healthcare.Domain.Common;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
 using System;
@@ -11,7 +11,6 @@ namespace Healthcare.Domain.Entities;
 /// Represents a doctor in the healthcare system.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Rich Domain Model + Strategy Pattern (availability checking)
 /// </remarks>
 public sealed class Doctor : Entity
 {

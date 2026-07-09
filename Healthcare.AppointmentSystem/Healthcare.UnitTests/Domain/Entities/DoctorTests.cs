@@ -183,7 +183,7 @@ public class DoctorTests
             .WithMessage("*at least 5 characters*");
     }
 
-    
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

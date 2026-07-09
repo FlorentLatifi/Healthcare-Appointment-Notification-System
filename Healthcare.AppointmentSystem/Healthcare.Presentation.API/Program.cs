@@ -1,6 +1,7 @@
 using Healthcare.Adapters;
 using Healthcare.Adapters.Events;
 using Healthcare.Adapters.Services;
+using Healthcare.Application.Commands.AnonymizePatient;
 using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Commands.CancelAppointment;
 using Healthcare.Application.Commands.CompleteAppointment;
@@ -8,9 +9,11 @@ using Healthcare.Application.Commands.ConfirmAppointment;
 using Healthcare.Application.Commands.CreateDoctor;
 using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Commands.DeactivateDoctor;
+using Healthcare.Application.Commands.ForgotPassword;
 using Healthcare.Application.Commands.MarkNoShowAppointment;
 using Healthcare.Application.Commands.ProcessPayment;
 using Healthcare.Application.Commands.RefundPayment;
+using Healthcare.Application.Commands.ResetPassword;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
 
@@ -56,6 +59,9 @@ try
     builder.Services.AddScoped<ICommandHandler<DeactivateDoctorCommand, Result>, DeactivateDoctorHandler>();
     builder.Services.AddScoped<ICommandHandler<ProcessPaymentCommand, Result<int>>, ProcessPaymentHandler>();
     builder.Services.AddScoped<ICommandHandler<RefundPaymentCommand, Result>, RefundPaymentHandler>();
+    builder.Services.AddScoped<ICommandHandler<ForgotPasswordCommand, Result>, ForgotPasswordHandler>();
+    builder.Services.AddScoped<ICommandHandler<ResetPasswordCommand, Result>, ResetPasswordHandler>();
+    builder.Services.AddScoped<ICommandHandler<AnonymizePatientCommand, Result>, AnonymizePatientHandler>();
     builder.Services.AddScoped<IQueryHandler<GetRevenueReportQuery, Result<RevenueReportDto>>, GetRevenueReportHandler>();
     builder.Services.AddScoped<IQueryHandler<GetNoShowRateQuery, Result<NoShowRateDto>>, GetNoShowRateHandler>();
     builder.Services.AddScoped<IQueryHandler<GetAppointmentVolumeQuery, Result<AppointmentVolumeDto>>, GetAppointmentVolumeHandler>();

@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Ports.Notifications;
+using Healthcare.Application.Ports.Notifications;
 using Healthcare.Domain.Entities;
 
 namespace Healthcare.Adapters.Notifications;
@@ -7,7 +7,6 @@ namespace Healthcare.Adapters.Notifications;
 /// Console-based notification adapter for development and testing.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Adapter Pattern + Strategy Pattern
 /// 
 /// This is a STRATEGY for sending notifications via console output.
 /// 
@@ -139,6 +138,31 @@ public sealed class ConsoleNotificationAdapter : INotificationService
         Console.WriteLine($"  New Time: {appointment.ScheduledTime.ToDisplayString()}");
         Console.WriteLine();
         Console.WriteLine("Please confirm the new time.");
+        Console.WriteLine();
+        Console.WriteLine(Separator);
+        Console.WriteLine();
+
+        return Task.CompletedTask;
+    }
+
+    public Task SendPasswordResetEmailAsync(
+        string email,
+        string resetLink,
+        CancellationToken cancellationToken = default)
+    {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine();
+        Console.WriteLine(Separator);
+        Console.WriteLine("PASSWORD RESET");
+        Console.WriteLine(Separator);
+        Console.ResetColor();
+
+        Console.WriteLine($"To: {email}");
+        Console.WriteLine($"Subject: Password Reset - Healthcare Clinic");
+        Console.WriteLine();
+        Console.WriteLine("A password reset has been requested.");
+        Console.WriteLine($"Reset link: {resetLink}");
+        Console.WriteLine("This link will expire in 60 minutes.");
         Console.WriteLine();
         Console.WriteLine(Separator);
         Console.WriteLine();

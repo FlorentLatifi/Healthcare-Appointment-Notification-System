@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Common;
+using Healthcare.Domain.Common;
 using System.Text.RegularExpressions;
 
 namespace Healthcare.Domain.ValueObjects;
@@ -7,7 +7,6 @@ namespace Healthcare.Domain.ValueObjects;
 /// Represents a valid phone number as a value object.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Value Object Pattern
 /// 
 /// Supports international format: +[country code][number]
 /// Example: +38349123456 (Kosovo), +1234567890 (US)

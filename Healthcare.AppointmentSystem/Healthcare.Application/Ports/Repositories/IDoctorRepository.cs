@@ -1,4 +1,5 @@
-﻿using Healthcare.Domain.Entities;
+﻿using Healthcare.Application.Common;
+using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 
 namespace Healthcare.Application.Ports.Repositories;
@@ -24,14 +25,29 @@ public interface IDoctorRepository
     Task<IEnumerable<Doctor>> GetAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets a paginated page of all doctors with total count (DB-level pagination).
+    /// </summary>
+    Task<PagedResult<Doctor>> GetPagedAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets all active doctors.
     /// </summary>
     Task<IEnumerable<Doctor>> GetActiveAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets a paginated page of active doctors with total count (DB-level pagination).
+    /// </summary>
+    Task<PagedResult<Doctor>> GetPagedActiveAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets all doctors accepting new patients.
     /// </summary>
     Task<IEnumerable<Doctor>> GetAcceptingPatientsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a paginated page of doctors accepting patients with total count (DB-level pagination).
+    /// </summary>
+    Task<PagedResult<Doctor>> GetPagedAcceptingPatientsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets all doctors with a specific specialty.

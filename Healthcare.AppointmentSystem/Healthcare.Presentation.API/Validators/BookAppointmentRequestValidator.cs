@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Healthcare.Presentation.API.Requests;
 
 namespace Healthcare.Presentation.API.Validators;
@@ -7,7 +7,6 @@ namespace Healthcare.Presentation.API.Validators;
 /// Validator for BookAppointmentRequest.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Strategy Pattern (FluentValidation)
 /// 
 /// Validation Rules:
 /// - PatientId must be positive

@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -9,7 +9,6 @@ namespace Healthcare.Application.Ports.Repositories;
 /// Repository interface for Payment aggregate.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Repository Pattern
 /// 
 /// Abstracts data access for payments, following the same pattern
 /// as other repositories in the system.

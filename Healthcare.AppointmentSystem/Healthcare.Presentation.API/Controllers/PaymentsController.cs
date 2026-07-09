@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using Healthcare.Application.Commands.ProcessPayment;
 using Healthcare.Application.Commands.RefundPayment;
 using Healthcare.Application.Common;
@@ -17,7 +17,6 @@ namespace Healthcare.Presentation.API.Controllers;
 /// Controller for managing payments.
 /// </summary>
 /// <remarks>
-/// Design Pattern: MVC Pattern + REST Architecture
 /// 
 /// Payment Flow (2-step process):
 /// 
@@ -101,73 +100,73 @@ public sealed class PaymentsController : ControllerBase
         var appointment = await _unitOfWork.Appointments
                 .GetByIdAsync(request.AppointmentId, cancellationToken);
 
-            if (appointment == null)
-            {
-                _logger.LogWarning("Appointment {AppointmentId} not found", request.AppointmentId);
-                return NotFound(ApiResponse<object>.ErrorResponse(
-                    $"Appointment with ID {request.AppointmentId} not found",
-                    "Appointment not found"));
-            }
+        if (appointment == null)
+        {
+            _logger.LogWarning("Appointment {AppointmentId} not found", request.AppointmentId);
+            return NotFound(ApiResponse<object>.ErrorResponse(
+                $"Appointment with ID {request.AppointmentId} not found",
+                "Appointment not found"));
+        }
 
-            // 2. Check if payment already exists
-            var existingPayment = await _unitOfWork.Payments
-                .GetByAppointmentIdAsync(request.AppointmentId, cancellationToken);
+        // 2. Check if payment already exists
+        var existingPayment = await _unitOfWork.Payments
+            .GetByAppointmentIdAsync(request.AppointmentId, cancellationToken);
 
-            if (existingPayment != null &&
-                existingPayment.Status == Domain.Enums.PaymentStatus.Succeeded)
-            {
-                _logger.LogWarning("Payment already processed for appointment {AppointmentId}",
-                    request.AppointmentId);
-                return BadRequest(ApiResponse<object>.ErrorResponse(
-                    "Payment has already been processed for this appointment",
-                    "Payment already exists"));
-            }
+        if (existingPayment != null &&
+            existingPayment.Status == Domain.Enums.PaymentStatus.Succeeded)
+        {
+            _logger.LogWarning("Payment already processed for appointment {AppointmentId}",
+                request.AppointmentId);
+            return BadRequest(ApiResponse<object>.ErrorResponse(
+                "Payment has already been processed for this appointment",
+                "Payment already exists"));
+        }
 
-            // 3. Create payment intent with gateway
-            var description = request.Description
-                ?? $"Consultation fee - {appointment.Doctor.FullName} - {appointment.ScheduledTime.ToDisplayString()}";
+        // 3. Create payment intent with gateway
+        var description = request.Description
+            ?? $"Consultation fee - {appointment.Doctor.FullName} - {appointment.ScheduledTime.ToDisplayString()}";
 
-            var metadata = new Dictionary<string, string>
+        var metadata = new Dictionary<string, string>
             {
                 { "appointment_id", appointment.Id.ToString() },
                 { "patient_id", appointment.PatientId.ToString() },
                 { "doctor_id", appointment.DoctorId.ToString() }
             };
 
-            var result = await _paymentGateway.CreatePaymentIntentAsync(
-                appointment.ConsultationFee.Amount,
-                appointment.ConsultationFee.Currency,
-                description,
-                metadata,
-                cancellationToken);
+        var result = await _paymentGateway.CreatePaymentIntentAsync(
+            appointment.ConsultationFee.Amount,
+            appointment.ConsultationFee.Currency,
+            description,
+            metadata,
+            cancellationToken);
 
-            if (result.IsFailure)
-            {
-                _logger.LogError("Failed to create payment intent: {Error}", result.Error);
-                return BadRequest(ApiResponse<object>.ErrorResponse(
-                    result.Error,
-                    "Failed to create payment intent"));
-            }
+        if (result.IsFailure)
+        {
+            _logger.LogError("Failed to create payment intent: {Error}", result.Error);
+            return BadRequest(ApiResponse<object>.ErrorResponse(
+                result.Error,
+                "Failed to create payment intent"));
+        }
 
-            var paymentIntent = result.Value;
+        var paymentIntent = result.Value;
 
-            _logger.LogInformation(
-                "Payment intent created successfully: {PaymentIntentId} for appointment {AppointmentId}",
-                paymentIntent.PaymentIntentId, request.AppointmentId);
+        _logger.LogInformation(
+            "Payment intent created successfully: {PaymentIntentId} for appointment {AppointmentId}",
+            paymentIntent.PaymentIntentId, request.AppointmentId);
 
-            // 4. Return client secret (frontend needs this for Stripe.js)
-            var response = new
-            {
-                paymentIntentId = paymentIntent.PaymentIntentId,
-                clientSecret = paymentIntent.ClientSecret,
-                amount = appointment.ConsultationFee.Amount,
-                currency = appointment.ConsultationFee.Currency,
-                appointmentId = appointment.Id
-            };
+        // 4. Return client secret (frontend needs this for Stripe.js)
+        var response = new
+        {
+            paymentIntentId = paymentIntent.PaymentIntentId,
+            clientSecret = paymentIntent.ClientSecret,
+            amount = appointment.ConsultationFee.Amount,
+            currency = appointment.ConsultationFee.Currency,
+            appointmentId = appointment.Id
+        };
 
-            return Ok(ApiResponse<object>.SuccessResponse(
-                response,
-                "Payment intent created. Use client secret to complete payment on frontend."));
+        return Ok(ApiResponse<object>.SuccessResponse(
+            response,
+            "Payment intent created. Use client secret to complete payment on frontend."));
     }
 
     /// <summary>

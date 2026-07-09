@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Ports.Authentication;
+using Healthcare.Application.Ports.Authentication;
 
 namespace Healthcare.Adapters.Authentication;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Adapters.Authentication;
 /// BCrypt implementation of password hashing.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Adapter Pattern
 /// 
 /// Uses BCrypt for secure password hashing.
 /// Can be replaced with another algorithm without touching Application layer.
@@ -21,5 +20,10 @@ public sealed class BcryptPasswordHasher : IPasswordHasher
     public bool VerifyPassword(string password, string hash)
     {
         return BCrypt.Net.BCrypt.Verify(password, hash);
+    }
+
+    public bool RequiresRehash(string passwordHash)
+    {
+        return false;
     }
 }

@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Ports.Pricing;
+using Healthcare.Domain.Ports.Pricing;
 
 namespace Healthcare.Application.Strategies.Pricing;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Application.Strategies.Pricing;
 /// Standard pricing — patient pays the doctor's full base fee.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Strategy Pattern (Behavioral)
 /// 
 /// This is the DEFAULT strategy.
 /// No discounts, no premiums — just the base consultation fee.

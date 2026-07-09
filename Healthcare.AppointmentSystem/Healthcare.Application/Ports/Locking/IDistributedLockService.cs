@@ -1,10 +1,9 @@
-﻿namespace Healthcare.Application.Ports.Locking;
+namespace Healthcare.Application.Ports.Locking;
 
 /// <summary>
 /// Distributed lock service for preventing race conditions.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Adapter Pattern
 /// 
 /// This PORT abstracts distributed locking mechanism.
 /// The ADAPTER can be implemented with:

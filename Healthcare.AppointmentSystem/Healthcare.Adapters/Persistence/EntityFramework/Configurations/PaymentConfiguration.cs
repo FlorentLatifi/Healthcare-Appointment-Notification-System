@@ -22,7 +22,8 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.HasOne(p => p.Appointment)
             .WithMany()
             .HasForeignKey(p => p.AppointmentId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
 
         // Value Object: Money (Amount)
         builder.OwnsOne(p => p.Amount, money =>
@@ -76,6 +77,10 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(p => p.FailureReason)
             .HasMaxLength(500)
             .IsRequired(false);
+
+        builder.Property<byte[]>("RowVersion")
+            .IsRowVersion()
+            .IsConcurrencyToken();
 
         builder.Property(p => p.CreatedAt)
             .IsRequired();

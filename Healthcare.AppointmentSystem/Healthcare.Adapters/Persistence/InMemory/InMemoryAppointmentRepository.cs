@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
@@ -10,7 +10,6 @@ namespace Healthcare.Adapters.Persistence.InMemory;
 /// In-memory implementation of IAppointmentRepository.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Adapter Pattern + Repository Pattern
 /// 
 /// This adapter:
 /// - Implements the PORT (IAppointmentRepository)

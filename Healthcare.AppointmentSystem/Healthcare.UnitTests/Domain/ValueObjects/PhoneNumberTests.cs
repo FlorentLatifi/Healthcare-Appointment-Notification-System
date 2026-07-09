@@ -90,7 +90,7 @@ public class PhoneNumberTests
             .WithMessage($"*{invalidPhone}*");
     }
 
-    
+
     #endregion
 
     #region Equality Tests

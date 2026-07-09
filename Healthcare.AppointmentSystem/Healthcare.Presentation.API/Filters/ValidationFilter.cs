@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Healthcare.Presentation.API.Responses;
 
@@ -8,7 +8,6 @@ namespace Healthcare.Presentation.API.Filters;
 /// Action filter for automatic model validation.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Filter Pattern (Decorator-like)
 /// 
 /// This filter:
 /// - Runs before controller action

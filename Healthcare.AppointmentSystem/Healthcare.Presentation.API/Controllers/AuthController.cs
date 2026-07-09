@@ -1,5 +1,8 @@
 using Asp.Versioning;
 using Healthcare.Adapters.Authentication;
+using Healthcare.Application.Commands.ForgotPassword;
+using Healthcare.Application.Commands.ResetPassword;
+using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
@@ -22,17 +25,26 @@ public sealed class AuthController : ControllerBase
     private readonly IUnitOfWork _unitOfWork;
     private readonly JwtSettings _jwtSettings;
     private readonly ILogger<AuthController> _logger;
+    private readonly ICommandHandler<ForgotPasswordCommand, Result> _forgotPasswordHandler;
+    private readonly ICommandHandler<ResetPasswordCommand, Result> _resetPasswordHandler;
+    private readonly IConfiguration _configuration;
 
     public AuthController(
         IAuthenticationService authService,
         IUnitOfWork unitOfWork,
         JwtSettings jwtSettings,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger,
+        ICommandHandler<ForgotPasswordCommand, Result> forgotPasswordHandler,
+        ICommandHandler<ResetPasswordCommand, Result> resetPasswordHandler,
+        IConfiguration configuration)
     {
         _authService = authService;
         _unitOfWork = unitOfWork;
         _jwtSettings = jwtSettings;
         _logger = logger;
+        _forgotPasswordHandler = forgotPasswordHandler;
+        _resetPasswordHandler = resetPasswordHandler;
+        _configuration = configuration;
     }
 
     private static readonly CookieOptions RefreshCookieOptions = new()
@@ -80,6 +92,67 @@ public sealed class AuthController : ControllerBase
             Username = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "",
             Role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? ""
         };
+    }
+
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting("AuthPolicy")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ForgotPassword(
+        [FromBody] ForgotPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var baseUrl = _configuration.GetValue<string>("App:ResetPasswordBaseUrl")
+            ?? $"{Request.Scheme}://{Request.Host}/reset-password";
+
+        var command = new ForgotPasswordCommand
+        {
+            Email = request.Email,
+            ResetLinkBaseUrl = baseUrl
+        };
+
+        var result = await _forgotPasswordHandler.HandleAsync(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return BadRequest(ApiResponse.ErrorResponse(
+                result.Error,
+                "Password reset request failed"));
+        }
+
+        _logger.LogInformation("Password reset email sent to {Email}", request.Email);
+        return Ok(ApiResponse.SuccessResponse(
+            "If the email address is registered, a password reset link has been sent."));
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting("AuthPolicy")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPassword(
+        [FromBody] ResetPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new ResetPasswordCommand
+        {
+            Email = request.Email,
+            Token = request.Token,
+            NewPassword = request.NewPassword
+        };
+
+        var result = await _resetPasswordHandler.HandleAsync(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return BadRequest(ApiResponse.ErrorResponse(
+                result.Error,
+                "Password reset failed"));
+        }
+
+        _logger.LogInformation("Password reset successful for {Email}", request.Email);
+        return Ok(ApiResponse.SuccessResponse("Password has been reset successfully."));
     }
 
     [HttpPost("register")]

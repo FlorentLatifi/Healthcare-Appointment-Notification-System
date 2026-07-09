@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Common;
+using Healthcare.Domain.Common;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.Events;
 using Healthcare.Domain.ValueObjects;
@@ -9,7 +9,6 @@ namespace Healthcare.Domain.Entities;
 /// Represents a payment transaction for an appointment.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Aggregate Root + State Machine
 /// 
 /// State Transitions:
 /// Pending → Succeeded, Failed

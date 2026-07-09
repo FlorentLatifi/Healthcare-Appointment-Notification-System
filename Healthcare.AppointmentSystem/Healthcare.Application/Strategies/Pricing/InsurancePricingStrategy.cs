@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Ports.Pricing;
+using Healthcare.Domain.Ports.Pricing;
 
 namespace Healthcare.Application.Strategies.Pricing;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Application.Strategies.Pricing;
 /// Insurance pricing — patient pays a reduced fee (insurance covers the rest).
 /// </summary>
 /// <remarks>
-/// Design Pattern: Strategy Pattern (Behavioral)
 /// 
 /// The discount percentage is configurable via constructor.
 /// Default: 30% discount (insurance covers 30% of the base fee).

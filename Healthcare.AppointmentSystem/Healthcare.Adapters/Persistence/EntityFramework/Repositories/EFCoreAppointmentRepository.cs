@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Queries.Analytics;
 using Healthcare.Domain.Entities;
@@ -11,7 +11,6 @@ namespace Healthcare.Adapters.Persistence.EntityFramework.Repositories;
 /// Entity Framework Core implementation of IAppointmentRepository.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Repository Pattern + Adapter Pattern
 /// 
 /// This adapter:
 /// - Implements the PORT (IAppointmentRepository) defined in Application layer

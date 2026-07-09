@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Entities;
+using Healthcare.Domain.Entities;
 using Healthcare.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -9,7 +9,6 @@ namespace Healthcare.Adapters.Persistence.EntityFramework.Configurations;
 /// Entity Framework configuration for Patient entity.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Fluent API Configuration
 /// 
 /// This configuration:
 /// - Maps Patient entity to database table
@@ -70,6 +69,10 @@ public class PatientConfiguration : IEntityTypeConfiguration<Patient>
         builder.Property(p => p.IsActive)
             .IsRequired()
             .HasDefaultValue(true);
+
+        builder.Property(p => p.IsAnonymized)
+            .IsRequired()
+            .HasDefaultValue(false);
 
         builder.Property(p => p.CreatedAt)
             .IsRequired();

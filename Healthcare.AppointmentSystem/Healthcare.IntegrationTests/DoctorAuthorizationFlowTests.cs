@@ -14,10 +14,15 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
         ClearAuthToken();
         var payload = new
         {
-            FirstName = "No", LastName = "Auth",
-            Email = "no.auth@clinic.com", PhoneNumber = "+38348111111",
-            LicenseNumber = "MED-NA-001", Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m, ConsultationFeeCurrency = "USD", YearsOfExperience = 5
+            FirstName = "No",
+            LastName = "Auth",
+            Email = "no.auth@clinic.com",
+            PhoneNumber = "+38348111111",
+            LicenseNumber = "MED-NA-001",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 5
         };
         var response = await Client.PostAsJsonAsync("/api/v1/doctors", payload);
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -31,10 +36,15 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
         var payload = new
         {
-            FirstName = "Patient", LastName = "CreateDoc",
-            Email = $"pat.create.doc.{suffix}@clinic.com", PhoneNumber = "+38348222222",
-            LicenseNumber = "MED-PC-001", Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m, ConsultationFeeCurrency = "USD", YearsOfExperience = 5
+            FirstName = "Patient",
+            LastName = "CreateDoc",
+            Email = $"pat.create.doc.{suffix}@clinic.com",
+            PhoneNumber = "+38348222222",
+            LicenseNumber = "MED-PC-001",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 5
         };
         var response = await Client.PostAsJsonAsync("/api/v1/doctors", payload);
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -48,10 +58,15 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
         var payload = new
         {
-            FirstName = "Doctor", LastName = "CreateDoc",
-            Email = $"doc.create.doc2.{suffix}@clinic.com", PhoneNumber = "+38348333333",
-            LicenseNumber = "MED-DC-001", Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m, ConsultationFeeCurrency = "USD", YearsOfExperience = 5
+            FirstName = "Doctor",
+            LastName = "CreateDoc",
+            Email = $"doc.create.doc2.{suffix}@clinic.com",
+            PhoneNumber = "+38348333333",
+            LicenseNumber = "MED-DC-001",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 5
         };
         var response = await Client.PostAsJsonAsync("/api/v1/doctors", payload);
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -65,10 +80,15 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
         var payload = new
         {
-            FirstName = "Admin", LastName = "CreateDoc",
-            Email = $"admin.create.doc.{suffix}@clinic.com", PhoneNumber = "+38348444444",
-            LicenseNumber = $"MED-AC-{suffix}", Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m, ConsultationFeeCurrency = "USD", YearsOfExperience = 5
+            FirstName = "Admin",
+            LastName = "CreateDoc",
+            Email = $"admin.create.doc.{suffix}@clinic.com",
+            PhoneNumber = "+38348444444",
+            LicenseNumber = $"MED-AC-{suffix}",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 5
         };
         var response = await Client.PostAsJsonAsync("/api/v1/doctors", payload);
         response.StatusCode.Should().Be(HttpStatusCode.Created);

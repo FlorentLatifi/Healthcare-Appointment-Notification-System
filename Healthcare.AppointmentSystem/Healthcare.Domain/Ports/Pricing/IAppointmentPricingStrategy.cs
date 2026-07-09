@@ -1,10 +1,9 @@
-﻿namespace Healthcare.Domain.Ports.Pricing;
+namespace Healthcare.Domain.Ports.Pricing;
 
 /// <summary>
 /// Strategy interface for calculating appointment pricing.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Strategy Pattern (Behavioral)
 /// 
 /// WHY: Different appointment types require different pricing rules.
 ///   - Standard consultation → base fee

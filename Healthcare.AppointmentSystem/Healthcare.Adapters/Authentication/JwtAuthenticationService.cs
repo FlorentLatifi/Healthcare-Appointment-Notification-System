@@ -19,6 +19,7 @@ public sealed class JwtAuthenticationService : IAuthenticationService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IBreachedPasswordChecker _breachedPasswordChecker;
     private readonly JwtSettings _jwtSettings;
     private readonly ILogger<JwtAuthenticationService> _logger;
     private readonly IDatabase? _redisDb;
@@ -27,16 +28,19 @@ public sealed class JwtAuthenticationService : IAuthenticationService
     private const string RefreshTokenKeyPrefix = "refresh_token:";
     private const string ConsumedTokenKeyPrefix = "refresh_token:consumed:";
     private const string FamilyRevokedKeyPrefix = "refresh_token:family:revoked:";
+    private const string ResetTokenKeyPrefix = "reset_token:";
 
     public JwtAuthenticationService(
         IUnitOfWork unitOfWork,
         IPasswordHasher passwordHasher,
+        IBreachedPasswordChecker breachedPasswordChecker,
         JwtSettings jwtSettings,
         ILogger<JwtAuthenticationService> logger,
         IConnectionMultiplexer? redis = null)
     {
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
+        _breachedPasswordChecker = breachedPasswordChecker;
         _jwtSettings = jwtSettings;
         _logger = logger;
         _redisDb = redis?.GetDatabase();
@@ -67,6 +71,13 @@ public sealed class JwtAuthenticationService : IAuthenticationService
             if (!Enum.TryParse<UserRole>(role, true, out var userRole))
             {
                 return Result<int>.Failure($"Invalid role: {role}. Valid roles: Patient, Doctor, Admin");
+            }
+
+            var isBreached = await _breachedPasswordChecker.IsPasswordBreachedAsync(password, cancellationToken);
+            if (isBreached)
+            {
+                _logger.LogWarning("Registration rejected for {Username}: password has been exposed in a data breach", username);
+                return Result<int>.Failure("Password has been exposed in a data breach and cannot be used. Please choose a different password.");
             }
 
             var emailVo = Email.Create(email);
@@ -111,6 +122,15 @@ public sealed class JwtAuthenticationService : IAuthenticationService
             {
                 _logger.LogWarning("Login failed: User {Username} is deactivated", username);
                 return Result<LoginResult>.Failure("Account is deactivated.");
+            }
+
+            if (_passwordHasher.RequiresRehash(user.PasswordHash))
+            {
+                var newHash = _passwordHasher.HashPassword(password);
+                user.SetPasswordHash(newHash);
+                await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Password hash upgraded for user {Username}", username);
             }
 
             var familyId = Guid.NewGuid();
@@ -295,6 +315,96 @@ public sealed class JwtAuthenticationService : IAuthenticationService
             _logger.LogError(ex, "Failed to revoke all sessions for user {UserId}", userId);
             throw;
         }
+    }
+
+    public async Task<string> GeneratePasswordResetTokenAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var resetToken = GenerateRefreshTokenValue();
+        var tokenHash = HashToken(resetToken);
+        var ttl = TimeSpan.FromMinutes(_jwtSettings.ResetTokenExpirationInMinutes);
+        var value = userId.ToString();
+
+        if (_redisDb != null)
+        {
+            try
+            {
+                await _redisDb.StringSetAsync(
+                    $"{ResetTokenKeyPrefix}{tokenHash}",
+                    value,
+                    ttl);
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for reset-token storage");
+                throw;
+            }
+            catch (RedisTimeoutException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for reset-token storage");
+                throw;
+            }
+        }
+        else
+        {
+            _memoryStore.TryAdd($"{ResetTokenKeyPrefix}{tokenHash}", value);
+            _ = ScheduleMemoryCleanup($"{ResetTokenKeyPrefix}{tokenHash}", ttl);
+        }
+
+        _logger.LogInformation("Password reset token generated for user {UserId}", userId);
+        return resetToken;
+    }
+
+    public async Task<Result> ValidateAndConsumePasswordResetTokenAsync(int userId, string token, CancellationToken cancellationToken = default)
+    {
+        var tokenHash = HashToken(token);
+
+        if (_redisDb != null)
+        {
+            try
+            {
+                var script = @"
+                    local val = redis.call('GET', KEYS[1])
+                    if val and tonumber(val) == tonumber(KEYS[2]) then
+                        redis.call('DEL', KEYS[1])
+                        return 1
+                    end
+                    return nil";
+
+                var result = await _redisDb.ScriptEvaluateAsync(
+                    script,
+                    new RedisKey[] { $"{ResetTokenKeyPrefix}{tokenHash}", userId.ToString() });
+
+                if (!result.IsNull)
+                {
+                    _logger.LogInformation("Password reset token consumed for user {UserId}", userId);
+                    return Result.Success();
+                }
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for reset-token validation");
+                throw;
+            }
+            catch (RedisTimeoutException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for reset-token validation");
+                throw;
+            }
+        }
+        else
+        {
+            var key = $"{ResetTokenKeyPrefix}{tokenHash}";
+            if (_memoryStore.TryGetValue(key, out var storedUserId) &&
+                storedUserId == userId.ToString())
+            {
+                _memoryStore.TryRemove(key, out _);
+                _logger.LogInformation("Password reset token consumed for user {UserId}", userId);
+                return Result.Success();
+            }
+        }
+
+        _logger.LogWarning("Invalid or expired reset token for user {UserId}", userId);
+        return Result.Failure("Invalid or expired reset token.");
     }
 
     private string GenerateJwtToken(User user)

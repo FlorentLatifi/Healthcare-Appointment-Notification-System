@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Ports.Common;
+using Healthcare.Application.Ports.Common;
 
 namespace Healthcare.Adapters.Common;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Adapters.Common;
 /// Fake implementation of ITimeProvider for testing.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Test Double (Fake) + Adapter Pattern
 /// 
 /// This allows complete control over time in unit tests.
 /// 

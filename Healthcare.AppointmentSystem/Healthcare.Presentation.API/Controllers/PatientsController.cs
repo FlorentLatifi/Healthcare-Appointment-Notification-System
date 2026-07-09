@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Healthcare.Application.Commands.AnonymizePatient;
 using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
@@ -36,6 +37,7 @@ namespace Healthcare.Presentation.API.Controllers;
 public sealed class PatientsController : ControllerBase
 {
     private readonly ICommandHandler<CreatePatientCommand, Result<int>> _createPatientHandler;
+    private readonly ICommandHandler<AnonymizePatientCommand, Result> _anonymizePatientHandler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IStringLocalizer<Messages> _localizer;
     private readonly ILogger<PatientsController> _logger;
@@ -43,12 +45,14 @@ public sealed class PatientsController : ControllerBase
 
     public PatientsController(
         ICommandHandler<CreatePatientCommand, Result<int>> createPatientHandler,
+        ICommandHandler<AnonymizePatientCommand, Result> anonymizePatientHandler,
         IUnitOfWork unitOfWork,
         IStringLocalizer<Messages> localizer,
         ILogger<PatientsController> logger,
         IDomainEventDispatcher eventDispatcher)
     {
         _createPatientHandler = createPatientHandler;
+        _anonymizePatientHandler = anonymizePatientHandler;
         _unitOfWork = unitOfWork;
         _localizer = localizer;
         _logger = logger;
@@ -364,6 +368,42 @@ public sealed class PatientsController : ControllerBase
     }
 
     /// <summary>
+    /// Anonymizes a patient record — irreversibly replaces all PII while
+    /// preserving the primary key for foreign-key integrity.
+    /// </summary>
+    /// <param name="id">The patient ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <response code="200">Patient anonymized successfully.</response>
+    /// <response code="400">Patient is already anonymized.</response>
+    /// <response code="403">Forbidden — Admin only.</response>
+    /// <response code="404">Patient not found.</response>
+    [HttpPost("{id}/anonymize")]
+    [Authorize(Roles = AppRoles.Admin)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AnonymizePatient(int id, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Anonymizing patient {PatientId}", id);
+
+        var command = new AnonymizePatientCommand { PatientId = id };
+        var result = await _anonymizePatientHandler.HandleAsync(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            _logger.LogWarning("Anonymization failed for patient {PatientId}: {Error}", id, result.Error);
+
+            return result.Error.Contains("not found", StringComparison.OrdinalIgnoreCase)
+                ? NotFound(ApiResponse.ErrorResponse(result.Error, "Patient not found"))
+                : BadRequest(ApiResponse.ErrorResponse(result.Error, "Anonymization failed"));
+        }
+
+        _logger.LogInformation("Patient {PatientId} anonymized successfully", id);
+        return Ok(ApiResponse.SuccessResponse("Patient data anonymized successfully."));
+    }
+
+    /// <summary>
     /// Maps Patient entity to PatientDto.
     /// </summary>
     private static PatientDto MapToDto(Domain.Entities.Patient patient)
@@ -381,6 +421,7 @@ public sealed class PatientsController : ControllerBase
             Gender = patient.Gender.ToString(),
             Address = patient.Address.GetFullAddress(),
             IsActive = patient.IsActive,
+            IsAnonymized = patient.IsAnonymized,
             EmailEnabled = patient.NotificationPreferences.EmailEnabled,
             SmsEnabled = patient.NotificationPreferences.SmsEnabled,
             CreatedAt = patient.CreatedAt

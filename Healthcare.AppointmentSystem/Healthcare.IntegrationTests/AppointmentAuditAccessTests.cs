@@ -107,10 +107,15 @@ public sealed class AppointmentAuditAccessTests : IntegrationTestBase
 
         var docPayload = new
         {
-            FirstName = "AuditTest", LastName = $"Doctor_{suffix}",
-            Email = $"audit.doctor.{suffix}@clinic.com", PhoneNumber = $"+38348{suffix}00",
-            LicenseNumber = $"MED-AT-{suffix}", Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m, ConsultationFeeCurrency = "USD", YearsOfExperience = 10
+            FirstName = "AuditTest",
+            LastName = $"Doctor_{suffix}",
+            Email = $"audit.doctor.{suffix}@clinic.com",
+            PhoneNumber = $"+38348{suffix}00",
+            LicenseNumber = $"MED-AT-{suffix}",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 10
         };
         var docResponse = await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
         docResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -125,10 +130,17 @@ public sealed class AppointmentAuditAccessTests : IntegrationTestBase
 
         var patPayload = new
         {
-            FirstName = "AuditTest", LastName = $"Patient_{suffix}",
-            Email = $"audit.patient.{suffix}@test.com", PhoneNumber = $"+38349{suffix}00",
-            DateOfBirth = "1990-01-01", Gender = "Male",
-            Street = "10 St", City = "City", State = "State", PostalCode = "10000", Country = "Country"
+            FirstName = "AuditTest",
+            LastName = $"Patient_{suffix}",
+            Email = $"audit.patient.{suffix}@test.com",
+            PhoneNumber = $"+38349{suffix}00",
+            DateOfBirth = "1990-01-01",
+            Gender = "Male",
+            Street = "10 St",
+            City = "City",
+            State = "State",
+            PostalCode = "10000",
+            Country = "Country"
         };
         var patResponse = await Client.PostAsJsonAsync("/api/v1/patients", patPayload);
         patResponse.StatusCode.Should().Be(HttpStatusCode.Created);

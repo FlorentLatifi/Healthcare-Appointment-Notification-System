@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Common;
+using Healthcare.Domain.Common;
 using System.Text.RegularExpressions;
 
 namespace Healthcare.Domain.ValueObjects;
@@ -7,7 +7,6 @@ namespace Healthcare.Domain.ValueObjects;
 /// Represents a valid email address as a value object.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Value Object Pattern
 /// 
 /// Encapsulates email validation logic and ensures that invalid emails
 /// cannot exist in the domain. This is "always valid" pattern - once

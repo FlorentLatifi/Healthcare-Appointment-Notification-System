@@ -1,4 +1,4 @@
-﻿using Healthcare.Adapters.Persistence.EntityFramework;
+using Healthcare.Adapters.Persistence.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -8,7 +8,6 @@ namespace Healthcare.Presentation.API.HealthChecks;
 /// Health check for database connectivity.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Health Check Pattern
 /// 
 /// This checks:
 /// - Database connection is alive

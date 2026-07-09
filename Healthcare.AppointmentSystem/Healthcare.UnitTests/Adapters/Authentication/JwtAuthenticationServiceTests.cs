@@ -18,6 +18,7 @@ public sealed class JwtAuthenticationServiceTests
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IUserRepository> _userRepoMock;
     private readonly Mock<IPasswordHasher> _passwordHasherMock;
+    private readonly Mock<IBreachedPasswordChecker> _breachedPasswordCheckerMock;
     private readonly Mock<ILogger<JwtAuthenticationService>> _loggerMock;
     private readonly JwtSettings _jwtSettings;
     private readonly JwtAuthenticationService _service;
@@ -27,6 +28,10 @@ public sealed class JwtAuthenticationServiceTests
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _userRepoMock = new Mock<IUserRepository>();
         _passwordHasherMock = new Mock<IPasswordHasher>();
+        _breachedPasswordCheckerMock = new Mock<IBreachedPasswordChecker>();
+        _breachedPasswordCheckerMock
+            .Setup(x => x.IsPasswordBreachedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
         _loggerMock = new Mock<ILogger<JwtAuthenticationService>>();
 
         _unitOfWorkMock.Setup(u => u.Users).Returns(_userRepoMock.Object);
@@ -43,6 +48,7 @@ public sealed class JwtAuthenticationServiceTests
         _service = new JwtAuthenticationService(
             _unitOfWorkMock.Object,
             _passwordHasherMock.Object,
+            _breachedPasswordCheckerMock.Object,
             _jwtSettings,
             _loggerMock.Object,
             redis: null);
@@ -318,6 +324,7 @@ public sealed class JwtAuthenticationServiceTests
         var serviceWithRedis = new JwtAuthenticationService(
             _unitOfWorkMock.Object,
             _passwordHasherMock.Object,
+            _breachedPasswordCheckerMock.Object,
             _jwtSettings,
             _loggerMock.Object,
             redisMock.Object);
@@ -360,6 +367,7 @@ public sealed class JwtAuthenticationServiceTests
         var serviceWithRedis = new JwtAuthenticationService(
             _unitOfWorkMock.Object,
             _passwordHasherMock.Object,
+            _breachedPasswordCheckerMock.Object,
             _jwtSettings,
             _loggerMock.Object,
             redisMock.Object);
@@ -393,6 +401,7 @@ public sealed class JwtAuthenticationServiceTests
         var serviceWithRedis = new JwtAuthenticationService(
             _unitOfWorkMock.Object,
             _passwordHasherMock.Object,
+            _breachedPasswordCheckerMock.Object,
             _jwtSettings,
             _loggerMock.Object,
             redisMock.Object);

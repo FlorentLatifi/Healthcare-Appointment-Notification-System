@@ -1,10 +1,9 @@
-﻿namespace Healthcare.Application.Ports.Common;
+namespace Healthcare.Application.Ports.Common;
 
 /// <summary>
 /// Provides access to the current date and time.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Adapter Pattern
 /// 
 /// This abstracts DateTime.UtcNow to make code testable.
 /// 

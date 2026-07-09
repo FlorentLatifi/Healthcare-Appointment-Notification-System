@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
 
 namespace Healthcare.Application.Queries.GetAppointment;
@@ -7,7 +7,6 @@ namespace Healthcare.Application.Queries.GetAppointment;
 /// Query to get a single appointment by ID.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Query Pattern + CQRS
 /// 
 /// Queries are read-only operations that return data without modifying state.
 /// They are optimized for reading and can bypass domain entities if needed.

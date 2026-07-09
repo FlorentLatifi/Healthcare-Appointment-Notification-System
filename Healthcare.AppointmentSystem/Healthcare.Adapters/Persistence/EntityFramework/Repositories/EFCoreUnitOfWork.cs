@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Ports.Repositories;
+using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -8,7 +8,6 @@ namespace Healthcare.Adapters.Persistence.EntityFramework.Repositories;
 /// Entity Framework Core implementation of Unit of Work pattern.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Unit of Work Pattern
 /// 
 /// EF Core DbContext already implements Unit of Work pattern:
 /// - Tracks changes to entities

@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Payments;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -9,7 +9,6 @@ namespace Healthcare.Adapters.Payments;
 /// Stripe implementation of IPaymentGateway.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Adapter Pattern
 /// 
 /// This ADAPTER wraps the Stripe SDK and implements our PORT (IPaymentGateway).
 /// 

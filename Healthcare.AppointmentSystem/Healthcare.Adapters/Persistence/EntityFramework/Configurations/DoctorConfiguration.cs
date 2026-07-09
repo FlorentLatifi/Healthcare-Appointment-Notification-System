@@ -58,6 +58,10 @@ public class DoctorConfiguration : IEntityTypeConfiguration<Doctor>
         builder.Property(d => d.YearsOfExperience)
             .IsRequired();
 
+        builder.Property<byte[]>("RowVersion")
+            .IsRowVersion()
+            .IsConcurrencyToken();
+
         builder.Property(d => d.CreatedAt)
             .IsRequired();
 

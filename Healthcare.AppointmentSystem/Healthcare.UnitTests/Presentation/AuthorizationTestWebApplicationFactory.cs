@@ -3,6 +3,7 @@ using Healthcare.Adapters.Caching;
 using Healthcare.Adapters.Locking;
 using Healthcare.Adapters.Payments;
 using Healthcare.Adapters.Persistence.InMemory;
+using Healthcare.Application.Ports.Authentication;
 using Healthcare.Application.Ports.Caching;
 using Healthcare.Application.Ports.Locking;
 using Healthcare.Application.Ports.Payments;
@@ -39,6 +40,7 @@ public sealed class AuthorizationTestWebApplicationFactory : WebApplicationFacto
         SetEnv("ConnectionStrings__DefaultConnection", "Server=.;Database=AuthTest_Unused;Trusted_Connection=true;");
         SetEnv("Redis__ConnectionString", "localhost:6379");
         SetEnv("AllowedOrigins__0", "https://example.com");
+        SetEnv("Authentication__BreachedPasswordCheckEnabled", "false");
     }
 
     private static void SetEnv(string key, string value)
@@ -75,6 +77,13 @@ public sealed class AuthorizationTestWebApplicationFactory : WebApplicationFacto
             services.RemoveAll<IAuditLogRepository>();
             services.RemoveAll<IUserSessionRepository>();
             services.RemoveAll<IUnitOfWork>();
+
+            services.RemoveAll<IBreachedPasswordChecker>();
+            var breachedCheckerMock = new Mock<IBreachedPasswordChecker>();
+            breachedCheckerMock
+                .Setup(x => x.IsPasswordBreachedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
+            services.AddScoped<IBreachedPasswordChecker>(_ => breachedCheckerMock.Object);
 
             services.RemoveAll<IConnectionMultiplexer>();
             services.RemoveAll<IDistributedLockService>();
@@ -117,6 +126,7 @@ public sealed class AuthorizationTestWebApplicationFactory : WebApplicationFacto
                 "RateLimiting__GlobalPermitLimit", "RateLimiting__AuthPermitLimit", "RateLimiting__WindowMinutes",
                 "ConnectionStrings__DefaultConnection", "Redis__ConnectionString",
                 "AllowedOrigins__0",
+                "Authentication__BreachedPasswordCheckEnabled",
             })
             {
                 Environment.SetEnvironmentVariable(key, null);

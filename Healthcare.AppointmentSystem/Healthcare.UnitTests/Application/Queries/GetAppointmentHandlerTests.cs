@@ -81,7 +81,7 @@ public class GetAppointmentHandlerTests
     {
         var futureDate = DateTime.Now.AddDays(7).Date;
 
-  
+
         while (futureDate.DayOfWeek == DayOfWeek.Saturday ||
                futureDate.DayOfWeek == DayOfWeek.Sunday)
         {

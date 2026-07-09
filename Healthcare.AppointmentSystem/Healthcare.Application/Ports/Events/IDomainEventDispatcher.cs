@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Common;
+using Healthcare.Domain.Common;
 
 namespace Healthcare.Application.Ports.Events;
 
@@ -6,7 +6,6 @@ namespace Healthcare.Application.Ports.Events;
 /// Service for dispatching domain events to their handlers.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Mediator Pattern + Observer Pattern
 /// 
 /// The dispatcher acts as a mediator between domain entities (which raise events)
 /// and event handlers (which react to events). This decouples the domain from

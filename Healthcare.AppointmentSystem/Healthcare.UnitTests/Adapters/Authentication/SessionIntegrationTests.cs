@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Healthcare.Adapters.Authentication;
 using Healthcare.Adapters.Persistence.InMemory;
+using Healthcare.Application.Ports.Authentication;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -21,6 +22,7 @@ public sealed class SessionIntegrationTests
     private readonly InMemoryAuditLogRepository _auditLogRepo;
     private readonly InMemoryUnitOfWork _unitOfWork;
     private readonly BcryptPasswordHasher _passwordHasher;
+    private readonly Mock<IBreachedPasswordChecker> _breachedPasswordCheckerMock;
     private readonly JwtSettings _jwtSettings;
     private readonly JwtAuthenticationService _authService;
     private readonly Mock<ILogger<JwtAuthenticationService>> _loggerMock;
@@ -43,6 +45,10 @@ public sealed class SessionIntegrationTests
             _auditLogRepo,
             _sessionRepo);
         _passwordHasher = new BcryptPasswordHasher();
+        _breachedPasswordCheckerMock = new Mock<IBreachedPasswordChecker>();
+        _breachedPasswordCheckerMock
+            .Setup(x => x.IsPasswordBreachedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
         _jwtSettings = new JwtSettings
         {
@@ -58,6 +64,7 @@ public sealed class SessionIntegrationTests
         _authService = new JwtAuthenticationService(
             _unitOfWork,
             _passwordHasher,
+            _breachedPasswordCheckerMock.Object,
             _jwtSettings,
             _loggerMock.Object,
             redis: null);

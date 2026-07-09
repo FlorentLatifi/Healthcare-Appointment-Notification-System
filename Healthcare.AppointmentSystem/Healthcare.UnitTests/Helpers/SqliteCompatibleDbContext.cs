@@ -23,5 +23,15 @@ public sealed class SqliteCompatibleDbContext : HealthcareDbContext
             .Property<byte[]>("RowVersion")
             .ValueGeneratedNever()
             .IsConcurrencyToken();
+
+        modelBuilder.Entity<Doctor>()
+            .Property<byte[]>("RowVersion")
+            .ValueGeneratedNever()
+            .IsConcurrencyToken();
+
+        modelBuilder.Entity<Payment>()
+            .Property<byte[]>("RowVersion")
+            .ValueGeneratedNever()
+            .IsConcurrencyToken();
     }
 }

@@ -27,7 +27,7 @@ public class RedisHealthCheck : IHealthCheck
         {
             var db = _redis.GetDatabase();
 
-            
+
 
             // Perform a PING command
             var pingTime = await db.PingAsync();

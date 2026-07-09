@@ -1,4 +1,4 @@
-﻿using Healthcare.Adapters.Common;
+using Healthcare.Adapters.Common;
 using Healthcare.Adapters.Events;
 using Healthcare.Adapters.Events.Handlers;
 using Healthcare.Adapters.Notifications;
@@ -32,7 +32,6 @@ namespace Healthcare.Adapters;
 /// Extension methods for registering Adapter layer services.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Extension Method Pattern + Dependency Injection
 /// 
 /// This class centralizes ALL adapter registrations:
 /// - Repositories (persistence)
@@ -55,7 +54,6 @@ public static class AdapterServiceExtensions
     /// Registers Redis distributed locking service.
     /// </summary>
     /// <remarks>
-    /// Design Pattern: Adapter Pattern + Dependency Injection
     /// 
     /// Redis Connection Pooling:
     /// - Uses IConnectionMultiplexer (singleton) for connection pooling
@@ -141,7 +139,8 @@ public static class AdapterServiceExtensions
             return JwtSettings.FromConfiguration(config);
         });
 
-        services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddScoped<IPasswordHasher, Argon2IdPasswordHasher>();
+        services.AddHttpClient<IBreachedPasswordChecker, HaveIBeenPwnedPasswordChecker>();
         services.AddScoped<IAuthenticationService, JwtAuthenticationService>();
         // Notification Adapters (Console)
         // Scoped: New instance per request
@@ -157,8 +156,6 @@ public static class AdapterServiceExtensions
         services.AddSingleton<ITimeProvider, SystemTimeProvider>();
 
         services.AddSingleton<IDistributedLockService, InMemoryLockService>();
-
-        // DESIGN PATTERN: Singleton (Creational)
 
         services.AddSingleton<IAppointmentCodeGenerator>(
             _ => AppointmentCodeGenerator.Instance);
@@ -311,7 +308,6 @@ public static class AdapterServiceExtensions
     /// Registers Stripe payment gateway.
     /// </summary>
     /// <remarks>
-    /// Design Pattern: Adapter Pattern + Dependency Injection
     /// 
     /// Configuration:
     /// - Reads from appsettings.json → Stripe section
@@ -373,7 +369,6 @@ public static class AdapterServiceExtensions
     /// Each event can have MULTIPLE handlers (Observer Pattern).
     /// Add new handlers here as they are created.
     /// 
-    /// Pattern:
     /// services.AddScoped<IDomainEventHandler<EventType>, HandlerType>();
     /// 
     /// Important: Use Scoped lifetime for handlers!
@@ -417,7 +412,8 @@ public static class AdapterServiceExtensions
         services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
 
         // ✅ AUTHENTICATION SERVICES (Simplified - JWT registered in Program.cs)
-        services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddScoped<IPasswordHasher, Argon2IdPasswordHasher>();
+        services.AddHttpClient<IBreachedPasswordChecker, HaveIBeenPwnedPasswordChecker>();
         services.AddScoped<IAuthenticationService, JwtAuthenticationService>();
 
         // Redis-backed code generator for multi-instance safety

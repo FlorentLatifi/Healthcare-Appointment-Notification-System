@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Common;
+using Healthcare.Domain.Common;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
 
@@ -10,8 +10,6 @@ namespace Healthcare.Domain.Entities;
 /// Represents a patient in the healthcare system.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Rich Domain Model (NOT Anemic)
-/// Factory Method Pattern: Use Create() factory method instead of constructor.
 /// </remarks>
 public sealed class Patient : Entity
 {
@@ -61,6 +59,11 @@ public sealed class Patient : Entity
     public bool IsActive { get; private set; }
 
     /// <summary>
+    /// Gets a value indicating whether the patient's PII has been anonymized.
+    /// </summary>
+    public bool IsAnonymized { get; private set; }
+
+    /// <summary>
     /// Gets the patient's full name.
     /// </summary>
     public string FullName => $"{FirstName} {LastName}";
@@ -104,6 +107,7 @@ public sealed class Patient : Entity
         Address = address;
         NotificationPreferences = NotificationPreferences.Default();
         IsActive = true;
+        IsAnonymized = false;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -213,6 +217,30 @@ public sealed class Patient : Entity
         }
 
         IsActive = true;
+        MarkAsModified();
+    }
+
+    /// <summary>
+    /// Irreversibly anonymizes all PII, preserving the primary key for FK integrity.
+    /// Sets IsActive = false, IsAnonymized = true.
+    /// </summary>
+    public void Anonymize()
+    {
+        if (IsAnonymized)
+        {
+            throw new InvalidOperationException("Patient data has already been anonymized.");
+        }
+
+        FirstName = "Anonymized";
+        LastName = Id.ToString();
+        Email = Email.Create($"anonymized-{Id}@anonymized.local");
+        PhoneNumber = PhoneNumber.Create("+00000000000");
+        DateOfBirth = new DateTime(1970, 1, 1);
+        Address = Address.Create("Anonymized", "Anonymized", "Anonymized", "00000", "Anonymized");
+        NotificationPreferences = NotificationPreferences.Default();
+        IsActive = false;
+        IsAnonymized = true;
+
         MarkAsModified();
     }
 

@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Ports.Events;
+using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Notifications;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Events;
@@ -10,7 +10,6 @@ namespace Healthcare.Adapters.Events.Handlers;
 /// Sends confirmation notification when appointment is confirmed.
 /// </summary>
 /// <remarks>
-/// Design Pattern: Observer Pattern
 /// 
 /// This handler OBSERVES AppointmentConfirmedEvent.
 /// When the event is raised, this handler:

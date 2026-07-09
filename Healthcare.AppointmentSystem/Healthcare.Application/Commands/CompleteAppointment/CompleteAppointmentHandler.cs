@@ -24,26 +24,26 @@ public sealed class CompleteAppointmentHandler : ICommandHandler<CompleteAppoint
         var appointment = await _unitOfWork.Appointments
                 .GetByIdAsync(command.AppointmentId, cancellationToken);
 
-            if (appointment is null)
-            {
-                return Result.Failure($"Appointment with ID {command.AppointmentId} not found.");
-            }
+        if (appointment is null)
+        {
+            return Result.Failure($"Appointment with ID {command.AppointmentId} not found.");
+        }
 
-            try
-            {
-                appointment.Complete(command.DoctorNotes);
-            }
-            catch (Exception ex)
-            {
-                return Result.Failure($"Failed to complete appointment: {ex.Message}");
-            }
+        try
+        {
+            appointment.Complete(command.DoctorNotes);
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure($"Failed to complete appointment: {ex.Message}");
+        }
 
-            await _unitOfWork.Appointments.UpdateAsync(appointment, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.Appointments.UpdateAsync(appointment, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
-            appointment.ClearDomainEvents();
+        await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
+        appointment.ClearDomainEvents();
 
-            return Result.Success();
+        return Result.Success();
     }
 }

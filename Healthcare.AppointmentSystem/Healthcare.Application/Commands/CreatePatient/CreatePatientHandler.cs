@@ -23,72 +23,72 @@ public sealed class CreatePatientHandler : ICommandHandler<CreatePatientCommand,
         CancellationToken cancellationToken = default)
     {
         // 1. Check if patient already exists
-            var existingPatient = await _unitOfWork.Patients
-                .GetByEmailAsync(command.Email, cancellationToken);
+        var existingPatient = await _unitOfWork.Patients
+            .GetByEmailAsync(command.Email, cancellationToken);
 
-            if (existingPatient is not null)
-            {
-                return Result<int>.Failure($"A patient with email '{command.Email}' already exists.");
-            }
+        if (existingPatient is not null)
+        {
+            return Result<int>.Failure($"A patient with email '{command.Email}' already exists.");
+        }
 
-            // 2. Create value objects
-            Email email;
-            PhoneNumber phoneNumber;
-            Address address;
-            Gender gender;
+        // 2. Create value objects
+        Email email;
+        PhoneNumber phoneNumber;
+        Address address;
+        Gender gender;
 
-            try
-            {
-                email = Email.Create(command.Email);
-                phoneNumber = PhoneNumber.Create(command.PhoneNumber);
-                address = Address.Create(
-                    command.Street,
-                    command.City,
-                    command.State,
-                    command.PostalCode,
-                    command.Country);
+        try
+        {
+            email = Email.Create(command.Email);
+            phoneNumber = PhoneNumber.Create(command.PhoneNumber);
+            address = Address.Create(
+                command.Street,
+                command.City,
+                command.State,
+                command.PostalCode,
+                command.Country);
 
-                gender = Enum.Parse<Gender>(command.Gender, ignoreCase: true);
-            }
-            catch (Exception ex)
-            {
-                return Result<int>.Failure($"Invalid input: {ex.Message}");
-            }
+            gender = Enum.Parse<Gender>(command.Gender, ignoreCase: true);
+        }
+        catch (Exception ex)
+        {
+            return Result<int>.Failure($"Invalid input: {ex.Message}");
+        }
 
-            // 3. Create patient entity
-            Patient patient;
-            try
-            {
-                patient = Patient.Create(
-                    command.FirstName,
-                    command.LastName,
-                    email,
-                    phoneNumber,
-                    command.DateOfBirth,
-                    gender,
-                    address);
-            }
-            catch (Exception ex)
-            {
-                return Result<int>.Failure($"Failed to create patient: {ex.Message}");
-            }
+        // 3. Create patient entity
+        Patient patient;
+        try
+        {
+            patient = Patient.Create(
+                command.FirstName,
+                command.LastName,
+                email,
+                phoneNumber,
+                command.DateOfBirth,
+                gender,
+                address);
+        }
+        catch (Exception ex)
+        {
+            return Result<int>.Failure($"Failed to create patient: {ex.Message}");
+        }
 
-            // 4. Persist patient
-            await _unitOfWork.Patients.AddAsync(patient, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        // 4. Persist patient
+        await _unitOfWork.Patients.AddAsync(patient, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 5. Link the calling user to this patient
-            var requestingUser = await _unitOfWork.Users.GetByIdAsync(command.RequestingUserId, cancellationToken);
-            if (requestingUser == null)
-                return Result<int>.Failure("Authenticated user not found.");
+        // 5. Link the calling user to this patient
+        var requestingUser = await _unitOfWork.Users.GetByIdAsync(command.RequestingUserId, cancellationToken);
+        if (requestingUser == null)
+            return Result<int>.Failure("Authenticated user not found.");
 
-            if (requestingUser.PatientId.HasValue)
-                return Result<int>.Failure("This account is already linked to a patient profile.");
+        if (requestingUser.PatientId.HasValue)
+            return Result<int>.Failure("This account is already linked to a patient profile.");
 
-            requestingUser.LinkToPatient(patient.Id);
-            await _unitOfWork.Users.UpdateAsync(requestingUser, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        requestingUser.LinkToPatient(patient.Id);
+        await _unitOfWork.Users.UpdateAsync(requestingUser, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return Result<int>.Success(patient.Id);
+        return Result<int>.Success(patient.Id);
     }
 }

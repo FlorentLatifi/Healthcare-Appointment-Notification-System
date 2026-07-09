@@ -1,11 +1,10 @@
-﻿namespace Healthcare.Presentation.API.Responses;
+namespace Healthcare.Presentation.API.Responses;
 
 /// <summary>
 /// Generic API response wrapper for consistent response format.
 /// </summary>
 /// <typeparam name="T">The type of data returned.</typeparam>
 /// <remarks>
-/// Design Pattern: Wrapper Pattern
 /// 
 /// Benefits:
 /// - Consistent response structure across all endpoints
