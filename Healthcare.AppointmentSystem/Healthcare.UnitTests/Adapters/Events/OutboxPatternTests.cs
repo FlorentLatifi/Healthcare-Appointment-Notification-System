@@ -5,7 +5,6 @@ using Healthcare.Adapters.Services;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Events;
-using Healthcare.Domain.Services;
 using Healthcare.Domain.ValueObjects;
 using Healthcare.UnitTests.Helpers;
 using Microsoft.Data.Sqlite;

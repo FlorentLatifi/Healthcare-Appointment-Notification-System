@@ -1,35 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
-
-const s = {
-  wrapper: { maxWidth: 1000, margin: '24px auto', padding: '0 16px' },
-  tabs: { display: 'flex', gap: 8, marginBottom: 20 },
-  tab: (active) => ({
-    padding: '8px 20px', fontSize: 14, borderRadius: 6, border: '1px solid #ddd',
-    background: active ? '#2563eb' : '#f9f9f9', color: active ? '#fff' : '#333', cursor: 'pointer', fontWeight: active ? 600 : 400,
-  }),
-  searchBar: { display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
-  searchInput: { padding: '8px 12px', borderRadius: 6, border: '1px solid #ccc', flex: 1, minWidth: 200 },
-  addBtn: { padding: '8px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 14 },
-  th: { textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #ddd', background: '#f9fafb', fontWeight: 600 },
-  td: { padding: '10px 12px', borderBottom: '1px solid #eee' },
-  badge: (bg, color) => ({ display: 'inline-block', fontSize: 11, padding: '2px 8px', borderRadius: 10, background: bg, color, fontWeight: 600 }),
-  loading: { textAlign: 'center', padding: 40, color: '#888' },
-  empty: { textAlign: 'center', padding: 40, color: '#888' },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#fff', borderRadius: 8, padding: 24, width: 500, maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto' },
-  field: { marginBottom: 12 },
-  label: { display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 3 },
-  input: { width: '100%', padding: '7px 10px', borderRadius: 6, border: '1px solid #ccc' },
-  select: { width: '100%', padding: '7px 10px', borderRadius: 6, border: '1px solid #ccc', background: '#fff' },
-  row: { display: 'flex', gap: 10 },
-  half: { flex: 1 },
-  modalActions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
-  pagination: { display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16, alignItems: 'center' },
-  pageBtn: (disabled) => ({ padding: '6px 14px', border: '1px solid #ccc', borderRadius: 6, background: disabled ? '#f3f4f6' : '#fff', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1 }),
-};
+import { Button, Card, Badge, Spinner, EmptyState, Modal, Input, Select, PageHeader } from '../components/ui';
+import { Table, Th, Td, Tr } from '../components/ui';
+import { UserPlus, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const SPECIALTIES = ['General', 'Cardiology', 'Dermatology', 'Neurology', 'Pediatrics', 'Orthopedics', 'Radiology', 'Surgery', 'Ophthalmology', 'Psychiatry', 'Urology', 'Other'];
 
@@ -37,7 +11,6 @@ export default function AdminDashboardPage() {
   const [page, setPage] = useState('doctors');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // doctors
   const [doctors, setDoctors] = useState([]);
   const [docsLoading, setDocsLoading] = useState(true);
   const [docPage, setDocPage] = useState(1);
@@ -50,7 +23,6 @@ export default function AdminDashboardPage() {
   });
   const [docSubmitting, setDocSubmitting] = useState(false);
 
-  // patients
   const [patients, setPatients] = useState([]);
   const [patsLoading, setPatsLoading] = useState(true);
 
@@ -102,101 +74,152 @@ export default function AdminDashboardPage() {
   const setF = (field) => (e) => setDocForm((p) => ({ ...p, [field]: e.target.value }));
 
   return (
-    <div style={s.wrapper}>
-      <h1>Admin Dashboard</h1>
-      <div style={s.tabs}>
-        <button style={s.tab(page === 'doctors')} onClick={() => setPage('doctors')}>Doctors</button>
-        <button style={s.tab(page === 'patients')} onClick={() => setPage('patients')}>Patients</button>
+    <div className="max-w-5xl mx-auto px-4 py-12">
+      <PageHeader title="Admin Dashboard" />
+
+      <div className="flex gap-2 mb-6">
+        <Button
+          variant={page === 'doctors' ? 'primary' : 'secondary'}
+          onClick={() => setPage('doctors')}
+        >
+          Doctors
+        </Button>
+        <Button
+          variant={page === 'patients' ? 'primary' : 'secondary'}
+          onClick={() => setPage('patients')}
+        >
+          Patients
+        </Button>
       </div>
 
       {page === 'doctors' && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ margin: 0 }}>All Doctors</h3>
-            <button style={s.addBtn} onClick={() => setShowDocForm(true)}>+ Add Doctor</button>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-medium text-text m-0">All Doctors</h3>
+            <Button size="sm" leftIcon={<UserPlus size={14} />} onClick={() => setShowDocForm(true)}>
+              Add Doctor
+            </Button>
           </div>
-          {docsLoading ? <div style={s.loading}>Loading...</div> : doctors.length === 0 ? <div style={s.empty}>No doctors found.</div> : (
+
+          {docsLoading ? <Spinner /> : doctors.length === 0 ? <EmptyState message="No doctors found." /> : (
             <>
-              <table style={s.table}>
-                <thead><tr>
-                  <th style={s.th}>Name</th><th style={s.th}>Email</th><th style={s.th}>Specialty</th><th style={s.th}>Fee</th><th style={s.th}>Status</th>
-                </tr></thead>
-                <tbody>
-                  {doctors.map((doc) => (
-                    <tr key={doc.id}>
-                      <td style={s.td}>Dr. {doc.fullName}</td>
-                      <td style={s.td}>{doc.email}</td>
-                      <td style={s.td}>{doc.specialties?.join(', ')}</td>
-                      <td style={s.td}>{doc.consultationFeeCurrency} {doc.consultationFeeAmount}</td>
-                      <td style={s.td}>
-                        {doc.isActive ? <span style={s.badge('#d1fae5', '#065f46')}>Active</span> : <span style={s.badge('#fee2e2', '#991b1b')}>Inactive</span>}
-                        {doc.isAcceptingPatients && <span style={{ ...s.badge('#dbeafe', '#1e40af'), marginLeft: 6 }}>Accepting</span>}
-                      </td>
+              <div className="overflow-x-auto bg-white rounded-xl shadow-card border border-border-light">
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>Name</Th>
+                      <Th>Email</Th>
+                      <Th>Specialty</Th>
+                      <Th>Fee</Th>
+                      <Th>Status</Th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div style={s.pagination}>
-                <button style={s.pageBtn(docPage <= 1)} disabled={docPage <= 1} onClick={() => fetchDoctors(docPage - 1)}>Prev</button>
-                <span style={{ fontSize: 14, color: '#666' }}>Page {docPage} of {docTotalPages}</span>
-                <button style={s.pageBtn(docPage >= docTotalPages)} disabled={docPage >= docTotalPages} onClick={() => fetchDoctors(docPage + 1)}>Next</button>
+                  </thead>
+                  <tbody>
+                    {doctors.map((doc) => (
+                      <Tr key={doc.id}>
+                        <Td className="font-medium">Dr. {doc.fullName}</Td>
+                        <Td className="text-text-muted">{doc.email}</Td>
+                        <Td>{doc.specialties?.join(', ')}</Td>
+                        <Td>{doc.consultationFeeCurrency} {doc.consultationFeeAmount}</Td>
+                        <Td>
+                          <div className="flex gap-1">
+                            {doc.isActive ? <Badge status="Confirmed">Active</Badge> : <Badge status="Cancelled">Inactive</Badge>}
+                            {doc.isAcceptingPatients && <Badge status="Scheduled">Accepting</Badge>}
+                          </div>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+              <div className="flex items-center justify-center gap-3 mt-4">
+                <Button variant="secondary" size="sm" disabled={docPage <= 1} onClick={() => fetchDoctors(docPage - 1)}>
+                  <ChevronLeft size={14} className="mr-1" />Prev
+                </Button>
+                <span className="text-xs text-text-muted">Page {docPage} of {docTotalPages}</span>
+                <Button variant="secondary" size="sm" disabled={docPage >= docTotalPages} onClick={() => fetchDoctors(docPage + 1)}>
+                  Next<ChevronRight size={14} className="ml-1" />
+                </Button>
               </div>
             </>
           )}
 
-          {showDocForm && (
-            <div style={s.overlay} onClick={() => setShowDocForm(false)}>
-              <div style={s.modal} onClick={(e) => e.stopPropagation()}>
-                <h3 style={{ margin: '0 0 16px' }}>Add Doctor</h3>
-                <form onSubmit={handleCreateDoctor}>
-                  <div style={s.row}>
-                    <div style={{ ...s.field, ...s.half }}><label style={s.label}>First Name</label><input style={s.input} value={docForm.firstName} onChange={setF('firstName')} required /></div>
-                    <div style={{ ...s.field, ...s.half }}><label style={s.label}>Last Name</label><input style={s.input} value={docForm.lastName} onChange={setF('lastName')} required /></div>
-                  </div>
-                  <div style={s.field}><label style={s.label}>Email</label><input style={s.input} type="email" value={docForm.email} onChange={setF('email')} required /></div>
-                  <div style={s.field}><label style={s.label}>Phone</label><input style={s.input} value={docForm.phoneNumber} onChange={setF('phoneNumber')} required /></div>
-                  <div style={s.field}><label style={s.label}>License Number</label><input style={s.input} value={docForm.licenseNumber} onChange={setF('licenseNumber')} required /></div>
-                  <div style={s.row}>
-                    <div style={{ ...s.field, ...s.half }}><label style={s.label}>Specialty</label><select style={s.select} value={docForm.specialty} onChange={setF('specialty')}>{SPECIALTIES.map((sp) => <option key={sp}>{sp}</option>)}</select></div>
-                    <div style={{ ...s.field, ...s.half }}><label style={s.label}>Years Exp.</label><input style={s.input} type="number" min="0" value={docForm.yearsOfExperience} onChange={setF('yearsOfExperience')} required /></div>
-                  </div>
-                  <div style={s.row}>
-                    <div style={{ ...s.field, ...s.half }}><label style={s.label}>Fee Amount</label><input style={s.input} type="number" step="0.01" min="0" value={docForm.consultationFeeAmount} onChange={setF('consultationFeeAmount')} required /></div>
-                    <div style={{ ...s.field, ...s.half }}><label style={s.label}>Currency</label><select style={s.select} value={docForm.consultationFeeCurrency} onChange={setF('consultationFeeCurrency')}><option>USD</option><option>EUR</option><option>GBP</option></select></div>
-                  </div>
-                  <div style={s.modalActions}>
-                    <button type="button" style={{ padding: '8px 16px', border: '1px solid #ccc', borderRadius: 6, background: '#fff' }} onClick={() => setShowDocForm(false)}>Cancel</button>
-                    <button type="submit" style={{ padding: '8px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: 6 }} disabled={docSubmitting}>{docSubmitting ? 'Creating...' : 'Create'}</button>
-                  </div>
-                </form>
+          <Modal
+            open={showDocForm}
+            onClose={() => setShowDocForm(false)}
+            title="Add Doctor"
+            footer={
+              <>
+                <Button variant="secondary" type="button" onClick={() => setShowDocForm(false)}>Cancel</Button>
+                <Button type="submit" loading={docSubmitting}>Create</Button>
+              </>
+            }
+          >
+            <form id="add-doctor-form" onSubmit={handleCreateDoctor}>
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="First Name" value={docForm.firstName} onChange={setF('firstName')} required />
+                <Input label="Last Name" value={docForm.lastName} onChange={setF('lastName')} required />
               </div>
-            </div>
-          )}
+              <Input label="Email" type="email" value={docForm.email} onChange={setF('email')} required />
+              <Input label="Phone" value={docForm.phoneNumber} onChange={setF('phoneNumber')} required />
+              <Input label="License Number" value={docForm.licenseNumber} onChange={setF('licenseNumber')} required />
+              <div className="grid grid-cols-2 gap-3">
+                <Select label="Specialty" value={docForm.specialty} onChange={setF('specialty')}>
+                  {SPECIALTIES.map((sp) => <option key={sp}>{sp}</option>)}
+                </Select>
+                <Input label="Years Exp." type="number" min="0" value={docForm.yearsOfExperience} onChange={setF('yearsOfExperience')} required />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Fee Amount" type="number" step="0.01" min="0" value={docForm.consultationFeeAmount} onChange={setF('consultationFeeAmount')} required />
+                <Select label="Currency" value={docForm.consultationFeeCurrency} onChange={setF('consultationFeeCurrency')}>
+                  <option>USD</option><option>EUR</option><option>GBP</option>
+                </Select>
+              </div>
+            </form>
+          </Modal>
         </>
       )}
 
       {page === 'patients' && (
         <>
-          <div style={s.searchBar}>
-            <input style={s.searchInput} placeholder="Search patients by name..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            <button style={s.addBtn} onClick={fetchPatients}>Search</button>
+          <div className="flex gap-2 mb-4">
+            <div className="flex-1 max-w-xs">
+              <Input
+                placeholder="Search patients by name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Button variant="primary" size="sm" onClick={fetchPatients}>Search</Button>
           </div>
-          {patsLoading ? <div style={s.loading}>Loading...</div> : patients.length === 0 ? <div style={s.empty}>No patients found.</div> : (
-            <table style={s.table}>
-              <thead><tr><th style={s.th}>Name</th><th style={s.th}>Email</th><th style={s.th}>Phone</th><th style={s.th}>Gender</th><th style={s.th}>DOB</th><th style={s.th}>Status</th></tr></thead>
-              <tbody>
-                {patients.map((p) => (
-                  <tr key={p.id}>
-                    <td style={s.td}>{p.fullName}</td>
-                    <td style={s.td}>{p.email}</td>
-                    <td style={s.td}>{p.phoneNumber}</td>
-                    <td style={s.td}>{p.gender}</td>
-                    <td style={s.td}>{p.dateOfBirth?.split('T')[0]}</td>
-                    <td style={s.td}>{p.isActive ? <span style={s.badge('#d1fae5', '#065f46')}>Active</span> : <span style={s.badge('#fee2e2', '#991b1b')}>Inactive</span>}</td>
+
+          {patsLoading ? <Spinner /> : patients.length === 0 ? <EmptyState message="No patients found." /> : (
+            <div className="overflow-x-auto bg-white rounded-xl shadow-card border border-border-light">
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Name</Th>
+                    <Th>Email</Th>
+                    <Th>Phone</Th>
+                    <Th>Gender</Th>
+                    <Th>DOB</Th>
+                    <Th>Status</Th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {patients.map((p) => (
+                    <Tr key={p.id}>
+                      <Td className="font-medium">{p.fullName}</Td>
+                      <Td className="text-text-muted">{p.email}</Td>
+                      <Td>{p.phoneNumber}</Td>
+                      <Td>{p.gender}</Td>
+                      <Td className="text-text-muted">{p.dateOfBirth?.split('T')[0]}</Td>
+                      <Td>{p.isActive ? <Badge status="Confirmed">Active</Badge> : <Badge status="Cancelled">Inactive</Badge>}</Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
           )}
         </>
       )}

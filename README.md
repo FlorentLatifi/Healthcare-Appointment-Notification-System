@@ -113,15 +113,19 @@ The frontend starts at `http://localhost:5173` and expects the API at `http://lo
 
 ## Environment Variables / Configuration Keys
 
-| Key | Description |
-|-----|-------------|
-| `Jwt__Secret` | JWT signing key (minimum 32 characters) |
-| `Stripe__SecretKey` | Stripe secret key (starts with `sk_test_` in test mode) |
-| `Stripe__PublishableKey` | Stripe publishable key (starts with `pk_test_` in test mode) |
-| `Redis__ConnectionString` | Redis connection string (e.g., `localhost:6379,abortConnect=false`) |
-| `AllowedOrigins` | Comma-separated list of allowed CORS origins |
-| `ConnectionStrings__DefaultConnection` | SQL Server connection string |
-| `SeedDemoData` | Set to `true` to seed demo data on startup (Docker Compose only) |
+| Key | Required | Description |
+|-----|----------|-------------|
+| `Jwt__Secret` | **Yes** | JWT signing key (minimum 32 characters) |
+| `Stripe__SecretKey` | **Yes** | Stripe secret key (starts with `sk_test_` in test mode) |
+| `Stripe__PublishableKey` | **Yes** | Stripe publishable key (starts with `pk_test_` in test mode) |
+| `Redis__ConnectionString` | **Yes** | Redis connection string (e.g., `localhost:6379,abortConnect=false`) |
+| `AllowedOrigins` | **Yes** | Comma-separated list of allowed CORS origins |
+| `ConnectionStrings__DefaultConnection` | **Yes** | SQL Server connection string |
+| `TrustedProxies` | **Yes** | Comma-separated list of reverse-proxy IPs; prevents rate-limit collapse behind a proxy |
+| `TrustedNetworks` | **Yes** | Comma-separated CIDR networks (e.g., `10.0.0.0/8`); alternative to `TrustedProxies` |
+| `UseOutboxForDomainEvents` | No | Defaults to `true` outside Development; set `false` to disable reliable event delivery |
+| `Otel__Endpoint` | No | OTLP gRPC endpoint (e.g., `http://localhost:4317`); when unset, traces/metrics fall back to console |
+| `SeedDemoData` | No | Set to `true` to seed demo data on startup (Docker Compose only) |
 
 Replace the Stripe test-mode placeholders with real keys from your [Stripe dashboard](https://dashboard.stripe.com/test/apikeys). The app starts without valid Stripe keys, but payment features will fail.
 

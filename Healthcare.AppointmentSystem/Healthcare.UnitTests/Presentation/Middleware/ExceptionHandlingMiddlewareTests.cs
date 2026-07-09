@@ -1,5 +1,6 @@
 using System.Net;
 using FluentAssertions;
+using Healthcare.Domain.Common;
 using Healthcare.Presentation.API.Middleware;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -35,14 +36,14 @@ public class ExceptionHandlingMiddlewareTests
     }
 
     [Fact]
-    public async Task ArgumentException_StillReturns400()
+    public async Task ArgumentException_Returns500()
     {
         var context = CreateContext();
         var middleware = CreateMiddleware(_ => throw new ArgumentException("Invalid argument"));
 
         await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.InternalServerError);
     }
 
     [Fact]
@@ -53,11 +54,27 @@ public class ExceptionHandlingMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.InternalServerError);
 
         var body = await ReadBodyAsync(context);
         body.Should().Contain("Something broke");
         body.Should().Contain("InvalidOperationException");
+    }
+
+    [Fact]
+    public async Task DomainException_Returns400WithCode()
+    {
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ => throw new InvalidEmailException("bad@email"));
+
+        await middleware.InvokeAsync(context);
+
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+
+        var body = await ReadBodyAsync(context);
+        body.Should().Contain("InvalidEmailException");
+        body.Should().Contain("bad@email");
+        body.Should().Contain("INVALID_EMAIL");
     }
 
     [Fact]

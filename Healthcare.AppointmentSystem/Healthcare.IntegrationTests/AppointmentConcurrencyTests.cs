@@ -2,7 +2,7 @@ using FluentAssertions;
 using Healthcare.Adapters.Persistence.EntityFramework;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
-using Healthcare.Domain.Services;
+using Healthcare.Adapters.Services;
 using Healthcare.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 

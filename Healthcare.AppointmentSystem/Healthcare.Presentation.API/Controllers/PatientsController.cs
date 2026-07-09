@@ -5,11 +5,14 @@ using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Events;
+using Healthcare.Presentation.API.Authorization;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Resources;
 using Healthcare.Presentation.API.Responses;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using System.Security.Claims;
 
 
 namespace Healthcare.Presentation.API.Controllers;
@@ -61,8 +64,11 @@ public sealed class PatientsController : ControllerBase
     /// <response code="201">Patient created successfully.</response>
     /// <response code="400">Invalid request data or patient already exists.</response>
     [HttpPost]
+    [Authorize(Roles = AppRoles.Patient)]
     [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreatePatient(
         [FromBody] CreatePatientRequest request,
         CancellationToken cancellationToken)
@@ -81,7 +87,8 @@ public sealed class PatientsController : ControllerBase
             City = request.City,
             State = request.State,
             PostalCode = request.PostalCode,
-            Country = request.Country
+            Country = request.Country,
+            RequestingUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value)
         };
 
         var result = await _createPatientHandler.HandleAsync(command, cancellationToken);
@@ -106,13 +113,20 @@ public sealed class PatientsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The patient details.</returns>
     /// <response code="200">Patient found.</response>
+    /// <response code="403">Forbidden for non-owners.</response>
     /// <response code="404">Patient not found.</response>
     [HttpGet("{id}")]
+    [Authorize(Roles = AppRoles.PatientOrDoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse<PatientDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPatientById(int id, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Retrieving patient {PatientId}", id);
+
+        var role = User.GetRole();
+        if (role == AppRoles.Patient && User.GetPatientId() != id)
+            return Forbid();
 
         var patient = await _unitOfWork.Patients.GetByIdAsync(id, cancellationToken);
 
@@ -130,11 +144,9 @@ public sealed class PatientsController : ControllerBase
         // Skip audit for self-access (Patient role viewing own record) to
         // avoid noisy logs. Only non-Patient roles (Doctor, Admin) and any
         // access where the actor cannot be identified are logged.
-        var accessorRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-        if (accessorRole != null && !accessorRole.Equals("Patient", StringComparison.OrdinalIgnoreCase))
+        if (role != AppRoles.Patient)
         {
-            var accessorIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            int? accessorId = int.TryParse(accessorIdClaim, out var uid) ? uid : null;
+            int? accessorId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid) ? uid : null;
 
             await _eventDispatcher.DispatchAsync(new PatientRecordAccessedEvent(
                 id,
@@ -154,7 +166,10 @@ public sealed class PatientsController : ControllerBase
     /// <returns>Paginated list of patients.</returns>
     /// <response code="200">Patients retrieved successfully.</response>
     [HttpGet]
+    [Authorize(Roles = AppRoles.DoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<PatientDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetAllPatients(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
@@ -189,7 +204,10 @@ public sealed class PatientsController : ControllerBase
     /// <returns>Paginated list of active patients.</returns>
     /// <response code="200">Active patients retrieved successfully.</response>
     [HttpGet("active")]
+    [Authorize(Roles = AppRoles.DoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<PatientDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetActivePatients(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
@@ -226,8 +244,11 @@ public sealed class PatientsController : ControllerBase
     /// <response code="200">Search completed successfully.</response>
     /// <response code="400">Search term is required.</response>
     [HttpGet("search")]
+    [Authorize(Roles = AppRoles.DoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<PatientDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> SearchPatients(
         [FromQuery] string term,
         [FromQuery] int pageNumber = 1,
@@ -265,7 +286,9 @@ public sealed class PatientsController : ControllerBase
     /// Updates the patient's notification preferences.
     /// </summary>
     [HttpPut("{id}/notification-preferences")]
+    [Authorize(Roles = AppRoles.PatientOrDoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateNotificationPreferences(
         int id,
@@ -273,6 +296,10 @@ public sealed class PatientsController : ControllerBase
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Updating notification preferences for patient {PatientId}", id);
+
+        var role = User.GetRole();
+        if (role == AppRoles.Patient && User.GetPatientId() != id)
+            return Forbid();
 
         var patient = await _unitOfWork.Patients.GetByIdAsync(id, cancellationToken);
         if (patient == null)
@@ -298,10 +325,13 @@ public sealed class PatientsController : ControllerBase
     /// <returns>Success or failure result.</returns>
     /// <response code="204">Patient deactivated successfully.</response>
     /// <response code="400">Patient is already deactivated.</response>
+    /// <response code="403">Forbidden — Admin only.</response>
     /// <response code="404">Patient not found.</response>
     [HttpDelete("{id}")]
+    [Authorize(Roles = AppRoles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeletePatient(int id, CancellationToken cancellationToken)
     {

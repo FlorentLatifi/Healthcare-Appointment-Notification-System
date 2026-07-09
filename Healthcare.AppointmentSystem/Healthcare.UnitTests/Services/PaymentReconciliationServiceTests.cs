@@ -8,7 +8,7 @@ using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Services;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
-using Healthcare.Domain.Services;
+using Healthcare.Adapters.Services;
 using Healthcare.Domain.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

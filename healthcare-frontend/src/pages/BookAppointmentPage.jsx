@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
+import { Button, Input, Textarea, Select, Card, Spinner, PageHeader } from '../components/ui';
+import { ArrowLeft } from 'lucide-react';
 
 const APPOINTMENT_TYPES = ['Standard', 'Insurance', 'Emergency', 'Vip'];
 
@@ -11,24 +13,13 @@ function toLocalDatetimeString(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-const s = {
-  wrapper: { maxWidth: 520, margin: '40px auto', padding: '0 16px' },
-  field: { marginBottom: 20 },
-  label: { display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 14 },
-  input: { width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #ccc' },
-  textarea: { width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #ccc', minHeight: 80, resize: 'vertical' },
-  select: { width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #ccc', background: '#fff' },
-  error: { color: '#dc2626', fontSize: 13, marginTop: 4 },
-  submit: { width: '100%', padding: '10px 0', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontSize: 16 },
-  back: { display: 'block', marginBottom: 16, color: '#2563eb', cursor: 'pointer', background: 'none', border: 'none', fontSize: 14, padding: 0 },
-};
-
 export default function BookAppointmentPage() {
   const { doctorId } = useParams();
   const navigate = useNavigate();
   const { patientId } = useAuth();
 
   const [doctor, setDoctor] = useState(null);
+  const [doctorLoading, setDoctorLoading] = useState(true);
   const [datetime, setDatetime] = useState('');
   const [reason, setReason] = useState('');
   const [appointmentType, setAppointmentType] = useState('Standard');
@@ -44,12 +35,15 @@ export default function BookAppointmentPage() {
 
   useEffect(() => {
     (async () => {
+      setDoctorLoading(true);
       try {
         const { data } = await apiClient.get(`/Doctors/${doctorId}`);
         if (data.success) setDoctor(data.data);
         else toast.error(data.message || 'Doctor not found');
       } catch {
         toast.error('Failed to load doctor details');
+      } finally {
+        setDoctorLoading(false);
       }
     })();
   }, [doctorId]);
@@ -99,52 +93,54 @@ export default function BookAppointmentPage() {
   };
 
   return (
-    <div style={s.wrapper}>
-      <button style={s.back} onClick={() => navigate('/doctors')}>← Back to Doctors</button>
-      <h1>Book Appointment</h1>
+    <div className="max-w-lg mx-auto px-4 py-12">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="mb-6 -ml-2"
+        onClick={() => navigate('/doctors')}
+      >
+        <ArrowLeft size={14} />
+        Back to Doctors
+      </Button>
 
-      {doctor && (
-        <p style={{ marginBottom: 20, fontSize: 15, color: '#555' }}>
-          Dr. {doctor.fullName} — {doctor.specialties?.join(', ')}
-        </p>
-      )}
+      <PageHeader title="Book Appointment" />
 
-      <form onSubmit={handleSubmit}>
-        <div style={s.field}>
-          <label style={s.label}>Date & Time</label>
-          <input
-            type="datetime-local"
-            style={s.input}
-            value={datetime}
-            min={minDate}
-            step="1800"
-            onChange={(e) => setDatetime(e.target.value)}
-          />
-          {errors.datetime && <div style={s.error}>{errors.datetime}</div>}
-        </div>
+      {doctorLoading ? (
+        <div className="flex justify-center py-8"><Spinner /></div>
+      ) : doctor ? (
+        <Card className="mb-6">
+          <p className="text-sm font-medium text-text">Dr. {doctor.fullName}</p>
+          <p className="text-xs text-text-muted mt-0.5">{doctor.specialties?.join(', ')}</p>
+        </Card>
+      ) : null}
 
-        <div style={s.field}>
-          <label style={s.label}>Reason</label>
-          <textarea
-            style={s.textarea}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Briefly describe your reason (min 10 characters)..."
-          />
-          {errors.reason && <div style={s.error}>{errors.reason}</div>}
-        </div>
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-6 border border-border-light">
+        <Input
+          label="Date & Time"
+          type="datetime-local"
+          value={datetime}
+          min={minDate}
+          step="1800"
+          onChange={(e) => setDatetime(e.target.value)}
+          error={errors.datetime}
+        />
 
-        <div style={s.field}>
-          <label style={s.label}>Appointment Type</label>
-          <select style={s.select} value={appointmentType} onChange={(e) => setAppointmentType(e.target.value)}>
-            {APPOINTMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-          {errors.appointmentType && <div style={s.error}>{errors.appointmentType}</div>}
-        </div>
+        <Textarea
+          label="Reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Briefly describe your reason (min 10 characters)..."
+          error={errors.reason}
+        />
 
-        <button type="submit" style={s.submit} disabled={submitting}>
-          {submitting ? 'Booking...' : 'Book Appointment'}
-        </button>
+        <Select label="Appointment Type" value={appointmentType} onChange={(e) => setAppointmentType(e.target.value)} error={errors.appointmentType}>
+          {APPOINTMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+        </Select>
+
+        <Button type="submit" loading={submitting} className="w-full mt-2" size="lg">
+          Book Appointment
+        </Button>
       </form>
     </div>
   );

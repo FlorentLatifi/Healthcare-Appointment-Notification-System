@@ -34,6 +34,18 @@ public abstract class IntegrationTestBase : IClassFixture<CustomWebApplicationFa
         return JsonSerializer.Deserialize<ApiResponse<T>>(content, JsonOptions);
     }
 
+    protected async Task<string> LoginAsync(
+        string username,
+        string password)
+    {
+        var loginPayload = new { Username = username, Password = password };
+        var loginResponse = await Client.PostAsJsonAsync("/api/v1/auth/login", loginPayload);
+        loginResponse.EnsureSuccessStatusCode();
+
+        var result = await DeserializeResponse<LoginResponse>(loginResponse);
+        return result!.Data!.Token;
+    }
+
     protected async Task<string> RegisterAndLoginAsync(
         string username,
         string email,

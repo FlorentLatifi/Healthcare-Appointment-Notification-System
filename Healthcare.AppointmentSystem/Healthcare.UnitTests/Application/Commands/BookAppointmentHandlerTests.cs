@@ -5,6 +5,7 @@ using Healthcare.Application.Ports.Locking;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
+using Healthcare.Adapters.Services;
 using Healthcare.Domain.Services;
 using Healthcare.UnitTests.Helpers;
 using Moq;

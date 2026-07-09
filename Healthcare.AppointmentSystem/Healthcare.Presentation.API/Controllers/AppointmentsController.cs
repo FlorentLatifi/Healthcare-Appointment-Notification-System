@@ -1,7 +1,10 @@
 ﻿using System.Security.Claims;
 using System.Text;
+using Healthcare.Application.Builders;
 using Healthcare.Application.Commands.BookAppointment;
+using Healthcare.Application.Commands.CancelAppointment;
 using Healthcare.Application.Commands.CompleteAppointment;
+using Healthcare.Application.Commands.ConfirmAppointment;
 using Healthcare.Application.Commands.MarkNoShowAppointment;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
@@ -14,7 +17,9 @@ using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Mvc;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
-using Healthcare.Application.Ports.Facades;
+using Healthcare.Application.Ports.Events;
+
+using Healthcare.Domain.Events;
 using Healthcare.Presentation.API.Authorization;
 
 namespace Healthcare.Presentation.API.Controllers;
@@ -26,29 +31,35 @@ namespace Healthcare.Presentation.API.Controllers;
 public sealed class AppointmentsController : ControllerBase
 {
     private readonly ICommandHandler<BookAppointmentCommand, Result<int>> _bookAppointmentHandler;
+    private readonly ICommandHandler<ConfirmAppointmentCommand, Result> _confirmAppointmentHandler;
+    private readonly ICommandHandler<CancelAppointmentCommand, Result> _cancelAppointmentHandler;
     private readonly ICommandHandler<CompleteAppointmentCommand, Result> _completeAppointmentHandler;
     private readonly ICommandHandler<MarkNoShowAppointmentCommand, Result> _markNoShowAppointmentHandler;
     private readonly IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>> _getAppointmentHandler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AppointmentsController> _logger;
-    private readonly IAppointmentFacade _facade;
+    private readonly IDomainEventDispatcher _eventDispatcher;
 
     public AppointmentsController(
         ICommandHandler<BookAppointmentCommand, Result<int>> bookAppointmentHandler,
+        ICommandHandler<ConfirmAppointmentCommand, Result> confirmAppointmentHandler,
+        ICommandHandler<CancelAppointmentCommand, Result> cancelAppointmentHandler,
         ICommandHandler<CompleteAppointmentCommand, Result> completeAppointmentHandler,
         ICommandHandler<MarkNoShowAppointmentCommand, Result> markNoShowAppointmentHandler,
         IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>> getAppointmentHandler,
         IUnitOfWork unitOfWork,
         ILogger<AppointmentsController> logger,
-        IAppointmentFacade facade)
+        IDomainEventDispatcher eventDispatcher)
     {
         _bookAppointmentHandler = bookAppointmentHandler;
+        _confirmAppointmentHandler = confirmAppointmentHandler;
+        _cancelAppointmentHandler = cancelAppointmentHandler;
         _completeAppointmentHandler = completeAppointmentHandler;
         _markNoShowAppointmentHandler = markNoShowAppointmentHandler;
         _getAppointmentHandler = getAppointmentHandler;
         _unitOfWork = unitOfWork;
         _logger = logger;
-        _facade = facade;
+        _eventDispatcher = eventDispatcher;
     }
 
     [HttpPost]
@@ -62,31 +73,59 @@ public sealed class AppointmentsController : ControllerBase
         _logger.LogInformation("Booking appointment Patient:{PatientId} Doctor:{DoctorId}",
             request.PatientId, request.DoctorId);
 
-        var result = await _facade.BookAppointmentAsync(
-            patientId: request.PatientId,
-            doctorId: request.DoctorId,
-            scheduledTime: request.ScheduledTime,
-            reason: request.Reason,
-            appointmentType: request.AppointmentType,
-            cancellationToken: cancellationToken);
-
-        if (result.IsFailure)
+        try
         {
-            _logger.LogWarning("Booking failed: {Error}", result.Error);
-            return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(
-                result.Error, "Failed to book appointment"));
-        }
+            var builder = new BookAppointmentCommandBuilder()
+                .ForPatient(request.PatientId)
+                .WithDoctor(request.DoctorId)
+                .At(request.ScheduledTime)
+                .BecauseOf(request.Reason);
 
-        return CreatedAtAction(
-            nameof(GetAppointmentById),
-            new { id = result.Value!.Id },
-            ApiResponse<AppointmentDto>.SuccessResponse(
-                result.Value, "Appointment booked successfully"));
+            var command = request.AppointmentType switch
+            {
+                "Insurance" => builder.WithInsurance().Build(),
+                "Emergency" => builder.AsEmergency().Build(),
+                "Vip" => builder.AsVip().Build(),
+                _ => builder.AsStandard().Build()
+            };
+
+            var handlerResult = await _bookAppointmentHandler.HandleAsync(command, cancellationToken);
+
+            if (handlerResult.IsFailure)
+            {
+                _logger.LogWarning("Booking failed: {Error}", handlerResult.Error);
+                return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(
+                    handlerResult.Error, "Failed to book appointment"));
+            }
+
+            var appointment = await _unitOfWork.Appointments
+                .GetByIdAsync(handlerResult.Value, cancellationToken);
+
+            if (appointment is null)
+                return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(
+                    "Appointment created but could not be retrieved.", "Failed to book appointment"));
+
+            var dto = AppointmentMapper.ToDto(appointment);
+            return CreatedAtAction(
+                nameof(GetAppointmentById),
+                new { id = dto.Id },
+                ApiResponse<AppointmentDto>.SuccessResponse(
+                    dto, "Appointment booked successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Booking failed: {Error}", ex.Message);
+            return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(
+                $"Invalid request: {ex.Message}", "Failed to book appointment"));
+        }
     }
 
     [HttpGet("{id}")]
+    [Authorize]
     [ProducesResponseType(typeof(ApiResponse<AppointmentDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAppointmentById(
         int id, CancellationToken cancellationToken)
     {
@@ -102,11 +141,20 @@ public sealed class AppointmentsController : ControllerBase
                 result.Error, "Appointment not found"));
         }
 
+        var role = User.GetRole();
+        if (role == AppRoles.Patient && User.GetPatientId() != result.Value!.PatientId)
+            return Forbid();
+        if (role == AppRoles.Doctor && User.GetDoctorId() != result.Value!.DoctorId)
+            return Forbid();
+
         return Ok(ApiResponse<AppointmentDto>.SuccessResponse(result.Value));
     }
 
     [HttpGet]
+    [Authorize(Roles = AppRoles.Admin)]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<AppointmentDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetAllAppointments(
     [FromQuery] int pageNumber = 1,
     [FromQuery] int pageSize = 20,
@@ -135,7 +183,10 @@ public sealed class AppointmentsController : ControllerBase
     /// Gets paginated list of appointments for a patient.
     /// </summary>
     [HttpGet("patient/{patientId}")]
+    [Authorize(Roles = AppRoles.PatientOrDoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<AppointmentDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAppointmentsByPatient(
         int patientId,
         [FromQuery] int pageNumber = 1,
@@ -144,6 +195,22 @@ public sealed class AppointmentsController : ControllerBase
     {
         _logger.LogInformation("Retrieving appointments for Patient {PatientId} - Page: {Page}, Size: {Size}",
             patientId, pageNumber, pageSize);
+
+        if (User.GetRole() == AppRoles.Patient && User.GetPatientId() != patientId)
+            return Forbid();
+
+        // ── Read-Access Audit ──────────────────────────────────────────────
+        // Skip audit for self-access (Patient role viewing own appointments).
+        // Only non-Patient roles (Doctor, Admin) are logged.
+        if (User.GetRole() != AppRoles.Patient)
+        {
+            int? accessorId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid) ? uid : null;
+
+            await _eventDispatcher.DispatchAsync(new PatientRecordAccessedEvent(
+                patientId,
+                accessorId,
+                "Patient appointments retrieved via GetAppointmentsByPatient API"), cancellationToken);
+        }
 
         if (pageNumber < 1) pageNumber = 1;
         if (pageSize < 1) pageSize = 20;
@@ -166,7 +233,10 @@ public sealed class AppointmentsController : ControllerBase
     /// Gets paginated list of appointments for a doctor.
     /// </summary>
     [HttpGet("doctor/{doctorId}")]
+    [Authorize(Roles = AppRoles.DoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<AppointmentDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAppointmentsByDoctor(
         int doctorId,
         [FromQuery] int pageNumber = 1,
@@ -175,6 +245,9 @@ public sealed class AppointmentsController : ControllerBase
     {
         _logger.LogInformation("Retrieving appointments for Doctor {DoctorId} - Page: {Page}, Size: {Size}",
             doctorId, pageNumber, pageSize);
+
+        if (User.GetRole() == AppRoles.Doctor && User.GetDoctorId() != doctorId)
+            return Forbid();
 
         if (pageNumber < 1) pageNumber = 1;
         if (pageSize < 1) pageSize = 20;
@@ -196,8 +269,10 @@ public sealed class AppointmentsController : ControllerBase
     [HttpPut("{id}/confirm")]
     [Authorize(Roles = AppRoles.DoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> ConfirmAppointment(
         int id,
         [FromBody] ConfirmAppointmentRequest? request,
@@ -205,11 +280,25 @@ public sealed class AppointmentsController : ControllerBase
     {
         _logger.LogInformation("Confirming appointment {AppointmentId}", id);
 
-        var result = await _facade.ConfirmAppointmentAsync(
-            appointmentId: id,
-            overridePaymentRequirement: request?.OverridePaymentRequirement ?? false,
-            overrideReason: request?.OverrideReason,
-            cancellationToken: cancellationToken);
+        var appointment = await _unitOfWork.Appointments.GetByIdAsync(id, cancellationToken);
+        if (appointment == null)
+        {
+            _logger.LogWarning("Appointment {AppointmentId} not found", id);
+            return NotFound(ApiResponse.ErrorResponse(
+                $"Appointment with ID {id} not found", "Appointment not found"));
+        }
+
+        if (User.GetRole() == AppRoles.Doctor && User.GetDoctorId() != appointment.DoctorId)
+            return Forbid();
+
+        var command = new ConfirmAppointmentCommand
+        {
+            AppointmentId = id,
+            OverridePaymentRequirement = request?.OverridePaymentRequirement ?? false,
+            OverrideReason = request?.OverrideReason
+        };
+
+        var result = await _confirmAppointmentHandler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -236,8 +325,10 @@ public sealed class AppointmentsController : ControllerBase
     [HttpPut("{id}/cancel")]
     [Authorize(Roles = AppRoles.PatientOrDoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> CancelAppointment(
         int id,
         [FromBody] CancelAppointmentRequest request,
@@ -245,10 +336,27 @@ public sealed class AppointmentsController : ControllerBase
     {
         _logger.LogInformation("Cancelling appointment {AppointmentId}", id);
 
-        var result = await _facade.CancelAppointmentAsync(
-            appointmentId: id,
-            reason: request.CancellationReason,
-            cancellationToken: cancellationToken);
+        var appointment = await _unitOfWork.Appointments.GetByIdAsync(id, cancellationToken);
+        if (appointment == null)
+        {
+            _logger.LogWarning("Appointment {AppointmentId} not found", id);
+            return NotFound(ApiResponse.ErrorResponse(
+                $"Appointment with ID {id} not found", "Appointment not found"));
+        }
+
+        var role = User.GetRole();
+        if (role == AppRoles.Patient && User.GetPatientId() != appointment.PatientId)
+            return Forbid();
+        if (role == AppRoles.Doctor && User.GetDoctorId() != appointment.DoctorId)
+            return Forbid();
+
+        var cancelCommand = new CancelAppointmentCommand
+        {
+            AppointmentId = id,
+            CancellationReason = request.CancellationReason
+        };
+
+        var result = await _cancelAppointmentHandler.HandleAsync(cancelCommand, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -300,14 +408,27 @@ public sealed class AppointmentsController : ControllerBase
     [HttpPut("{id}/complete")]
     [Authorize(Roles = AppRoles.DoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> CompleteAppointment(
         int id,
         [FromBody] CompleteAppointmentRequest request,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Completing appointment {AppointmentId}", id);
+
+        var appointment = await _unitOfWork.Appointments.GetByIdAsync(id, cancellationToken);
+        if (appointment == null)
+        {
+            _logger.LogWarning("Appointment {AppointmentId} not found", id);
+            return NotFound(ApiResponse.ErrorResponse(
+                $"Appointment with ID {id} not found", "Appointment not found"));
+        }
+
+        if (User.GetRole() == AppRoles.Doctor && User.GetDoctorId() != appointment.DoctorId)
+            return Forbid();
 
         var command = new CompleteAppointmentCommand
         {
@@ -336,13 +457,26 @@ public sealed class AppointmentsController : ControllerBase
     [HttpPut("{id}/mark-no-show")]
     [Authorize(Roles = AppRoles.DoctorOrAdmin)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> MarkNoShowAppointment(
         int id,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Marking appointment {AppointmentId} as No-Show", id);
+
+        var appointment = await _unitOfWork.Appointments.GetByIdAsync(id, cancellationToken);
+        if (appointment == null)
+        {
+            _logger.LogWarning("Appointment {AppointmentId} not found", id);
+            return NotFound(ApiResponse.ErrorResponse(
+                $"Appointment with ID {id} not found", "Appointment not found"));
+        }
+
+        if (User.GetRole() == AppRoles.Doctor && User.GetDoctorId() != appointment.DoctorId)
+            return Forbid();
 
         var command = new MarkNoShowAppointmentCommand
         {

@@ -3,7 +3,7 @@ using Healthcare.Domain.Common;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.Events;
-using Healthcare.Domain.Services;
+using Healthcare.Adapters.Services;
 using Healthcare.Domain.ValueObjects;
 using Xunit;
 

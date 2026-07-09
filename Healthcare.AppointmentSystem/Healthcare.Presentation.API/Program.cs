@@ -1,6 +1,5 @@
 using Healthcare.Adapters;
 using Healthcare.Adapters.Events;
-using Healthcare.Adapters.Factories;
 using Healthcare.Adapters.Services;
 using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Commands.CancelAppointment;
@@ -14,12 +13,11 @@ using Healthcare.Application.Commands.ProcessPayment;
 using Healthcare.Application.Commands.RefundPayment;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
-using Healthcare.Application.Ports.Facades;
-using Healthcare.Application.Ports.Factories;
+
 using Healthcare.Application.Ports.Payments;
 using Healthcare.Application.Queries.Analytics;
 using Healthcare.Application.Queries.GetAppointment;
-using Healthcare.Application.Queries.GetAppointmentsByPatient;
+
 using Healthcare.Application.Services;
 using Healthcare.Adapters.Persistence.EntityFramework;
 using Healthcare.Presentation.API.Configuration;
@@ -62,18 +60,16 @@ try
     builder.Services.AddScoped<IQueryHandler<GetNoShowRateQuery, Result<NoShowRateDto>>, GetNoShowRateHandler>();
     builder.Services.AddScoped<IQueryHandler<GetAppointmentVolumeQuery, Result<AppointmentVolumeDto>>, GetAppointmentVolumeHandler>();
     builder.Services.AddScoped<IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>>, GetAppointmentHandler>();
-    builder.Services.AddScoped<IQueryHandler<GetAppointmentsByPatientQuery, Result<IEnumerable<AppointmentDto>>>, GetAppointmentsByPatientHandler>();
-    builder.Services.AddScoped<IAppointmentFacade, AppointmentFacade>();
+
     builder.Services.AddScoped<IPaymentReconciliationService, PaymentReconciliationService>();
 
     // ── Adapters ────────────────────────────────────────────
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
     builder.Services.AddAdaptersWithEFCorePersistence(connectionString, builder.Configuration);
-    builder.Services.AddSingleton<IHealthcareRepositoryFactory, InMemoryRepositoryFactory>();
 
     // ── Observability ───────────────────────────────────────
-    builder.Services.AddObservability();
+    builder.Services.AddObservability(builder.Configuration);
 
     // ── Background Services ─────────────────────────────────
     builder.Services.Configure<ReminderSettings>(
@@ -99,17 +95,39 @@ try
 
     var app = builder.Build();
 
+    if (!app.Environment.IsDevelopment())
+    {
+        var proxies = builder.Configuration.GetSection("TrustedProxies").Get<string[]>();
+        var networks = builder.Configuration.GetSection("TrustedNetworks").Get<string[]>();
+        if ((proxies is null || proxies.Length == 0) &&
+            (networks is null || networks.Length == 0))
+        {
+            Log.Warning(
+                "No trusted proxies or networks configured. " +
+                "Rate limiting will use the direct RemoteIpAddress, which collapses to " +
+                "one global bucket when the server sits behind a reverse proxy. " +
+                "Set TrustedProxies or TrustedNetworks in production configuration.");
+        }
+    }
+
     // ── Middleware Pipeline ──────────────────────────────────
     app.UseForwardedHeaders();
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseMiddleware<CorrelationIdMiddleware>();
 
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
+    if (app.Environment.IsDevelopment())
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Healthcare API v1");
-        options.RoutePrefix = string.Empty;
-    });
+        app.UseSwagger();
+        app.UseSwaggerUI(options =>
+        {
+            options.SwaggerEndpoint("/swagger/v1/swagger.json", "Healthcare API v1");
+            options.RoutePrefix = string.Empty;
+        });
+    }
+    else
+    {
+        app.MapGet("/", () => Results.Ok("Healthy"));
+    }
 
     app.UseHttpsRedirection();
 
@@ -151,8 +169,9 @@ try
         }
     });
 
-    Log.Information("Healthcare API started successfully");
-    Log.Information("Swagger UI available at: https://localhost:7039");
+    Log.Information("Healthcare API started successfully (Environment: {Env})", app.Environment.EnvironmentName);
+    if (app.Environment.IsDevelopment())
+        Log.Information("Swagger UI available at: https://localhost:7039");
 
     app.Run();
 }

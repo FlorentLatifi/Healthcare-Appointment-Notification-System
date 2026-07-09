@@ -5,7 +5,7 @@ using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Queries.GetAppointment;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
-using Healthcare.Domain.Services;
+using Healthcare.Adapters.Services;
 using Healthcare.Domain.ValueObjects;
 using Xunit;
 

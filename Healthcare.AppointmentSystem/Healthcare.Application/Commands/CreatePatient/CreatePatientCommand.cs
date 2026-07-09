@@ -18,4 +18,5 @@ public sealed class CreatePatientCommand : ICommand<Result<int>>
     public string State { get; set; } = string.Empty;
     public string PostalCode { get; set; } = string.Empty;
     public string Country { get; set; } = string.Empty;
+    public int RequestingUserId { get; set; }
 }

@@ -3,7 +3,7 @@ using Healthcare.Application.Mappings;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
-using Healthcare.Domain.Services;
+using Healthcare.Adapters.Services;
 using Healthcare.UnitTests.Helpers;
 
 namespace Healthcare.UnitTests.Mappings;

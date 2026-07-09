@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using FluentAssertions;
 using Healthcare.Adapters.Persistence.InMemory;
 using Healthcare.Application.Commands.CreatePatient;
@@ -57,6 +58,7 @@ public class PatientControllerTests
     [Fact]
     public async Task DeletePatient_WithActivePatient_Returns204AndSetsIsActiveFalse()
     {
+        SetAdminPrincipal();
         var patient = await CreateActivePatientAsync();
 
         var result = await _controller.DeletePatient(patient.Id, CancellationToken.None);
@@ -71,6 +73,7 @@ public class PatientControllerTests
     [Fact]
     public async Task DeletePatient_WithActivePatient_RecordStillExistsInDatabase()
     {
+        SetAdminPrincipal();
         var patient = await CreateActivePatientAsync();
 
         await _controller.DeletePatient(patient.Id, CancellationToken.None);
@@ -86,6 +89,7 @@ public class PatientControllerTests
     [Fact]
     public async Task DeletePatient_WithAlreadyDeactivatedPatient_Returns400()
     {
+        SetAdminPrincipal();
         var patient = await CreateActivePatientAsync();
 
         await _controller.DeletePatient(patient.Id, CancellationToken.None);
@@ -100,9 +104,26 @@ public class PatientControllerTests
     [Fact]
     public async Task DeletePatient_WithNonExistentPatient_Returns404()
     {
+        SetAdminPrincipal();
         var result = await _controller.DeletePatient(9999, CancellationToken.None);
 
         result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    private void SetAdminPrincipal()
+    {
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1"),
+            new Claim(ClaimTypes.Name, "admin"),
+            new Claim(ClaimTypes.Role, "Admin")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var principal = new ClaimsPrincipal(identity);
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = principal }
+        };
     }
 
     private async Task<Patient> CreateActivePatientAsync()

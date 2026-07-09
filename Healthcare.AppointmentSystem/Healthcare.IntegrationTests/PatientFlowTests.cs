@@ -13,6 +13,9 @@ public sealed class PatientFlowTests : IntegrationTestBase
     [Fact]
     public async Task CreatePatient_ValidData_Returns201()
     {
+        var token = await RegisterAndLoginAsync("pat_create", "pat.create@test.com", "SecurePass123!", "Patient");
+        SetAuthToken(token);
+
         var payload = new
         {
             FirstName = "John",
@@ -40,6 +43,9 @@ public sealed class PatientFlowTests : IntegrationTestBase
     [Fact]
     public async Task CreatePatient_DuplicateEmail_Returns400()
     {
+        var token = await RegisterAndLoginAsync("pat_dup", "pat.dup@test.com", "SecurePass123!", "Patient");
+        SetAuthToken(token);
+
         var payload = new
         {
             FirstName = "Jane",
@@ -65,6 +71,9 @@ public sealed class PatientFlowTests : IntegrationTestBase
     [Fact]
     public async Task GetPatientById_ExistingPatient_ReturnsPatient()
     {
+        var token = await RegisterAndLoginAsync("pat_get", "pat.get@test.com", "SecurePass123!", "Patient");
+        SetAuthToken(token);
+
         var createPayload = new
         {
             FirstName = "Get",
@@ -97,7 +106,34 @@ public sealed class PatientFlowTests : IntegrationTestBase
     [Fact]
     public async Task GetPatientById_NonExisting_Returns404()
     {
+        var token = await RegisterAndLoginAsync("doc_get404", "doc.get404@test.com", "SecurePass123!", "Doctor");
+        SetAuthToken(token);
+
         var response = await Client.GetAsync("/api/v1/patients/99999");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task CreatePatient_WithoutAuth_Returns401()
+    {
+        ClearAuthToken();
+
+        var payload = new
+        {
+            FirstName = "Unauth",
+            LastName = "User",
+            Email = "unauth@test.com",
+            PhoneNumber = "+38349999999",
+            DateOfBirth = "1990-01-01",
+            Gender = "Male",
+            Street = "1 Main St",
+            City = "Pristina",
+            State = "Kosovo",
+            PostalCode = "10000",
+            Country = "Kosovo"
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/v1/patients", payload);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

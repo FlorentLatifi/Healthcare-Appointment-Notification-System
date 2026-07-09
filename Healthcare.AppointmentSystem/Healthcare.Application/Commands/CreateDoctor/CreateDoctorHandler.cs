@@ -75,6 +75,20 @@ public sealed class CreateDoctorHandler : ICommandHandler<CreateDoctorCommand, R
         await _unitOfWork.Doctors.AddAsync(doctor, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        if (command.RequestingUserId.HasValue)
+        {
+            var requestingUser = await _unitOfWork.Users.GetByIdAsync(command.RequestingUserId.Value, cancellationToken);
+            if (requestingUser == null)
+                return Result<int>.Failure("Authenticated user not found.");
+
+            if (requestingUser.DoctorId.HasValue)
+                return Result<int>.Failure("This account is already linked to a doctor profile.");
+
+            requestingUser.LinkToDoctor(doctor.Id);
+            await _unitOfWork.Users.UpdateAsync(requestingUser, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
         await _eventDispatcher.DispatchAsync(
             new DoctorCacheInvalidationNeededEvent(), cancellationToken);
 

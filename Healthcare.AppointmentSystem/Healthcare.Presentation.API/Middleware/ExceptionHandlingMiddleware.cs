@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
+using Healthcare.Domain.Common;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.EntityFrameworkCore;
 
@@ -82,12 +83,19 @@ public sealed class ExceptionHandlingMiddleware
         context.Response.StatusCode = exception switch
         {
             DbUpdateException => (int)HttpStatusCode.Conflict,
-            ArgumentException => (int)HttpStatusCode.BadRequest,
-            InvalidOperationException => (int)HttpStatusCode.BadRequest,
+            DomainException => (int)HttpStatusCode.BadRequest,
+            ArgumentException => (int)HttpStatusCode.InternalServerError,
+            InvalidOperationException => (int)HttpStatusCode.InternalServerError,
             UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
             KeyNotFoundException => (int)HttpStatusCode.NotFound,
             _ => (int)HttpStatusCode.InternalServerError
         };
+
+        // Populate the error code for domain exceptions
+        if (exception is DomainException domainEx)
+        {
+            errorResponse.Code = domainEx.ErrorCode;
+        }
 
         // Override message for DbUpdateException so the caller gets a clear,
         // actionable error instead of a raw SQL constraint message.
@@ -96,7 +104,7 @@ public sealed class ExceptionHandlingMiddleware
             errorResponse.Message = "This record cannot be removed because related records exist.";
         }
 
-        // For truly unexpected exceptions (HTTP 5xx), hide the original message
+        // For unexpected internal errors (HTTP 5xx), hide the original message
         // in non-development environments to avoid leaking sensitive internals.
         if (context.Response.StatusCode >= 500 && !_environment.IsDevelopment())
         {

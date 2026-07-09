@@ -8,9 +8,12 @@ using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Resources;
+using Healthcare.Presentation.API.Authorization;
 using Healthcare.Presentation.API.Responses;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using System.Security.Claims;
 
 namespace Healthcare.Presentation.API.Controllers;
 
@@ -44,8 +47,11 @@ public sealed class DoctorsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = AppRoles.AdminOrDoctor)]
     [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreateDoctor(
         [FromBody] CreateDoctorRequest request,
         CancellationToken cancellationToken)
@@ -62,7 +68,8 @@ public sealed class DoctorsController : ControllerBase
             Specialty = request.Specialty,
             ConsultationFeeAmount = request.ConsultationFeeAmount,
             ConsultationFeeCurrency = request.ConsultationFeeCurrency,
-            YearsOfExperience = request.YearsOfExperience
+            YearsOfExperience = request.YearsOfExperience,
+            RequestingUserId = User.IsInRole(AppRoles.Doctor) ? int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value) : null
         };
 
         var result = await _createDoctorHandler.HandleAsync(command, cancellationToken);
@@ -81,6 +88,7 @@ public sealed class DoctorsController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<DoctorDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetDoctorById(int id, CancellationToken cancellationToken)
@@ -102,9 +110,12 @@ public sealed class DoctorsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = AppRoles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> DeleteDoctor(int id, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Deactivating doctor {DoctorId}", id);
@@ -123,6 +134,7 @@ public sealed class DoctorsController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAllDoctors(
         [FromQuery] int pageNumber = 1,
@@ -156,6 +168,7 @@ public sealed class DoctorsController : ControllerBase
     }
 
     [HttpGet("active")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetActiveDoctors(
         [FromQuery] int pageNumber = 1,
@@ -189,6 +202,7 @@ public sealed class DoctorsController : ControllerBase
     }
 
     [HttpGet("accepting-patients")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDoctorsAcceptingPatients(
         [FromQuery] int pageNumber = 1,

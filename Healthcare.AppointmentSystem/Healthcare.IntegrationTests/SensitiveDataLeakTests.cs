@@ -8,11 +8,10 @@ using Healthcare.Application.Commands.ConfirmAppointment;
 using Healthcare.Application.Commands.MarkNoShowAppointment;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
-using Healthcare.Application.Ports.Facades;
+
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Queries.GetAppointment;
-using Healthcare.Application.Queries.GetAppointmentsByPatient;
-using Healthcare.Application.Services;
+using Healthcare.Application.Ports.Events;
 using Healthcare.Presentation.API.Controllers;
 using Healthcare.Presentation.API.Middleware;
 using Healthcare.Presentation.API.Responses;
@@ -85,12 +84,11 @@ public sealed class SensitiveDataLeakTests
                 services.AddScoped<IAppointmentRepository>(_ => repoMock.Object);
 
                 services.AddScoped<IUnitOfWork>(_ => Mock.Of<IUnitOfWork>());
-                services.AddScoped<IAppointmentFacade>(_ => Mock.Of<IAppointmentFacade>());
 
                 services.AddScoped<
                     IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>>,
                     GetAppointmentHandler>();
-                services.AddScoped(_ => Mock.Of<IQueryHandler<GetAppointmentsByPatientQuery, Result<IEnumerable<AppointmentDto>>>>());
+                services.AddScoped<IDomainEventDispatcher>(_ => Mock.Of<IDomainEventDispatcher>());
                 services.AddScoped(_ => Mock.Of<ICommandHandler<BookAppointmentCommand, Result<int>>>());
                 services.AddScoped(_ => Mock.Of<ICommandHandler<ConfirmAppointmentCommand, Result>>());
                 services.AddScoped(_ => Mock.Of<ICommandHandler<CancelAppointmentCommand, Result>>());

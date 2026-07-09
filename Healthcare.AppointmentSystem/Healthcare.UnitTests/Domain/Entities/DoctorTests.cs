@@ -894,7 +894,7 @@ public class DoctorTests
             patient, doctor,
             AppointmentTime.Create(time),
             "Test reason for appointment that is long enough",
-            Healthcare.Domain.Services.AppointmentCodeGenerator.Instance);
+            Healthcare.Adapters.Services.AppointmentCodeGenerator.Instance);
 
         typeof(Appointment).GetProperty("Id",
             System.Reflection.BindingFlags.Public |

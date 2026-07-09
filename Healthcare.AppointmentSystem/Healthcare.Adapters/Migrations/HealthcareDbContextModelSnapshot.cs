@@ -397,6 +397,7 @@ namespace Healthcare.Adapters.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AppointmentId")
+                        .IsUnique()
                         .HasDatabaseName("IX_Payments_AppointmentId");
 
                     b.HasIndex("Status")

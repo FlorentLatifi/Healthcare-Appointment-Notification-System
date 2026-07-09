@@ -3,23 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
-
-const s = {
-  wrapper: { maxWidth: 900, margin: '40px auto', padding: '0 16px' },
-  search: { padding: '8px 12px', width: 280, borderRadius: 6, border: '1px solid #ccc', marginBottom: 24 },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 },
-  card: { border: '1px solid #ddd', borderRadius: 8, padding: 16, background: '#fff' },
-  name: { margin: '0 0 4px', fontSize: 18 },
-  specialty: { fontSize: 13, color: '#555', marginBottom: 6 },
-  fee: { fontSize: 14, fontWeight: 600, color: '#059669', marginBottom: 8 },
-  badge: {
-    display: 'inline-block', fontSize: 12, padding: '2px 8px', borderRadius: 12,
-    background: '#dbeafe', color: '#1e40af',
-  },
-  bookBtn: { width: '100%', padding: '8px 0', marginTop: 12, background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6 },
-  loading: { textAlign: 'center', padding: 40, color: '#888' },
-  empty: { textAlign: 'center', padding: 40, color: '#888', fontSize: 16 },
-};
+import { Card, Button, Spinner, Input, EmptyState, PageHeader } from '../components/ui';
+import { Clock, DollarSign } from 'lucide-react';
 
 export default function DoctorsListPage() {
   const { patientId, user } = useAuth();
@@ -52,61 +37,65 @@ export default function DoctorsListPage() {
       )
     : doctors;
 
-  if (loading) return <div style={s.wrapper}><div style={s.loading}>Loading doctors...</div></div>;
+  if (loading) return <div className="max-w-4xl mx-auto px-4 py-12"><Spinner /></div>;
 
   return (
-    <div style={s.wrapper}>
-      <h1>Available Doctors</h1>
+    <div className="max-w-4xl mx-auto px-4 py-12">
+      <PageHeader title="Available Doctors" />
 
-      <input
-        style={s.search}
-        placeholder="Filter by specialty..."
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
+      <div className="mb-4">
+        <Input
+          placeholder="Filter by specialty..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+      </div>
 
       {specialties.length > 0 && (
-        <div style={{ marginBottom: 20, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap gap-2 mb-6">
           {specialties.map((sp) => (
-            <button
+            <Button
               key={sp}
-              style={{
-                fontSize: 12, padding: '4px 12px', borderRadius: 16, border: '1px solid #ccc',
-                background: filter === sp ? '#2563eb' : '#f3f4f6',
-                color: filter === sp ? '#fff' : '#333', cursor: 'pointer',
-              }}
+              variant={filter === sp ? 'primary' : 'secondary'}
+              size="sm"
+              className="rounded-full"
               onClick={() => setFilter(filter === sp ? '' : sp)}
             >
               {sp}
-            </button>
+            </Button>
           ))}
         </div>
       )}
 
       {filtered.length === 0 ? (
-        <div style={s.empty}>No doctors found matching this specialty.</div>
+        <EmptyState message="No doctors found matching this specialty." />
       ) : (
-        <div style={s.grid}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((doc) => (
-            <div key={doc.id} style={s.card}>
-              <h3 style={s.name}>Dr. {doc.fullName}</h3>
-              <div style={s.specialty}>{doc.specialties.join(', ')}</div>
-              <div style={s.fee}>{doc.consultationFeeCurrency} {doc.consultationFeeAmount}</div>
-              <span style={s.badge}>{doc.yearsOfExperience} yr{doc.yearsOfExperience !== 1 ? 's' : ''}</span>
-              <button
-                style={s.bookBtn}
-                onClick={() => {
-                  if (!patientId && user?.role === 'Patient') {
-                    toast.error('Create your patient profile first');
-                    navigate('/create-patient');
-                    return;
-                  }
-                  navigate(`/book-appointment/${doc.id}`);
-                }}
-              >
+            <Card key={doc.id}>
+              <h3 className="text-base font-semibold text-text mb-1">Dr. {doc.fullName}</h3>
+              <p className="text-xs text-text-muted mb-2">{doc.specialties.join(', ')}</p>
+              <div className="flex items-center gap-3 text-xs text-text-secondary mb-3">
+                <span className="inline-flex items-center gap-1">
+                  <DollarSign size={12} />
+                  {doc.consultationFeeCurrency} {doc.consultationFeeAmount}
+                </span>
+                <span className="inline-flex items-center gap-1 bg-status-scheduled-bg text-status-scheduled-text px-2 py-0.5 rounded-full">
+                  <Clock size={12} />
+                  {doc.yearsOfExperience} yr{doc.yearsOfExperience !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <Button size="sm" className="w-full" onClick={() => {
+                if (!patientId && user?.role === 'Patient') {
+                  toast.error('Create your patient profile first');
+                  navigate('/create-patient');
+                  return;
+                }
+                navigate(`/book-appointment/${doc.id}`);
+              }}>
                 Book Appointment
-              </button>
-            </div>
+              </Button>
+            </Card>
           ))}
         </div>
       )}

@@ -13,10 +13,10 @@ public sealed class AppointmentDto
     /// </summary>
     public string ReferenceCode { get; set; } = string.Empty;
 
-    /// <summary>Patient ID — used by AppointmentFacade lightweight mapping.</summary>
+    /// <summary>Patient ID.</summary>
     public int PatientId { get; set; }
 
-    /// <summary>Doctor ID — used by AppointmentFacade lightweight mapping.</summary>
+    /// <summary>Doctor ID.</summary>
     public int DoctorId { get; set; }
 
     public PatientDto Patient { get; set; } = null!;

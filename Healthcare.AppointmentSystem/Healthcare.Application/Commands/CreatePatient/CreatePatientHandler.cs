@@ -77,6 +77,18 @@ public sealed class CreatePatientHandler : ICommandHandler<CreatePatientCommand,
             await _unitOfWork.Patients.AddAsync(patient, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            // 5. Link the calling user to this patient
+            var requestingUser = await _unitOfWork.Users.GetByIdAsync(command.RequestingUserId, cancellationToken);
+            if (requestingUser == null)
+                return Result<int>.Failure("Authenticated user not found.");
+
+            if (requestingUser.PatientId.HasValue)
+                return Result<int>.Failure("This account is already linked to a patient profile.");
+
+            requestingUser.LinkToPatient(patient.Id);
+            await _unitOfWork.Users.UpdateAsync(requestingUser, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
             return Result<int>.Success(patient.Id);
     }
 }

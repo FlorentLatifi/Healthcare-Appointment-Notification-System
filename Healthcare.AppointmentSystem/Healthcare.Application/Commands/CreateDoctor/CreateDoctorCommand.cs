@@ -13,4 +13,5 @@ public sealed class CreateDoctorCommand : ICommand<Result<int>>
     public decimal ConsultationFeeAmount { get; set; }
     public string ConsultationFeeCurrency { get; set; } = "USD";
     public int YearsOfExperience { get; set; }
+    public int? RequestingUserId { get; set; }
 }

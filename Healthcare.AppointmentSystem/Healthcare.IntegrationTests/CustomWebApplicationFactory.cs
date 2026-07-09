@@ -1,7 +1,5 @@
 using Healthcare.Adapters.Authentication;
-using Healthcare.Adapters.Factories;
 using Healthcare.Adapters.Persistence.EntityFramework;
-using Healthcare.Application.Ports.Factories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -9,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using Testcontainers.MsSql;
 using Testcontainers.Redis;
@@ -55,14 +52,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
         builder.ConfigureTestServices(services =>
         {
-            services.RemoveAll<IHealthcareRepositoryFactory>();
-            services.AddSingleton<IHealthcareRepositoryFactory>(sp =>
-            {
-                var context = sp.GetRequiredService<HealthcareDbContext>();
-                var logger = sp.GetRequiredService<ILogger<EFCoreRepositoryFactory>>();
-                return new EFCoreRepositoryFactory(context, logger);
-            });
-
             services.RemoveAll<IConnectionMultiplexer>();
             services.AddSingleton<IConnectionMultiplexer>(_ =>
                 ConnectionMultiplexer.Connect(new ConfigurationOptions

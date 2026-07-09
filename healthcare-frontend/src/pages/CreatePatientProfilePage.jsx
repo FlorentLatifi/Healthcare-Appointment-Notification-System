@@ -3,18 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
+import { Button, Input, Select, PageHeader } from '../components/ui';
 
 const GENDERS = ['Male', 'Female', 'Other'];
-
-const s = {
-  wrapper: { maxWidth: 520, margin: '40px auto', padding: '0 16px' },
-  field: { marginBottom: 16 },
-  label: { display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 14 },
-  input: { width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #ccc' },
-  select: { width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #ccc', background: '#fff' },
-  row: { display: 'flex', gap: 12 },
-  submit: { width: '100%', padding: '10px 0', marginTop: 8, background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontSize: 16 },
-};
 
 export default function CreatePatientProfilePage() {
   const { setPatientId } = useAuth();
@@ -51,67 +42,34 @@ export default function CreatePatientProfilePage() {
   };
 
   return (
-    <div style={s.wrapper}>
-      <h1>Create Patient Profile</h1>
-      <p style={{ color: '#666', marginBottom: 20 }}>Fill in your details to start booking appointments.</p>
-      <form onSubmit={handleSubmit}>
-        <div style={s.row}>
-          <div style={{ flex: 1, ...s.field }}>
-            <label style={s.label}>First Name</label>
-            <input style={s.input} value={form.firstName} onChange={set('firstName')} required />
-          </div>
-          <div style={{ flex: 1, ...s.field }}>
-            <label style={s.label}>Last Name</label>
-            <input style={s.input} value={form.lastName} onChange={set('lastName')} required />
-          </div>
+    <div className="max-w-lg mx-auto px-4 py-12">
+      <PageHeader title="Create Patient Profile" subtitle="Fill in your details to start booking appointments." />
+
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-6 border border-border-light">
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="First Name" value={form.firstName} onChange={set('firstName')} required />
+          <Input label="Last Name" value={form.lastName} onChange={set('lastName')} required />
         </div>
-        <div style={s.field}>
-          <label style={s.label}>Email</label>
-          <input style={s.input} type="email" value={form.email} onChange={set('email')} required />
+        <Input label="Email" type="email" value={form.email} onChange={set('email')} required />
+        <Input label="Phone Number" value={form.phoneNumber} onChange={set('phoneNumber')} required />
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Date of Birth" type="date" value={form.dateOfBirth} onChange={set('dateOfBirth')} required />
+          <Select label="Gender" value={form.gender} onChange={set('gender')}>
+            {GENDERS.map((g) => <option key={g}>{g}</option>)}
+          </Select>
         </div>
-        <div style={s.field}>
-          <label style={s.label}>Phone Number</label>
-          <input style={s.input} value={form.phoneNumber} onChange={set('phoneNumber')} required />
+        <Input label="Street" value={form.street} onChange={set('street')} />
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="City" value={form.city} onChange={set('city')} />
+          <Input label="State" value={form.state} onChange={set('state')} />
         </div>
-        <div style={s.row}>
-          <div style={{ flex: 1, ...s.field }}>
-            <label style={s.label}>Date of Birth</label>
-            <input style={s.input} type="date" value={form.dateOfBirth} onChange={set('dateOfBirth')} required />
-          </div>
-          <div style={{ flex: 1, ...s.field }}>
-            <label style={s.label}>Gender</label>
-            <select style={s.select} value={form.gender} onChange={set('gender')}>
-              {GENDERS.map((g) => <option key={g}>{g}</option>)}
-            </select>
-          </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Postal Code" value={form.postalCode} onChange={set('postalCode')} />
+          <Input label="Country" value={form.country} onChange={set('country')} />
         </div>
-        <div style={s.field}>
-          <label style={s.label}>Street</label>
-          <input style={s.input} value={form.street} onChange={set('street')} />
-        </div>
-        <div style={s.row}>
-          <div style={{ flex: 1, ...s.field }}>
-            <label style={s.label}>City</label>
-            <input style={s.input} value={form.city} onChange={set('city')} />
-          </div>
-          <div style={{ flex: 1, ...s.field }}>
-            <label style={s.label}>State</label>
-            <input style={s.input} value={form.state} onChange={set('state')} />
-          </div>
-        </div>
-        <div style={s.row}>
-          <div style={{ flex: 1, ...s.field }}>
-            <label style={s.label}>Postal Code</label>
-            <input style={s.input} value={form.postalCode} onChange={set('postalCode')} />
-          </div>
-          <div style={{ flex: 1, ...s.field }}>
-            <label style={s.label}>Country</label>
-            <input style={s.input} value={form.country} onChange={set('country')} />
-          </div>
-        </div>
-        <button type="submit" style={s.submit} disabled={submitting}>
-          {submitting ? 'Creating...' : 'Create Profile'}
-        </button>
+        <Button type="submit" loading={submitting} className="w-full mt-2" size="lg">
+          Create Profile
+        </Button>
       </form>
     </div>
   );

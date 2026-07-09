@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { Button, Input } from '../components/ui';
 
 export default function LoginPage() {
   const { login, loading } = useAuth();
@@ -24,26 +25,24 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: '80px auto', padding: '0 16px' }}>
-      <h1>Login</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 12 }}>
-          <label>Username</label><br />
-          <input name="username" value={form.username} onChange={handleChange} required
-            style={{ width: '100%', padding: 8 }} />
+    <div className="min-h-screen flex items-center justify-center bg-bg px-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-semibold text-text tracking-tight">Login</h1>
+          <p className="text-sm text-text-muted mt-1">Sign in to your account</p>
         </div>
-        <div style={{ marginBottom: 12 }}>
-          <label>Password</label><br />
-          <input name="password" type="password" value={form.password} onChange={handleChange} required
-            style={{ width: '100%', padding: 8 }} />
-        </div>
-        <button type="submit" disabled={loading} style={{ width: '100%', padding: 10 }}>
-          {loading ? 'Logging in...' : 'Login'}
-        </button>
-      </form>
-      <p style={{ marginTop: 16 }}>
-        Don&apos;t have an account? <Link to="/register">Register</Link>
-      </p>
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-6 border border-border-light">
+          <Input label="Username" name="username" value={form.username} onChange={handleChange} required autoComplete="username" />
+          <Input label="Password" name="password" type="password" value={form.password} onChange={handleChange} required autoComplete="current-password" />
+          <Button type="submit" disabled={loading} className="w-full mt-2" size="lg">
+            {loading ? 'Logging in...' : 'Login'}
+          </Button>
+        </form>
+        <p className="text-sm text-text-muted text-center mt-6">
+          Don&apos;t have an account?{' '}
+          <Link to="/register" className="text-primary font-medium hover:text-primary-hover">Register</Link>
+        </p>
+      </div>
     </div>
   );
 }

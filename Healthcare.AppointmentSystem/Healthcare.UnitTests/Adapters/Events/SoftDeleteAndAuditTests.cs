@@ -5,7 +5,7 @@ using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Events;
-using Healthcare.Domain.Services;
+using Healthcare.Adapters.Services;
 using Healthcare.Domain.ValueObjects;
 using Healthcare.UnitTests.Adapters.Persistence.EntityFramework;
 using Healthcare.UnitTests.Helpers;
@@ -145,7 +145,7 @@ public sealed class SoftDeleteAndAuditTests
         await handler.HandleAsync(domainEvent, CancellationToken.None);
 
         // The handler always writes when called; the gating logic is in the
-        // callers (PatientsController / GetAppointmentsByPatientHandler),
+        // callers (PatientsController / AppointmentsController),
         // which skip calling DispatchAsync when the accessor role is Patient.
         // This test verifies the handler's behavior would still work if called.
         auditLogRepo.Verify(r => r.AddAsync(

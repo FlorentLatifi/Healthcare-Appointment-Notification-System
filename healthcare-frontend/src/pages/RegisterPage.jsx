@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { Button, Input, Select } from '../components/ui';
 
 export default function RegisterPage() {
   const { register, loading } = useAuth();
@@ -30,45 +31,31 @@ export default function RegisterPage() {
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: '80px auto', padding: '0 16px' }}>
-      <h1>Register</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 12 }}>
-          <label>Username</label><br />
-          <input name="username" value={form.username} onChange={handleChange} required minLength={3}
-            style={{ width: '100%', padding: 8 }} />
+    <div className="min-h-screen flex items-center justify-center bg-bg px-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-semibold text-text tracking-tight">Register</h1>
+          <p className="text-sm text-text-muted mt-1">Create a new account</p>
         </div>
-        <div style={{ marginBottom: 12 }}>
-          <label>Email</label><br />
-          <input name="email" type="email" value={form.email} onChange={handleChange} required
-            style={{ width: '100%', padding: 8 }} />
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <label>Password</label><br />
-          <input name="password" type="password" value={form.password} onChange={handleChange} required minLength={8}
-            style={{ width: '100%', padding: 8 }} />
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <label>Confirm Password</label><br />
-          <input name="confirmPassword" type="password" value={form.confirmPassword}
-            onChange={handleChange} required minLength={8}
-            style={{ width: '100%', padding: 8 }} />
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <label>Role</label><br />
-          <select name="role" value={form.role} onChange={handleChange} style={{ width: '100%', padding: 8 }}>
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-6 border border-border-light">
+          <Input label="Username" name="username" value={form.username} onChange={handleChange} required minLength={3} autoComplete="username" />
+          <Input label="Email" name="email" type="email" value={form.email} onChange={handleChange} required autoComplete="email" />
+          <Input label="Password" name="password" type="password" value={form.password} onChange={handleChange} required minLength={8} autoComplete="new-password" />
+          <Input label="Confirm Password" name="confirmPassword" type="password" value={form.confirmPassword} onChange={handleChange} required minLength={8} autoComplete="new-password" />
+          <Select label="Role" name="role" value={form.role} onChange={handleChange}>
             <option value="Patient">Patient</option>
             <option value="Doctor">Doctor</option>
             <option value="Admin">Admin</option>
-          </select>
-        </div>
-        <button type="submit" disabled={loading} style={{ width: '100%', padding: 10 }}>
-          {loading ? 'Registering...' : 'Register'}
-        </button>
-      </form>
-      <p style={{ marginTop: 16 }}>
-        Already have an account? <Link to="/login">Login</Link>
-      </p>
+          </Select>
+          <Button type="submit" disabled={loading} className="w-full mt-2" size="lg">
+            {loading ? 'Registering...' : 'Register'}
+          </Button>
+        </form>
+        <p className="text-sm text-text-muted text-center mt-6">
+          Already have an account?{' '}
+          <Link to="/login" className="text-primary font-medium hover:text-primary-hover">Login</Link>
+        </p>
+      </div>
     </div>
   );
 }

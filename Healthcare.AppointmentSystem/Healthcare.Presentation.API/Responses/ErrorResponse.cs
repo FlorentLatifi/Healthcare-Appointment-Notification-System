@@ -23,6 +23,11 @@ public sealed class ErrorResponse
     public string Message { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the error code (for DomainException subclasses).
+    /// </summary>
+    public string? Code { get; set; }
+
+    /// <summary>
     /// Gets or sets the list of validation errors (if any).
     /// </summary>
     public List<string>? Errors { get; set; }

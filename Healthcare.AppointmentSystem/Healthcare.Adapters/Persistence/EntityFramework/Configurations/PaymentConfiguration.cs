@@ -85,6 +85,7 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
 
         // Indexes
         builder.HasIndex(p => p.AppointmentId)
+            .IsUnique()
             .HasDatabaseName("IX_Payments_AppointmentId");
 
         builder.HasIndex(p => p.TransactionId)

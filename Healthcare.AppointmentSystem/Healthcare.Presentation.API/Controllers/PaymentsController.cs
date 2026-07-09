@@ -271,7 +271,9 @@ public sealed class PaymentsController : ControllerBase
     [HttpGet("{id}")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<PaymentDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetPaymentById(int id, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Retrieving payment {PaymentId}", id);
@@ -285,6 +287,20 @@ public sealed class PaymentsController : ControllerBase
                 $"Payment with ID {id} not found",
                 "Payment not found"));
         }
+
+        var appointment = await _unitOfWork.Appointments.GetByIdAsync(payment.AppointmentId, cancellationToken);
+        if (appointment == null)
+        {
+            _logger.LogWarning("Appointment {AppointmentId} for payment {PaymentId} not found", payment.AppointmentId, id);
+            return NotFound(ApiResponse<PaymentDto>.ErrorResponse(
+                $"Associated appointment not found", "Payment not found"));
+        }
+
+        var role = User.GetRole();
+        if (role == AppRoles.Patient && User.GetPatientId() != appointment.PatientId)
+            return Forbid();
+        if (role == AppRoles.Doctor && User.GetDoctorId() != appointment.DoctorId)
+            return Forbid();
 
         var dto = MapToDto(payment);
         return Ok(ApiResponse<PaymentDto>.SuccessResponse(dto));
@@ -301,12 +317,29 @@ public sealed class PaymentsController : ControllerBase
     [HttpGet("appointment/{appointmentId}")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<PaymentDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetPaymentByAppointment(
         int appointmentId,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Retrieving payment for appointment {AppointmentId}", appointmentId);
+
+        var appointment = await _unitOfWork.Appointments.GetByIdAsync(appointmentId, cancellationToken);
+        if (appointment == null)
+        {
+            _logger.LogWarning("Appointment {AppointmentId} not found", appointmentId);
+            return NotFound(ApiResponse<PaymentDto>.ErrorResponse(
+                $"Appointment with ID {appointmentId} not found",
+                "Payment not found"));
+        }
+
+        var role = User.GetRole();
+        if (role == AppRoles.Patient && User.GetPatientId() != appointment.PatientId)
+            return Forbid();
+        if (role == AppRoles.Doctor && User.GetDoctorId() != appointment.DoctorId)
+            return Forbid();
 
         var payment = await _unitOfWork.Payments
             .GetByAppointmentIdAsync(appointmentId, cancellationToken);

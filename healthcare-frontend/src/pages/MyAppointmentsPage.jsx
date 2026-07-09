@@ -3,40 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
-import { STATUS_COLORS } from '../theme';
-
-const s = {
-  wrapper: { maxWidth: 800, margin: '40px auto', padding: '0 16px' },
-  card: { border: '1px solid #ddd', borderRadius: 8, padding: 16, marginBottom: 12, background: '#fff' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
-  ref: { fontWeight: 700, fontSize: 15 },
-  badge: (status) => ({
-    display: 'inline-block', fontSize: 12, padding: '3px 10px', borderRadius: 12,
-    fontWeight: 600,
-    background: (STATUS_COLORS[status] || { bg: '#f3f4f6' }).bg,
-    color: (STATUS_COLORS[status] || { color: '#333' }).color,
-  }),
-  meta: { fontSize: 13, color: '#666', marginBottom: 4 },
-  reason: { fontSize: 14, color: '#333', marginTop: 4 },
-  actions: { marginTop: 10 },
-  cancelBtn: { padding: '6px 16px', fontSize: 13, background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: 6 },
-  loading: { textAlign: 'center', padding: 40, color: '#888' },
-  empty: { textAlign: 'center', padding: 40, color: '#888', fontSize: 16 },
-  // modal
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#fff', borderRadius: 8, padding: 24, width: 400, maxWidth: '90vw' },
-  modalTitle: { margin: '0 0 16px' },
-  modalTextarea: { width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #ccc', minHeight: 80, resize: 'vertical' },
-  modalActions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
-  modalCancel: { padding: '8px 16px', border: '1px solid #ccc', borderRadius: 6, background: '#fff' },
-  modalConfirm: { padding: '8px 16px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6 },
-};
+import { Button, Card, Badge, Spinner, EmptyState, Modal, Textarea, PageHeader } from '../components/ui';
+import { Calendar, Clock, AlertCircle, CalendarClock } from 'lucide-react';
 
 export default function MyAppointmentsPage() {
   const { patientId } = useAuth();
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [cancelling, setCancelling] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
@@ -52,12 +27,14 @@ export default function MyAppointmentsPage() {
 
   const fetchAppointments = async () => {
     setLoading(true);
+    setFetchError(false);
     try {
       const { data } = await apiClient.get(`/Appointments/patient/${patientId}`, { params: { pageSize: 50 } });
       if (data.success) setAppointments(data.data.items);
-      else toast.error(data.message || 'Failed to load appointments');
+      else { toast.error(data.message || 'Failed to load appointments'); setFetchError(true); }
     } catch {
       toast.error('Failed to load appointments');
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -91,70 +68,87 @@ export default function MyAppointmentsPage() {
     }
   };
 
-  if (loading) return <div style={s.wrapper}><div style={s.loading}>Loading appointments...</div></div>;
+  if (loading) return <div className="max-w-3xl mx-auto px-4 py-12"><Spinner /></div>;
+
+  if (fetchError) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-12">
+        <PageHeader title="My Appointments" />
+        <EmptyState message="Failed to load appointments." actionLabel="Retry" onAction={fetchAppointments} />
+      </div>
+    );
+  }
 
   return (
-    <div style={s.wrapper}>
-      <h1>My Appointments</h1>
+    <div className="max-w-3xl mx-auto px-4 py-12">
+      <PageHeader title="My Appointments" />
 
       {appointments.length === 0 ? (
-        <div style={s.empty}>
-          <p>No appointments found.</p>
-          <button onClick={() => navigate('/doctors')} style={{ marginTop: 8, padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6 }}>
-            Browse Doctors
-          </button>
-        </div>
+        <EmptyState
+          icon={<CalendarClock size={24} className="text-text-muted" />}
+          message="No appointments found."
+          actionLabel="Browse Doctors"
+          onAction={() => navigate('/doctors')}
+        />
       ) : (
-        appointments.map((appt) => (
-          <div key={appt.id} style={s.card}>
-            <div style={s.header}>
-              <div>
-                <span style={s.ref}>{appt.referenceCode}</span>
-                <span style={{ marginLeft: 10, ...s.badge(appt.status) }}>{appt.status}</span>
+        <div className="space-y-3">
+          {appointments.map((appt) => (
+            <Card key={appt.id}>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-text">{appt.referenceCode}</span>
+                  <Badge status={appt.status} />
+                </div>
+                <span className="text-xs text-text-muted">{appt.scheduledDate}</span>
               </div>
-              <div style={{ fontSize: 13, color: '#888' }}>{appt.scheduledDate}</div>
-            </div>
-            <div style={s.meta}>
-              Dr. {appt.doctor?.fullName} — {appt.scheduledTimeFormatted}
-            </div>
-            <div style={s.meta}>Type: {appt.reason}</div>
-            <div style={s.reason}>{appt.reason}</div>
-            {appt.cancellationReason && (
-              <div style={{ ...s.reason, color: '#991b1b', fontSize: 13, marginTop: 4 }}>
-                Cancellation reason: {appt.cancellationReason}
+              <div className="flex items-center gap-3 text-xs text-text-muted mb-1">
+                <span className="inline-flex items-center gap-1">
+                  <Calendar size={12} />
+                  Dr. {appt.doctor?.fullName}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Clock size={12} />
+                  {appt.scheduledTimeFormatted}
+                </span>
               </div>
-            )}
-            {appt.status === 'Scheduled' && (
-              <div style={s.actions}>
-                <button style={s.cancelBtn} onClick={() => openCancelModal(appt)}>Cancel</button>
-              </div>
-            )}
-          </div>
-        ))
+              <p className="text-sm text-text mt-1">{appt.reason}</p>
+              {appt.cancellationReason && (
+                <p className="text-xs text-status-cancelled-text mt-2 inline-flex items-center gap-1">
+                  <AlertCircle size={12} />
+                  Cancellation reason: {appt.cancellationReason}
+                </p>
+              )}
+              {appt.status === 'Scheduled' && (
+                <div className="mt-3 pt-3 border-t border-border-light">
+                  <Button variant="danger" size="sm" onClick={() => openCancelModal(appt)}>Cancel</Button>
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
       )}
 
-      {/* Cancel Modal */}
-      {cancelling && (
-        <div style={s.overlay} onClick={() => setCancelling(null)}>
-          <div style={s.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={s.modalTitle}>Cancel Appointment</h3>
-            <p style={{ fontSize: 14, color: '#666', marginBottom: 12 }}>
-              {cancelling.referenceCode} — Dr. {cancelling.doctor?.fullName}
-            </p>
-            <textarea
-              style={s.modalTextarea}
-              placeholder="Reason for cancellation (min 10 characters)..."
-              value={cancelReason}
-              onChange={(e) => { setCancelReason(e.target.value); setCancelError(''); }}
-            />
-            {cancelError && <div style={{ color: '#dc2626', fontSize: 13, marginTop: 4 }}>{cancelError}</div>}
-            <div style={s.modalActions}>
-              <button style={s.modalCancel} onClick={() => setCancelling(null)}>Keep</button>
-              <button style={s.modalConfirm} onClick={confirmCancel}>Confirm Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={!!cancelling}
+        onClose={() => setCancelling(null)}
+        title="Cancel Appointment"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setCancelling(null)}>Keep</Button>
+            <Button variant="danger" onClick={confirmCancel}>Confirm Cancel</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-text-muted mb-4">
+          {cancelling?.referenceCode} — Dr. {cancelling?.doctor?.fullName}
+        </p>
+        <Textarea
+          placeholder="Reason for cancellation (min 10 characters)..."
+          value={cancelReason}
+          onChange={(e) => { setCancelReason(e.target.value); setCancelError(''); }}
+          error={cancelError}
+        />
+      </Modal>
     </div>
   );
 }

@@ -1,13 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-
-const s = {
-  wrapper: { maxWidth: 600, margin: '40px auto', padding: '0 16px' },
-  card: { border: '1px solid #ddd', borderRadius: 8, padding: 16, marginBottom: 12, background: '#fff', cursor: 'pointer' },
-  cardTitle: { margin: '0 0 4px', fontSize: 16 },
-  cardDesc: { margin: 0, fontSize: 13, color: '#666' },
-};
+import { Card, Button, PageHeader } from '../components/ui';
+import { LogOut, ArrowRight } from 'lucide-react';
 
 const ROLE_ACTIONS = {
   Patient: [
@@ -34,33 +29,42 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={s.wrapper}>
-      <h1>Dashboard</h1>
-      <p>Welcome, <strong>{user?.username}</strong>!</p>
-      <p>Role: {user?.role}</p>
+    <div className="max-w-lg mx-auto px-4 py-12">
+      <PageHeader
+        title="Dashboard"
+        subtitle={<>Welcome, <span className="font-medium text-text">{user?.username}</span></>}
+      />
 
       {actions.length > 0 && (
-        <div style={{ marginTop: 24 }}>
-          <h3 style={{ marginBottom: 12 }}>Quick Actions</h3>
-          {actions.map((a) => (
-            <div key={a.path} style={s.card} onClick={() => {
-              if (a.needsPatientId && !patientId) {
-                toast.error('Create your patient profile first');
-                return navigate('/create-patient');
-              }
-              navigate(a.path);
-            }}>
-              <h4 style={s.cardTitle}>{a.title}</h4>
-              <p style={s.cardDesc}>{a.desc}</p>
-            </div>
-          ))}
+        <div>
+          <h3 className="text-sm font-medium text-text-secondary uppercase tracking-wider mb-3">Quick Actions</h3>
+          <div className="space-y-3">
+            {actions.map((a) => (
+              <Card key={a.path} hover onClick={() => {
+                if (a.needsPatientId && !patientId) {
+                  toast.error('Create your patient profile first');
+                  return navigate('/create-patient');
+                }
+                navigate(a.path);
+              }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium text-text">{a.title}</h4>
+                    <p className="text-xs text-text-muted mt-0.5">{a.desc}</p>
+                  </div>
+                  <ArrowRight size={16} className="text-text-muted shrink-0" />
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
 
-      <button onClick={() => { logout(); navigate('/login', { replace: true }); }}
-        style={{ padding: '8px 24px', marginTop: 24, background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: 6 }}>
-        Logout
-      </button>
+      <div className="mt-8 pt-6 border-t border-border-light">
+        <Button variant="ghost" leftIcon={<LogOut size={14} />} onClick={() => { logout(); navigate('/login', { replace: true }); }}>
+          Logout
+        </Button>
+      </div>
     </div>
   );
 }

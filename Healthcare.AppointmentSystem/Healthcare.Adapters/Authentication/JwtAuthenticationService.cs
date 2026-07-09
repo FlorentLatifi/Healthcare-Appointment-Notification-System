@@ -302,13 +302,18 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         var key = Encoding.UTF8.GetBytes(_jwtSettings.Secret);
         var signingKey = new SymmetricSecurityKey(key);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Email, user.Email.Value),
-            new Claim(ClaimTypes.Role, user.Role.ToString())
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Name, user.Username),
+            new(ClaimTypes.Email, user.Email.Value),
+            new(ClaimTypes.Role, user.Role.ToString())
         };
+
+        if (user.PatientId.HasValue)
+            claims.Add(new Claim("patient_id", user.PatientId.Value.ToString()));
+        if (user.DoctorId.HasValue)
+            claims.Add(new Claim("doctor_id", user.DoctorId.Value.ToString()));
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
