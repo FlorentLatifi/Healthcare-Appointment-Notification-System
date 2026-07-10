@@ -47,6 +47,8 @@
   --color-warning: #7A6E3A;
   --color-warning-bg: #EAE6D4;
 
+  --color-status-pending-bg: #E8E4DB;
+  --color-status-pending-text: #5C5546;
   --color-status-scheduled-bg: #E8E4DB;
   --color-status-scheduled-text: #5C5546;
   --color-status-confirmed-bg: #DCE8E2;

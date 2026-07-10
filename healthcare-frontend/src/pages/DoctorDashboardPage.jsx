@@ -4,8 +4,9 @@ import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { Button, Card, Badge, Spinner, EmptyState, Modal, Input, Textarea, PageHeader } from '../components/ui';
 import { Calendar, Clock, User, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { APPOINTMENT_STATUS } from '../constants/appointmentStatus';
 
-const TABS = ['All', 'Scheduled', 'Confirmed', 'Completed', 'Cancelled', 'NoShow'];
+const TABS = ['All', APPOINTMENT_STATUS.PENDING, APPOINTMENT_STATUS.CONFIRMED, APPOINTMENT_STATUS.COMPLETED, APPOINTMENT_STATUS.CANCELLED, APPOINTMENT_STATUS.NO_SHOW];
 
 export default function DoctorDashboardPage() {
   const { doctorId, setDoctorId } = useAuth();
@@ -40,9 +41,9 @@ export default function DoctorDashboardPage() {
   const filtered = useMemo(() => {
     const filterByStatus = (status) => allAppts.filter((a) => a.status === status);
     return {
-      All: allAppts, Scheduled: filterByStatus('Scheduled'),
-      Confirmed: filterByStatus('Confirmed'), Completed: filterByStatus('Completed'),
-      Cancelled: filterByStatus('Cancelled'), NoShow: filterByStatus('NoShow'),
+      All: allAppts, [APPOINTMENT_STATUS.PENDING]: filterByStatus(APPOINTMENT_STATUS.PENDING),
+      [APPOINTMENT_STATUS.CONFIRMED]: filterByStatus(APPOINTMENT_STATUS.CONFIRMED), [APPOINTMENT_STATUS.COMPLETED]: filterByStatus(APPOINTMENT_STATUS.COMPLETED),
+      [APPOINTMENT_STATUS.CANCELLED]: filterByStatus(APPOINTMENT_STATUS.CANCELLED), [APPOINTMENT_STATUS.NO_SHOW]: filterByStatus(APPOINTMENT_STATUS.NO_SHOW),
     };
   }, [allAppts]);
 
@@ -188,7 +189,7 @@ export default function DoctorDashboardPage() {
               {appt.cancellationReason && <p className="text-xs text-status-cancelled-text mt-2 inline-flex items-center gap-1"><XCircle size={12} />Cancel reason: {appt.cancellationReason}</p>}
 
               <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border-light">
-                {appt.status === 'Scheduled' && (
+                {appt.status === APPOINTMENT_STATUS.PENDING && (
                   <>
                     <Button variant="primary" size="sm" leftIcon={<CheckCircle size={14} />} onClick={() => openConfirm(appt)}>Confirm</Button>
                     <Button variant="secondary" size="sm" onClick={() => openComplete(appt)}>Complete</Button>

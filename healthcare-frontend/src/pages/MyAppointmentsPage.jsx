@@ -5,6 +5,7 @@ import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { Button, Card, Badge, Spinner, EmptyState, Modal, Textarea, PageHeader } from '../components/ui';
 import { Calendar, Clock, AlertCircle, CalendarClock } from 'lucide-react';
+import { APPOINTMENT_STATUS } from '../constants/appointmentStatus';
 
 export default function MyAppointmentsPage() {
   const { patientId } = useAuth();
@@ -118,7 +119,7 @@ export default function MyAppointmentsPage() {
                   Cancellation reason: {appt.cancellationReason}
                 </p>
               )}
-              {appt.status === 'Scheduled' && (
+              {appt.status === APPOINTMENT_STATUS.PENDING && (
                 <div className="mt-3 pt-3 border-t border-border-light">
                   <Button variant="danger" size="sm" onClick={() => openCancelModal(appt)}>Cancel</Button>
                 </div>

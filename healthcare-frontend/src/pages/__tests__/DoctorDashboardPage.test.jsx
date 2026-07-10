@@ -23,7 +23,8 @@ vi.mock('../../services/apiClient', () => ({
 
 vi.mock('../../theme', () => ({
   STATUS_COLORS: {
-    Scheduled: { bg: '#dbeafe', color: '#1e40af' },
+    Pending: { bg: '#E8E4DB', color: '#5C5546' },
+    Scheduled: { bg: '#E8E4DB', color: '#5C5546' },
     Confirmed: { bg: '#d1fae5', color: '#065f46' },
     Completed: { bg: '#f3f4f6', color: '#374151' },
     Cancelled: { bg: '#fee2e2', color: '#991b1b' },
@@ -71,9 +72,9 @@ describe('DoctorDashboardPage', () => {
       mockApiClient.get.mockResolvedValue({ data: { success: true, data: { items: [] } } });
     });
 
-    it('shows Confirm, Complete and No-Show for Scheduled appointments', async () => {
+    it('shows Confirm, Complete and No-Show for Pending appointments', async () => {
       mockApiClient.get.mockResolvedValue({
-        data: { success: true, data: { items: [makeAppt(1, 'Scheduled')] } },
+        data: { success: true, data: { items: [makeAppt(1, 'Pending')] } },
       });
       render(<DoctorDashboardPage />);
 
@@ -113,7 +114,7 @@ describe('DoctorDashboardPage', () => {
     describe('complete modal', () => {
       it('rejects short doctor notes', async () => {
         mockApiClient.get.mockResolvedValue({
-          data: { success: true, data: { items: [makeAppt(5, 'Scheduled')] } },
+          data: { success: true, data: { items: [makeAppt(5, 'Pending')] } },
         });
         render(<DoctorDashboardPage />);
 
@@ -134,7 +135,7 @@ describe('DoctorDashboardPage', () => {
     describe('confirm modal', () => {
       it('shows override reason field when override payment is checked', async () => {
         mockApiClient.get.mockResolvedValue({
-          data: { success: true, data: { items: [makeAppt(6, 'Scheduled')] } },
+          data: { success: true, data: { items: [makeAppt(6, 'Pending')] } },
         });
         render(<DoctorDashboardPage />);
 
@@ -148,7 +149,7 @@ describe('DoctorDashboardPage', () => {
 
       it('sends overrideReason with confirm request when checked', async () => {
         mockApiClient.get.mockResolvedValue({
-          data: { success: true, data: { items: [makeAppt(7, 'Scheduled')] } },
+          data: { success: true, data: { items: [makeAppt(7, 'Pending')] } },
         });
         mockApiClient.put.mockResolvedValue({ data: { success: true } });
         render(<DoctorDashboardPage />);

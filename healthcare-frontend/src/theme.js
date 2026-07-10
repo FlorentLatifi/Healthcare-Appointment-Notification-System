@@ -2,6 +2,7 @@
    This file re-exports the CSS custom properties for JS usage. */
 
 export const STATUS_COLORS = {
+  Pending: { bg: '#E8E4DB', color: '#5C5546' },
   Scheduled: { bg: '#E8E4DB', color: '#5C5546' },
   Confirmed: { bg: '#DCE8E2', color: '#3D6656' },
   InProgress: { bg: '#EAE6D4', color: '#7A6E3A' },

@@ -1,4 +1,5 @@
 const statusStyles = {
+  Pending: 'bg-status-pending-bg text-status-pending-text',
   Scheduled: 'bg-status-scheduled-bg text-status-scheduled-text',
   Confirmed: 'bg-status-confirmed-bg text-status-confirmed-text',
   Completed: 'bg-status-completed-bg text-status-completed-text',

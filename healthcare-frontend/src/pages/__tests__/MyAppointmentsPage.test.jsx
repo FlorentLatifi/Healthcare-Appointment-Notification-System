@@ -21,7 +21,8 @@ vi.mock('../../services/apiClient', () => ({
 
 vi.mock('../../theme', () => ({
   STATUS_COLORS: {
-    Scheduled: { bg: '#dbeafe', color: '#1e40af' },
+    Pending: { bg: '#E8E4DB', color: '#5C5546' },
+    Scheduled: { bg: '#E8E4DB', color: '#5C5546' },
     Confirmed: { bg: '#d1fae5', color: '#065f46' },
     Completed: { bg: '#f3f4f6', color: '#374151' },
     Cancelled: { bg: '#fee2e2', color: '#991b1b' },
@@ -53,9 +54,9 @@ describe('MyAppointmentsPage', () => {
     mockApiClient.get.mockResolvedValue({ data: { success: true, data: { items: [] } } });
   });
 
-  it('shows cancel button for Scheduled appointments', async () => {
+  it('shows cancel button for Pending appointments', async () => {
     mockApiClient.get.mockResolvedValue({
-      data: { success: true, data: { items: [makeAppt(1, 'Scheduled')] } },
+      data: { success: true, data: { items: [makeAppt(1, 'Pending')] } },
     });
     render(<MyAppointmentsPage />);
 
@@ -89,7 +90,7 @@ describe('MyAppointmentsPage', () => {
   describe('cancel modal', () => {
     it('opens modal when clicking Cancel', async () => {
       mockApiClient.get.mockResolvedValue({
-        data: { success: true, data: { items: [makeAppt(4, 'Scheduled')] } },
+        data: { success: true, data: { items: [makeAppt(4, 'Pending')] } },
       });
       render(<MyAppointmentsPage />);
 
@@ -101,7 +102,7 @@ describe('MyAppointmentsPage', () => {
 
     it('rejects reason shorter than 10 characters', async () => {
       mockApiClient.get.mockResolvedValue({
-        data: { success: true, data: { items: [makeAppt(5, 'Scheduled')] } },
+        data: { success: true, data: { items: [makeAppt(5, 'Pending')] } },
       });
       render(<MyAppointmentsPage />);
 
@@ -117,7 +118,7 @@ describe('MyAppointmentsPage', () => {
 
     it('sends cancel request when reason is long enough', async () => {
       mockApiClient.get.mockResolvedValue({
-        data: { success: true, data: { items: [makeAppt(6, 'Scheduled')] } },
+        data: { success: true, data: { items: [makeAppt(6, 'Pending')] } },
       });
       mockApiClient.put.mockResolvedValue({ data: { success: true } });
       render(<MyAppointmentsPage />);
