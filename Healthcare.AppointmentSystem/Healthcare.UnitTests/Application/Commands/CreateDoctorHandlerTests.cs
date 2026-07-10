@@ -16,14 +16,17 @@ public class CreateDoctorHandlerTests
 {
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IDoctorRepository> _doctorRepoMock;
+    private readonly Mock<IUserRepository> _userRepoMock;
     private readonly Mock<IDomainEventDispatcher> _eventDispatcherMock;
     private readonly CreateDoctorHandler _handler;
 
     public CreateDoctorHandlerTests()
     {
         _doctorRepoMock = new Mock<IDoctorRepository>();
+        _userRepoMock = new Mock<IUserRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _unitOfWorkMock.Setup(u => u.Doctors).Returns(_doctorRepoMock.Object);
+        _unitOfWorkMock.Setup(u => u.Users).Returns(_userRepoMock.Object);
         _eventDispatcherMock = new Mock<IDomainEventDispatcher>();
         _handler = new CreateDoctorHandler(_unitOfWorkMock.Object, _eventDispatcherMock.Object);
     }
@@ -157,5 +160,77 @@ public class CreateDoctorHandlerTests
         _eventDispatcherMock.Verify(d => d.DispatchAsync(
             It.IsAny<DoctorCacheInvalidationNeededEvent>(),
             It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenRequestingUserAlreadyLinked_ShouldNotPersistNewEntity()
+    {
+        var userId = 1;
+        var email = Email.Create($"user{userId}@test.com");
+        var linkedUser = User.Create($"user{userId}", email, "hash", UserRole.Doctor);
+        linkedUser.LinkToDoctor(999);
+
+        _doctorRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Doctor?)null);
+        _userRepoMock.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(linkedUser);
+
+        var command = new CreateDoctorCommand
+        {
+            FirstName = "Jane",
+            LastName = "Smith",
+            Email = "dr.smith@test.com",
+            PhoneNumber = "+355672345678",
+            LicenseNumber = "LIC-12345",
+            Specialty = "Cardiology",
+            ConsultationFeeAmount = 100m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 10,
+            RequestingUserId = userId
+        };
+
+        var result = await _handler.HandleAsync(command, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("already linked");
+
+        _doctorRepoMock.Verify(r => r.AddAsync(It.IsAny<Doctor>(), It.IsAny<CancellationToken>()), Times.Never);
+        _userRepoMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _eventDispatcherMock.Verify(d => d.DispatchAsync(
+            It.IsAny<DoctorCacheInvalidationNeededEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenRequestingUserAlreadyLinked_WithNoRequestingUser_ShouldCreateDoctor()
+    {
+        // When RequestingUserId is null, the user-link check is skipped entirely.
+        _doctorRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Doctor?)null);
+
+        var command = new CreateDoctorCommand
+        {
+            FirstName = "Jane",
+            LastName = "Smith",
+            Email = "dr.smith@test.com",
+            PhoneNumber = "+355672345678",
+            LicenseNumber = "LIC-12345",
+            Specialty = "Cardiology",
+            ConsultationFeeAmount = 100m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 10,
+            RequestingUserId = null
+        };
+
+        var result = await _handler.HandleAsync(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        _doctorRepoMock.Verify(r => r.AddAsync(It.IsAny<Doctor>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _eventDispatcherMock.Verify(d => d.DispatchAsync(
+            It.IsAny<DoctorCacheInvalidationNeededEvent>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 }

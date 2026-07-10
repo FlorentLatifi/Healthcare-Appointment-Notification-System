@@ -13,12 +13,14 @@ using Healthcare.Domain.Enums;
 using Healthcare.Domain.Events;
 using Healthcare.Domain.ValueObjects;
 using Healthcare.Presentation.API.Resources;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Healthcare.Presentation.API.Controllers;
 using Healthcare.Presentation.API.Requests;
+using System.Security.Claims;
 
 namespace Healthcare.UnitTests.Adapters.Caching;
 
@@ -150,6 +152,17 @@ public sealed class DoctorCacheTests
             cache,
             new Mock<IStringLocalizer<Messages>>().Object,
             loggerMock.Object);
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+                {
+                    new(ClaimTypes.Role, "Admin")
+                }))
+            }
+        };
 
         var request = new CreateDoctorRequest
         {

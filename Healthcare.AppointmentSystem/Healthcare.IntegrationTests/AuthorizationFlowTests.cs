@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Healthcare.Presentation.API.Responses;
 
 namespace Healthcare.IntegrationTests;
 

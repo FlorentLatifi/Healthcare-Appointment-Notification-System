@@ -31,7 +31,15 @@ public sealed class CreatePatientHandler : ICommandHandler<CreatePatientCommand,
             return Result<int>.Failure($"A patient with email '{command.Email}' already exists.");
         }
 
-        // 2. Create value objects
+        // 2. Check that the requesting user exists and is not already linked to a patient
+        var requestingUser = await _unitOfWork.Users.GetByIdAsync(command.RequestingUserId, cancellationToken);
+        if (requestingUser == null)
+            return Result<int>.Failure("Authenticated user not found.");
+
+        if (requestingUser.PatientId.HasValue)
+            return Result<int>.Failure("This account is already linked to a patient profile.");
+
+        // 3. Create value objects
         Email email;
         PhoneNumber phoneNumber;
         Address address;
@@ -55,7 +63,7 @@ public sealed class CreatePatientHandler : ICommandHandler<CreatePatientCommand,
             return Result<int>.Failure($"Invalid input: {ex.Message}");
         }
 
-        // 3. Create patient entity
+        // 4. Create patient entity
         Patient patient;
         try
         {
@@ -73,21 +81,23 @@ public sealed class CreatePatientHandler : ICommandHandler<CreatePatientCommand,
             return Result<int>.Failure($"Failed to create patient: {ex.Message}");
         }
 
-        // 4. Persist patient
-        await _unitOfWork.Patients.AddAsync(patient, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        // 5. Persist patient and link user atomically
+        await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.Patients.AddAsync(patient, cancellationToken);
 
-        // 5. Link the calling user to this patient
-        var requestingUser = await _unitOfWork.Users.GetByIdAsync(command.RequestingUserId, cancellationToken);
-        if (requestingUser == null)
-            return Result<int>.Failure("Authenticated user not found.");
+            requestingUser.LinkToPatient(patient.Id);
+            await _unitOfWork.Users.UpdateAsync(requestingUser, cancellationToken);
 
-        if (requestingUser.PatientId.HasValue)
-            return Result<int>.Failure("This account is already linked to a patient profile.");
-
-        requestingUser.LinkToPatient(patient.Id);
-        await _unitOfWork.Users.UpdateAsync(requestingUser, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+            throw;
+        }
 
         return Result<int>.Success(patient.Id);
     }

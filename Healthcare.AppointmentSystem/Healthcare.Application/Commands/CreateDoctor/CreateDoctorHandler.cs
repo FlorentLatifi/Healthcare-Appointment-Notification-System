@@ -31,6 +31,18 @@ public sealed class CreateDoctorHandler : ICommandHandler<CreateDoctorCommand, R
             return Result<int>.Failure($"A doctor with email '{command.Email}' already exists");
         }
 
+        // Check user link restrictions early, before creating any entity
+        User? requestingUser = null;
+        if (command.RequestingUserId.HasValue)
+        {
+            requestingUser = await _unitOfWork.Users.GetByIdAsync(command.RequestingUserId.Value, cancellationToken);
+            if (requestingUser == null)
+                return Result<int>.Failure("Authenticated user not found.");
+
+            if (requestingUser.DoctorId.HasValue)
+                return Result<int>.Failure("This account is already linked to a doctor profile.");
+        }
+
         Email email;
         PhoneNumber phoneNumber;
         Money consultationFee;
@@ -72,21 +84,25 @@ public sealed class CreateDoctorHandler : ICommandHandler<CreateDoctorCommand, R
             return Result<int>.Failure($"Failed to create doctor: {ex.Message}");
         }
 
-        await _unitOfWork.Doctors.AddAsync(doctor, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        if (command.RequestingUserId.HasValue)
+        // Persist doctor and link user atomically
+        await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
         {
-            var requestingUser = await _unitOfWork.Users.GetByIdAsync(command.RequestingUserId.Value, cancellationToken);
-            if (requestingUser == null)
-                return Result<int>.Failure("Authenticated user not found.");
+            await _unitOfWork.Doctors.AddAsync(doctor, cancellationToken);
 
-            if (requestingUser.DoctorId.HasValue)
-                return Result<int>.Failure("This account is already linked to a doctor profile.");
+            if (requestingUser != null)
+            {
+                requestingUser.LinkToDoctor(doctor.Id);
+                await _unitOfWork.Users.UpdateAsync(requestingUser, cancellationToken);
+            }
 
-            requestingUser.LinkToDoctor(doctor.Id);
-            await _unitOfWork.Users.UpdateAsync(requestingUser, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+            throw;
         }
 
         await _eventDispatcher.DispatchAsync(
