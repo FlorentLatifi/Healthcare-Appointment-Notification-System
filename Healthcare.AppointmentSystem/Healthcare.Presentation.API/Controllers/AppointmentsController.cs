@@ -70,12 +70,18 @@ public sealed class AppointmentsController : ControllerBase
         [FromBody] BookAppointmentRequest request,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Booking appointment Patient:{PatientId} Doctor:{DoctorId}",
-            request.PatientId, request.DoctorId);
+        _logger.LogInformation("Booking appointment Doctor:{DoctorId}",
+            request.DoctorId);
+
+        var patientId = User.GetPatientId();
+        if (patientId == null)
+            return BadRequest(ApiResponse<AppointmentDto>.ErrorResponse(
+                "Patient profile not linked to your account. Please create a patient profile first.",
+                "Profile not found"));
 
         var command = new BookAppointmentCommand
         {
-            PatientId = request.PatientId,
+            PatientId = patientId.Value,
             DoctorId = request.DoctorId,
             ScheduledTime = request.ScheduledTime,
             Reason = request.Reason,

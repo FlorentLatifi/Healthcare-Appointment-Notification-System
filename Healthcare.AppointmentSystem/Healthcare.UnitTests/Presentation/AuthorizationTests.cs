@@ -8,6 +8,7 @@ using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Healthcare.UnitTests.Presentation;
 
@@ -748,6 +749,80 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
             new { AppointmentId = apptId, OverridePaymentRequirement = true, OverrideReason = "Test override for confirmation testing" });
         SetBearer(_seed.DoctorB_Token);
         var response = await _client.GetAsync($"/api/v1/payments/appointment/{apptId}");
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  IDOR FIX TESTS
+    // ═══════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task Patient_BookAppointment_ForgedPatientId_Ignored()
+    {
+        // PatientA books with PatientB's ID in the body — the endpoint
+        // must ignore the forged ID and create under PatientA's identity.
+        SetBearer(_seed.PatientA_Token);
+        var response = await _client.PostAsJsonAsync("/api/v1/appointments", new
+        {
+            PatientId = _seed.PatientB_PatientId,
+            DoctorId = _seed.DoctorA_DoctorId,
+            ScheduledTime = NextWeekdayAt10Am().AddDays(21).ToString("o"),
+            Reason = "Forged patient ID test",
+            AppointmentType = "Standard"
+        });
+        var body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.Created, $"Booking with forged PatientId failed: {body}");
+
+        var appointmentId = (await ExtractIdFromCreatedResponse(response))!.Value;
+
+        // Fetch the appointment and verify it belongs to PatientA, not PatientB
+        var getResponse = await _client.GetAsync($"/api/v1/appointments/{appointmentId}");
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var getBody = await getResponse.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(getBody);
+        var patientId = doc.RootElement.GetProperty("data").GetProperty("patientId").GetInt32();
+        patientId.Should().Be(_seed.PatientA_PatientId, "the appointment should be created under the caller's identity, ignoring the forged PatientId");
+    }
+
+    [Fact]
+    public async Task Patient_CreatePaymentIntent_OtherAppointment_Returns403()
+    {
+        // PatientB tries to create a payment intent for PatientA's appointment
+        SetBearer(_seed.PatientB_Token);
+        var response = await _client.PostAsJsonAsync("/api/v1/payments/create-intent", new
+        {
+            AppointmentId = _seed.AppointmentAB_Id,
+            Description = "Should be forbidden"
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Doctor_RefundPayment_OtherDoctor_Returns403()
+    {
+        // Arrange: seed a payment for the pre-seeded AppointmentAB (PatientA + DoctorA).
+        // This avoids the doctor-slot contention that plagues BookAppointmentAsync
+        // during a full test run.
+        int paymentId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var payment = Payment.Create(_seed.AppointmentAB_Id, Money.Create(100.00m, "USD"), "Stripe");
+            payment.MarkAsSucceeded(TransactionId.Create("txn_idor_refund_test"), "card");
+            await unitOfWork.Payments.AddAsync(payment);
+            await unitOfWork.SaveChangesAsync();
+            paymentId = payment.Id;
+        }
+
+        // Act: DoctorB tries to refund DoctorA's payment
+        SetBearer(_seed.DoctorB_Token);
+        var response = await _client.PostAsJsonAsync("/api/v1/payments/refund", new
+        {
+            PaymentId = paymentId,
+            Reason = "Attempted refund by wrong doctor"
+        });
+
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 }

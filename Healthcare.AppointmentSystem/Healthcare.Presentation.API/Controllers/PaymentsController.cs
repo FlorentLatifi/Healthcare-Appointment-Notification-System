@@ -108,6 +108,9 @@ public sealed class PaymentsController : ControllerBase
                 "Appointment not found"));
         }
 
+        if (User.GetRole() == AppRoles.Patient && User.GetPatientId() != appointment.PatientId)
+            return Forbid();
+
         // 2. Check if payment already exists
         var existingPayment = await _unitOfWork.Payments
             .GetByAppointmentIdAsync(request.AppointmentId, cancellationToken);
@@ -189,6 +192,21 @@ public sealed class PaymentsController : ControllerBase
             "Processing payment for appointment {AppointmentId} with intent {PaymentIntentId}",
             request.AppointmentId, request.PaymentIntentId);
 
+        // 1. Fetch appointment and verify ownership
+        var appointment = await _unitOfWork.Appointments
+            .GetByIdAsync(request.AppointmentId, cancellationToken);
+
+        if (appointment == null)
+        {
+            _logger.LogWarning("Appointment {AppointmentId} not found", request.AppointmentId);
+            return NotFound(ApiResponse<object>.ErrorResponse(
+                $"Appointment with ID {request.AppointmentId} not found",
+                "Appointment not found"));
+        }
+
+        if (User.GetRole() == AppRoles.Patient && User.GetPatientId() != appointment.PatientId)
+            return Forbid();
+
         var command = new ProcessPaymentCommand
         {
             AppointmentId = request.AppointmentId,
@@ -231,6 +249,30 @@ public sealed class PaymentsController : ControllerBase
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Processing refund for payment {PaymentId}", request.PaymentId);
+
+        // 1. Fetch payment and its appointment to verify doctor ownership
+        var payment = await _unitOfWork.Payments.GetByIdAsync(request.PaymentId, cancellationToken);
+        if (payment == null)
+        {
+            _logger.LogWarning("Payment {PaymentId} not found", request.PaymentId);
+            return NotFound(ApiResponse.ErrorResponse(
+                $"Payment with ID {request.PaymentId} not found",
+                "Payment not found"));
+        }
+
+        var appointment = await _unitOfWork.Appointments
+            .GetByIdAsync(payment.AppointmentId, cancellationToken);
+        if (appointment == null)
+        {
+            _logger.LogWarning("Appointment {AppointmentId} for payment {PaymentId} not found",
+                payment.AppointmentId, request.PaymentId);
+            return NotFound(ApiResponse.ErrorResponse(
+                "Associated appointment not found",
+                "Payment not found"));
+        }
+
+        if (User.GetRole() == AppRoles.Doctor && User.GetDoctorId() != appointment.DoctorId)
+            return Forbid();
 
         var command = new RefundPaymentCommand
         {
