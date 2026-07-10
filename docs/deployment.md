@@ -32,6 +32,30 @@ Optional:
 |--------|-------------|
 | `DEPLOY_PATH` | Directory on the target VM (default: `/opt/healthcare`) |
 | `OTEL_ENDPOINT` | OpenTelemetry OTLP gRPC endpoint |
+| `BOOTSTRAP_ADMIN_ENABLED` | Set `true` **once** on first deploy to create the initial Admin |
+| `BOOTSTRAP_ADMIN_USERNAME` | Admin username (default `admin`) |
+| `BOOTSTRAP_ADMIN_EMAIL` | Admin email (required when bootstrap enabled) |
+| `BOOTSTRAP_ADMIN_PASSWORD` | Strong password (min 12 chars, upper/lower/digit/special). Required in Production |
+
+### First-admin bootstrap (production)
+
+Do **not** ship default credentials. On a fresh production database:
+
+1. Set secrets: `BOOTSTRAP_ADMIN_ENABLED=true`, `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD` (strong, unique).
+2. Deploy / start the API once — it creates the Admin only if no Admin role user exists.
+3. Log in, change the password if your process requires it, then set `BOOTSTRAP_ADMIN_ENABLED=false` (or unset) for subsequent deploys.
+4. Never set `Seeding__SeedDemoData=true` in Production; the app blocks demo seed there regardless.
+
+Demo doctor data is for Development / local Docker only.
+
+## Seeding security summary
+
+| Concern | Production behavior |
+|---------|---------------------|
+| Demo doctors / sample data | Always blocked |
+| Hardcoded admin password | Removed; `Admin123!` rejected if supplied |
+| First admin | Optional one-time bootstrap via `BOOTSTRAP_ADMIN_*` secrets |
+| Migrations | Applied by `DatabaseSeeder` on every startup |
 
 ## Target VM Setup (one-time)
 

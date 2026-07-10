@@ -92,12 +92,20 @@ try
     builder.Services.AddSingleton(outboxSettings);
     builder.Services.AddHostedService<OutboxRelayService>();
 
-    var seedDemoData = builder.Configuration.GetValue<bool>("SeedDemoData");
-    if (seedDemoData)
-    {
-        Log.Information("SeedDemoData is enabled — registering DatabaseSeeder.");
-        builder.Services.AddHostedService<DatabaseSeeder>();
-    }
+    // Database migrations + optional secure admin bootstrap + gated demo seed.
+    // Always registered so Production still applies migrations without enabling demo data.
+    builder.Services.AddOptions<SeedingOptions>()
+        .Bind(builder.Configuration.GetSection(SeedingOptions.SectionName))
+        .PostConfigure(opts =>
+        {
+            // Back-compat: legacy top-level SeedDemoData still maps into Seeding:SeedDemoData
+            if (builder.Configuration.GetSection("SeedDemoData").Exists())
+                opts.SeedDemoData = builder.Configuration.GetValue<bool>("SeedDemoData");
+        });
+
+    builder.Services.AddHostedService<DatabaseSeeder>();
+    Log.Information(
+        "DatabaseSeeder registered (migrations always; demo/admin gated by Seeding options).");
 
     var app = builder.Build();
 

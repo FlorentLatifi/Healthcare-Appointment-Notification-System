@@ -67,18 +67,30 @@ A `docker-compose.yml` at the repo root spins up the full stack (API + SQL Serve
    - SQL Server: `localhost:1433` (user: `sa`, password: from `.env`)
    - Redis: `localhost:6379`
 
-#### Seeded demo data
+#### Database init, admin bootstrap, and demo data
 
-On first startup (when the `Doctors` table is empty), the API automatically:
+On startup the API **always** applies pending EF Core migrations.
 
-- Runs EF Core migrations
-- Creates an **Admin** user:
-  - Username: `admin`
-  - Password: `Admin123!`
-  - Email: `admin@healthcareclinic.com`
-- Creates 4 sample doctors across different specialties (General Practice, Cardiology, Pediatrics, Neurology) with realistic consultation fees
+**First admin (secure bootstrap)** — no hardcoded passwords:
 
-Seeding is controlled by the `SeedDemoData` config flag (set to `true` only in the Docker Compose environment). It defaults to `false` in all other environments.
+| Setting | Purpose |
+|---------|---------|
+| `Seeding__BootstrapAdmin__Enabled` | Create the first Admin only when none exists |
+| `Seeding__BootstrapAdmin__Username` | Default `admin` |
+| `Seeding__BootstrapAdmin__Email` | Required when enabled |
+| `Seeding__BootstrapAdmin__Password` | Strong secret (min 12 chars). Set via `.env` / secret store |
+
+- Production **requires** an explicit strong password when bootstrap is enabled (startup fails otherwise).
+- Local Docker / Development may leave the password empty: a **random** password is generated once and written to the API log. Change it after first login.
+- Known weak defaults (including the old `Admin123!`) are **rejected**.
+
+**Demo doctors** only seed when:
+
+1. `Seeding__SeedDemoData=true`, and
+2. Environment is `Development`, **or** `Seeding__AllowDemoDataOutsideDevelopment=true` (used by local `docker-compose.yml` where env is `Docker`), and
+3. Environment is **not** `Production` (Production always blocks demo seed).
+
+Local compose enables demo doctors + admin bootstrap; production compose keeps both off unless you set bootstrap secrets for a one-time first-admin create.
 
 ### Manual (without Docker)
 
@@ -125,7 +137,13 @@ The frontend starts at `http://localhost:5173` and expects the API at `http://lo
 | `TrustedNetworks` | **Yes** | Comma-separated CIDR networks (e.g., `10.0.0.0/8`); alternative to `TrustedProxies` |
 | `UseOutboxForDomainEvents` | No | Defaults to `true` outside Development; set `false` to disable reliable event delivery |
 | `Otel__Endpoint` | No | OTLP gRPC endpoint (e.g., `http://localhost:4317`); when unset, traces/metrics fall back to console |
-| `SeedDemoData` | No | Set to `true` to seed demo data on startup (Docker Compose only) |
+| `Seeding__SeedDemoData` | No | Seed sample doctors (blocked in Production) |
+| `Seeding__AllowDemoDataOutsideDevelopment` | No | Allow demo seed when env is not Development (e.g. local Docker) |
+| `Seeding__BootstrapAdmin__Enabled` | No | Bootstrap first Admin if none exists |
+| `Seeding__BootstrapAdmin__Username` | No | Admin username (default `admin`) |
+| `Seeding__BootstrapAdmin__Email` | When bootstrap enabled | Admin email |
+| `Seeding__BootstrapAdmin__Password` | Prod when bootstrap enabled | Strong password from secrets (never commit) |
+| `BOOTSTRAP_ADMIN_PASSWORD` | Recommended for compose | Maps to bootstrap password in docker-compose |
 
 Replace the Stripe test-mode placeholders with real keys from your [Stripe dashboard](https://dashboard.stripe.com/test/apikeys). The app starts without valid Stripe keys, but payment features will fail.
 

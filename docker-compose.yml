@@ -43,7 +43,15 @@ services:
       Stripe__SecretKey: ${STRIPE_SECRET_KEY}
       Stripe__PublishableKey: ${STRIPE_PUBLISHABLE_KEY}
       AllowedOrigins__0: "http://localhost:5173"
-      SeedDemoData: "true"
+      # Demo doctors: Docker is not "Development", so opt-in is required.
+      Seeding__SeedDemoData: "true"
+      Seeding__AllowDemoDataOutsideDevelopment: "true"
+      # First admin: set a strong password in .env (never commit it).
+      # If BOOTSTRAP_ADMIN_PASSWORD is empty, a random password is generated once and logged.
+      Seeding__BootstrapAdmin__Enabled: "true"
+      Seeding__BootstrapAdmin__Username: "admin"
+      Seeding__BootstrapAdmin__Email: "admin@localhost.dev"
+      Seeding__BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     ports:
       - "5171:8080"
     volumes:

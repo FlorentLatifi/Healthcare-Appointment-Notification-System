@@ -48,6 +48,13 @@ services:
       # rate limiting buckets all users behind the proxy into one global bucket.
       TrustedNetworks__0: 172.16.0.0/12
       AllowedOrigins__0: ${FRONTEND_URL:-http://localhost:5173}
+      # Never seed demo data in production. Bootstrap first admin only via secrets.
+      Seeding__SeedDemoData: "false"
+      Seeding__AllowDemoDataOutsideDevelopment: "false"
+      Seeding__BootstrapAdmin__Enabled: ${BOOTSTRAP_ADMIN_ENABLED:-false}
+      Seeding__BootstrapAdmin__Username: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
+      Seeding__BootstrapAdmin__Email: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      Seeding__BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     ports:
       - "8080:8080"
     volumes:
