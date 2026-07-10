@@ -38,6 +38,7 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         return await _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
+            .ThenInclude(d => d.SpecialtyEntries)
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
     }
 
@@ -46,6 +47,7 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         return await _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
+            .ThenInclude(d => d.SpecialtyEntries)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }
@@ -58,6 +60,7 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         var query = _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
+            .ThenInclude(d => d.SpecialtyEntries)
             .AsNoTracking();
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -78,6 +81,7 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         return await _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
+            .ThenInclude(d => d.SpecialtyEntries)
             .Where(a => a.PatientId == patientId)
             .AsNoTracking()
             .OrderByDescending(a => a.ScheduledTime)
@@ -93,6 +97,7 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         var query = _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
+            .ThenInclude(d => d.SpecialtyEntries)
             .Where(a => a.PatientId == patientId)
             .AsNoTracking();
 
@@ -114,6 +119,7 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         return await _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
+            .ThenInclude(d => d.SpecialtyEntries)
             .Where(a => a.DoctorId == doctorId)
             .AsNoTracking()
             .OrderByDescending(a => a.ScheduledTime)
@@ -129,6 +135,7 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         var query = _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
+            .ThenInclude(d => d.SpecialtyEntries)
             .Where(a => a.DoctorId == doctorId)
             .AsNoTracking();
 
@@ -154,6 +161,7 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         return await _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
+            .ThenInclude(d => d.SpecialtyEntries)
             .Where(a => a.DoctorId == doctorId &&
                        a.ScheduledTime.Value >= startOfDay &&
                        a.ScheduledTime.Value < endOfDay)
@@ -168,6 +176,7 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         return await _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
+            .ThenInclude(d => d.SpecialtyEntries)
             .Where(a => a.Status == status)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -182,6 +191,7 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         return await _context.Appointments
             .Include(a => a.Patient)
             .Include(a => a.Doctor)
+            .ThenInclude(d => d.SpecialtyEntries)
             .Where(a => a.Status == AppointmentStatus.Confirmed &&
                        a.ScheduledTime.Value > now &&
                        a.ScheduledTime.Value <= twentyFourHoursFromNow &&
