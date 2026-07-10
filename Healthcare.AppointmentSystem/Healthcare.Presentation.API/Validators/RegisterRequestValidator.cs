@@ -30,7 +30,7 @@ public sealed class RegisterRequestValidator : AbstractValidator<RegisterRequest
 
         RuleFor(x => x.Role)
             .NotEmpty().WithMessage("Role is required")
-            .Must(r => r == "Patient" || r == "Doctor" || r == "Admin")
-            .WithMessage("Role must be Patient, Doctor, or Admin");
+            .Must(r => r == "Patient" || r == "Doctor")
+            .WithMessage("Role must be Patient or Doctor");
     }
 }

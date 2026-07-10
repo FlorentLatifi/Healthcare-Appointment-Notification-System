@@ -3,6 +3,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using Healthcare.Presentation.API.Responses;
+using Healthcare.Application.Ports.Authentication;
+using Healthcare.Application.Ports.Repositories;
+using Healthcare.Domain.Entities;
+using Healthcare.Domain.Enums;
+using Healthcare.Domain.ValueObjects;
 
 namespace Healthcare.UnitTests.Presentation;
 
@@ -35,6 +40,7 @@ public sealed class AuthTestSeedData
 public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
+    private readonly AuthorizationTestWebApplicationFactory _factory;
     private AuthTestSeedData _seed = null!;
     private static readonly SemaphoreSlim _seedLock = new(1, 1);
     private static AuthTestSeedData? _sharedSeed;
@@ -48,6 +54,7 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
     public AuthorizationTests(AuthorizationTestWebApplicationFactory factory)
     {
         _client = factory.CreateClient();
+        _factory = factory;
     }
 
     public async Task InitializeAsync()
@@ -91,8 +98,9 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
         s.DoctorB_DoctorId = await CreateDoctorAsync(s.DoctorB_Token);
         s.DoctorB_Token = await LoginAsync(s.DoctorB_Username);
 
-        s.Admin_Username = $"admin_{suffix}";
-        s.Admin_Token = await RegisterLoginAsync(s.Admin_Username, "Admin");
+        _factory.SeedTestAdmin();
+        s.Admin_Username = _factory.SeedTestAdminUsername;
+        s.Admin_Token = await LoginAsync(_factory.SeedTestAdminUsername);
 
         SetBearer(s.PatientA_Token);
         var book1 = await _client.PostAsJsonAsync("/api/v1/appointments", new
@@ -195,8 +203,8 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
     private async Task<string> GetAdminTokenAsync()
     {
         if (_adminToken != null) return _adminToken;
-        var suffix = Guid.NewGuid().ToString("N")[..6];
-        _adminToken = await RegisterLoginAsync($"adm_{suffix}", "Admin");
+        _factory.SeedTestAdmin();
+        _adminToken = await LoginAsync(_factory.SeedTestAdminUsername);
         return _adminToken;
     }
 

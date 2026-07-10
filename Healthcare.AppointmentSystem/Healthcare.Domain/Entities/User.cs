@@ -62,6 +62,12 @@ public sealed class User : Entity
         MarkAsModified();
     }
 
+    public void PromoteToAdmin()
+    {
+        Role = UserRole.Admin;
+        MarkAsModified();
+    }
+
     public void Deactivate()
     {
         IsActive = false;

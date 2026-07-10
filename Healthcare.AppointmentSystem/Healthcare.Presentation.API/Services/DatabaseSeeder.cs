@@ -28,6 +28,7 @@ public sealed class DatabaseSeeder : IHostedService
             var dbContext = scope.ServiceProvider.GetRequiredService<HealthcareDbContext>();
             var authService = scope.ServiceProvider.GetRequiredService<IAuthenticationService>();
 
+
             _logger.LogInformation("Applying pending migrations...");
             await dbContext.Database.MigrateAsync(cancellationToken);
             _logger.LogInformation("Migrations applied successfully.");
@@ -40,7 +41,8 @@ public sealed class DatabaseSeeder : IHostedService
 
             _logger.LogInformation("Seeding demo data...");
 
-            await SeedAdminUser(authService, cancellationToken);
+            var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+            await SeedAdminUser(dbContext, passwordHasher, cancellationToken);
 
             await SeedDoctors(dbContext, cancellationToken);
 
@@ -54,15 +56,18 @@ public sealed class DatabaseSeeder : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    private static async Task SeedAdminUser(IAuthenticationService authService, CancellationToken ct)
+    private static async Task SeedAdminUser(HealthcareDbContext dbContext, IPasswordHasher passwordHasher, CancellationToken ct)
     {
-        var result = await authService.RegisterAsync(
-            "admin", "admin@healthcareclinic.com", "Admin123!", "Admin", ct);
+        var existingAdmin = await dbContext.Users.FirstOrDefaultAsync(u => u.Username == "admin", ct);
+        if (existingAdmin != null)
+            return;
 
-        if (result.IsFailure)
-        {
-            throw new InvalidOperationException($"Failed to create admin user: {result.Error}");
-        }
+        var email = Email.Create("admin@healthcareclinic.com");
+        var passwordHash = passwordHasher.HashPassword("Admin123!");
+        var admin = User.Create("admin", email, passwordHash, UserRole.Admin);
+
+        dbContext.Users.Add(admin);
+        await dbContext.SaveChangesAsync(ct);
     }
 
     private static async Task SeedDoctors(HealthcareDbContext dbContext, CancellationToken ct)

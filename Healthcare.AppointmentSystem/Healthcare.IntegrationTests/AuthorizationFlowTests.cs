@@ -56,7 +56,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
     [Fact]
     public async Task CreatePatient_WithAdminRole_Returns403()
     {
-        var token = await RegisterAndLoginAsync("admin_createpat", "admin.createpat@test.com", "SecurePass123!", "Admin");
+        var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
         var payload = new
         {
@@ -213,9 +213,55 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
     [Fact]
     public async Task DeletePatient_WithAdminRole_Returns404ForNonExistent()
     {
-        var token = await RegisterAndLoginAsync("admin_delete", "admin.delete@test.com", "SecurePass123!", "Admin");
+        var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
         var response = await Client.DeleteAsync("/api/v1/patients/99999");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task PromoteToAdmin_ByNonAdmin_Returns403()
+    {
+        var patientToken = await RegisterAndLoginAsync("promote_nonadmin", "promote.nonadmin@test.com", "SecurePass123!", "Patient");
+        SetAuthToken(patientToken);
+
+        var response = await Client.PostAsync("/api/v1/users/1/promote-to-admin", null);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task PromoteToAdmin_ByAdmin_SucceedsAndCreatesAuditLog()
+    {
+        // Register a patient to be promoted
+        var suffix = Guid.NewGuid().ToString("N")[..6];
+        var patientUsername = $"promote_me_{suffix}";
+        var registerPayload = new
+        {
+            Username = patientUsername,
+            Email = $"{patientUsername}@test.com",
+            Password = "SecurePass123!",
+            Role = "Patient"
+        };
+        var registerResponse = await Client.PostAsJsonAsync("/api/v1/auth/register", registerPayload);
+        registerResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
+        var registerBody = await DeserializeResponse<int>(registerResponse);
+        var patientUserId = registerBody!.Data;
+
+        // Admin promotes the patient
+        var adminToken = await LoginAsPreSeededAdminAsync();
+        SetAuthToken(adminToken);
+
+        var promoteResponse = await Client.PostAsync($"/api/v1/users/{patientUserId}/promote-to-admin", null);
+        promoteResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+
+        // Verify the promoted user can now log in and has Admin role
+        var loginResponse = await Client.PostAsJsonAsync("/api/v1/auth/login", new
+        {
+            Username = patientUsername,
+            Password = "SecurePass123!"
+        });
+        loginResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        var loginResult = await DeserializeResponse<LoginResponse>(loginResponse);
+        loginResult!.Data!.Role.Should().Be("Admin");
     }
 }

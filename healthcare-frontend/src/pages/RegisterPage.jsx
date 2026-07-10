@@ -45,7 +45,6 @@ export default function RegisterPage() {
           <Select label="Role" name="role" value={form.role} onChange={handleChange}>
             <option value="Patient">Patient</option>
             <option value="Doctor">Doctor</option>
-            <option value="Admin">Admin</option>
           </Select>
           <Button type="submit" disabled={loading} className="w-full mt-2" size="lg">
             {loading ? 'Registering...' : 'Register'}

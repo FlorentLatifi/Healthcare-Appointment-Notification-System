@@ -73,6 +73,11 @@ public sealed class JwtAuthenticationService : IAuthenticationService
                 return Result<int>.Failure($"Invalid role: {role}. Valid roles: Patient, Doctor, Admin");
             }
 
+            if (userRole == UserRole.Admin)
+            {
+                return Result<int>.Failure("Cannot register as Admin through public registration.");
+            }
+
             var isBreached = await _breachedPasswordChecker.IsPasswordBreachedAsync(password, cancellationToken);
             if (isBreached)
             {

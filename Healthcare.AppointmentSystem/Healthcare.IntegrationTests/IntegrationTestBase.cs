@@ -34,6 +34,14 @@ public abstract class IntegrationTestBase : IClassFixture<CustomWebApplicationFa
         return JsonSerializer.Deserialize<ApiResponse<T>>(content, JsonOptions);
     }
 
+    protected const string PreSeededAdminUsername = "testadmin";
+    protected const string PreSeededAdminPassword = "SecurePass123!";
+
+    protected async Task<string> LoginAsPreSeededAdminAsync()
+    {
+        return await LoginAsync(PreSeededAdminUsername, PreSeededAdminPassword);
+    }
+
     protected async Task<string> LoginAsync(
         string username,
         string password)

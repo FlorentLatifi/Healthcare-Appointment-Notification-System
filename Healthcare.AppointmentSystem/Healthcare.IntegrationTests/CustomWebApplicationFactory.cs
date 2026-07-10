@@ -1,5 +1,9 @@
 using Healthcare.Adapters.Authentication;
 using Healthcare.Adapters.Persistence.EntityFramework;
+using Healthcare.Application.Ports.Authentication;
+using Healthcare.Domain.Entities;
+using Healthcare.Domain.Enums;
+using Healthcare.Domain.ValueObjects;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -72,6 +76,16 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         using var scope = Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<HealthcareDbContext>();
         await context.Database.MigrateAsync();
+
+        var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        if (!await context.Users.AnyAsync(u => u.Username == "testadmin"))
+        {
+            var email = Email.Create("testadmin@test.com");
+            var passwordHash = passwordHasher.HashPassword("SecurePass123!");
+            var admin = User.Create("testadmin", email, passwordHash, UserRole.Admin);
+            context.Users.Add(admin);
+            await context.SaveChangesAsync();
+        }
     }
 
     public new async Task DisposeAsync()

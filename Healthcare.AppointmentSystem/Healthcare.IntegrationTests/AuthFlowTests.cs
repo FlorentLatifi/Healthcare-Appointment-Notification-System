@@ -123,21 +123,32 @@ public sealed class AuthFlowTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Login_SetsRefreshCookie_AndRefreshEndpointUsesIt()
+    public async Task Register_WithAdminRole_Returns400()
     {
-        var username = "cookie_refresh_user";
-        await Client.PostAsJsonAsync("/api/v1/auth/register", new
+        var payload = new
         {
-            Username = username,
-            Email = "cookie_refresh@test.com",
+            Username = "wannabe_admin",
+            Email = "wannabe.admin@test.com",
             Password = "SecurePass123!",
             Role = "Admin"
-        });
+        };
 
+        var response = await Client.PostAsJsonAsync("/api/v1/auth/register", payload);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        // Verify no user was created with that username
+        var loginPayload = new { Username = "wannabe_admin", Password = "SecurePass123!" };
+        var loginResponse = await Client.PostAsJsonAsync("/api/v1/auth/login", loginPayload);
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Login_SetsRefreshCookie_AndRefreshEndpointUsesIt()
+    {
         var loginResponse = await Client.PostAsJsonAsync("/api/v1/auth/login", new
         {
-            Username = username,
-            Password = "SecurePass123!"
+            Username = PreSeededAdminUsername,
+            Password = PreSeededAdminPassword
         });
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 

@@ -9,7 +9,10 @@ using Healthcare.Application.Ports.Locking;
 using Healthcare.Application.Ports.Payments;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Adapters.Services;
+using Healthcare.Domain.Entities;
+using Healthcare.Domain.Enums;
 using Healthcare.Domain.Services;
+using Healthcare.Domain.ValueObjects;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -114,8 +117,43 @@ public sealed class AuthorizationTestWebApplicationFactory : WebApplicationFacto
         });
     }
 
+    private static int _adminSeedCounter;
+    private static readonly object _adminSeedLock = new();
+
+    public string SeedTestAdminUsername { get; private set; } = "testadmin";
+    public string SeedTestAdminPassword { get; private set; } = "SecurePass123!";
+
+    /// <summary>
+    /// Seeds a test admin user directly into the in-memory store, bypassing the public registration endpoint.
+    /// Safe to call multiple times — only seeds once.
+    /// </summary>
+    public void SeedTestAdmin()
+    {
+        if (_adminSeedCounter > 0) return;
+        lock (_adminSeedLock)
+        {
+            if (_adminSeedCounter > 0) return;
+            using var scope = Services.CreateScope();
+            var userRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+            var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+
+            if (userRepo.GetByUsernameAsync(SeedTestAdminUsername).GetAwaiter().GetResult() != null)
+            {
+                _adminSeedCounter = 1;
+                return;
+            }
+
+            var email = Email.Create("testadmin@test.com");
+            var passwordHash = passwordHasher.HashPassword(SeedTestAdminPassword);
+            var admin = User.Create(SeedTestAdminUsername, email, passwordHash, UserRole.Admin);
+            userRepo.AddAsync(admin).GetAwaiter().GetResult();
+            _adminSeedCounter = 1;
+        }
+    }
+
     protected override void Dispose(bool disposing)
     {
+        _adminSeedCounter = 0;
         if (disposing)
         {
             // Clean up environment variables to avoid cross-test pollution
