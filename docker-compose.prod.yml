@@ -43,6 +43,10 @@ services:
       Redis__InstanceName: "HealthcareApp:"
       Stripe__SecretKey: ${STRIPE_SECRET_KEY}
       Stripe__PublishableKey: ${STRIPE_PUBLISHABLE_KEY}
+      # Trust the Docker bridge network so ForwardedHeadersMiddleware reads
+      # the real client IP from X-Forwarded-For sent by nginx. Without this,
+      # rate limiting buckets all users behind the proxy into one global bucket.
+      TrustedNetworks__0: 172.16.0.0/12
       AllowedOrigins__0: ${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "8080:8080"

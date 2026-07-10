@@ -8,7 +8,7 @@ avoids introducing a container orchestrator (Kubernetes, Nomad, etc.) without a
 documented operational need.
 
 If the infrastructure changes to a clustered environment (Azure Container Apps,
-AWS ECS, GCP Cloud Run, or Kubernetes), the deployment step in `.github/workflows/cd.yml`
+AWS ECS, GCP Cloud Run, or Kubernetes), the deployment step in `.github/workflows/ci.yml`
 must be adapted. The image-building phase (`build-and-push`) is provider-agnostic
 and should remain unchanged.
 
@@ -49,6 +49,30 @@ sudo git clone https://github.com/FlorentLatifi/Healthcare-Appointment-Notificat
 cp /opt/healthcare/.env.example /opt/healthcare/.env
 # Edit .env with real secrets
 ```
+
+## Trusted Proxies / Networks
+
+The API uses ASP.NET Core's `ForwardedHeadersMiddleware` to extract the real
+client IP from the `X-Forwarded-For` header set by nginx. Without this, every
+request appears to come from the nginx container's internal IP, and rate-limiting
+buckets all users together.
+
+`docker-compose.prod.yml` sets `TrustedNetworks__0: 172.16.0.0/12` on the `api`
+service, which covers the standard Docker bridge / Compose network IP range
+(`172.16.0.0` – `172.31.255.255`).
+
+If you deploy behind a different reverse proxy or on a non-Docker network,
+override `TrustedNetworks` or `TrustedProxies` in the environment:
+
+| Variable | Example | Description |
+|----------|---------|-------------|
+| `TrustedNetworks__0` | `172.16.0.0/12` | CIDR block whose forwarded headers are trusted |
+| `TrustedProxies__0` | `10.0.1.5` | Specific proxy IP (use instead of a CIDR when the proxy has a fixed address) |
+
+You can specify multiple entries with `__0`, `__1`, etc.
+
+If neither is set in Production, the API logs a startup warning and rate-limiting
+will not distinguish real client IPs behind the proxy.
 
 ## How the CI/CD Pipeline Works
 
