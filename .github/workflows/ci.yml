@@ -1,0 +1,249 @@
+# ────────────────────────────────────────────────────────────────────
+# CI/CD Pipeline
+# ────────────────────────────────────────────────────────────────────
+# This single workflow merges the former build-and-test.yml and
+# cd.yml into one file so that the dependency chain is explicit:
+#
+#   unit-tests ──→ integration-tests ──┐
+#                                       ├──→ build-and-push ──→ deploy
+#   frontend ───────────────────────────┘
+#
+# A red test job blocks image building and deployment.  This is much
+# easier to reason about than coordinating two independent workflows
+# with workflow_run triggers.
+# ────────────────────────────────────────────────────────────────────
+
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln
+
+    - name: Check formatting
+      run: dotnet format Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln --verify-no-changes
+
+    - name: Build (Release)
+      run: dotnet build Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln --no-restore -c Release
+
+    - name: Run Fast Unit Tests
+      run: dotnet test Healthcare.AppointmentSystem/Healthcare.UnitTests/Healthcare.UnitTests.csproj --no-build -c Release --filter Category!=Integration --logger "trx;LogFileName=unit-test-results.trx" --collect:"XPlat Code Coverage"
+
+    - name: Check for vulnerabilities
+      run: |
+        output=$(dotnet list package --vulnerable --include-transitive Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln 2>&1)
+        echo "$output"
+        if echo "$output" | grep -Eq "High|Critical"; then
+          echo "❌ High or Critical severity vulnerabilities found!"
+          exit 1
+        fi
+        if echo "$output" | grep -Eq "Moderate"; then
+          echo "⚠️  Moderate severity vulnerabilities found (not blocking — review above)."
+        fi
+        echo "✅ No High or Critical vulnerabilities detected."
+
+    - name: Upload unit test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: unit-test-results
+        path: '**/unit-test-results.trx'
+
+    - name: Upload coverage reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-reports
+        path: '**/coverage.cobertura.xml'
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln
+
+    - name: Build (Release)
+      run: dotnet build Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln --no-restore -c Release
+
+    - name: Run Integration Tests (Testcontainers)
+      run: dotnet test Healthcare.AppointmentSystem/Healthcare.IntegrationTests/Healthcare.IntegrationTests.csproj --no-build -c Release --logger "trx;LogFileName=integration-test-results.trx"
+
+    - name: Upload integration test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-results
+        path: '**/integration-test-results.trx'
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22.x'
+        cache: 'npm'
+        cache-dependency-path: healthcare-frontend/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+      working-directory: healthcare-frontend
+
+    - name: Lint
+      run: npm run lint
+      working-directory: healthcare-frontend
+
+    - name: Test
+      run: npm run test
+      working-directory: healthcare-frontend
+
+    - name: Build
+      run: npm run build
+      working-directory: healthcare-frontend
+
+  build-and-push:
+    needs: [unit-tests, integration-tests, frontend]
+    # Skip image building on pull requests — only build on push (main or tags)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── API image ──────────────────────────────────────────────
+      - name: Extract metadata for API
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/api
+          tags: |
+            type=sha,prefix=,suffix=
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push API
+        uses: docker/build-push-action@v5
+        with:
+          context: Healthcare.AppointmentSystem
+          file: Healthcare.AppointmentSystem/Healthcare.Presentation.API/Dockerfile
+          push: true
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── Frontend image ─────────────────────────────────────────
+      - name: Extract metadata for Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/frontend
+          tags: |
+            type=sha,prefix=,suffix=
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: healthcare-frontend
+          build-args: |
+            VITE_API_BASE_URL=/api/v1
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Deployment (placeholder) ───────────────────────────────────
+  # Assumption: the target is a single VM running Docker Compose.
+  # Adapt SSH_HOST / SSH_USER / DEPLOY_PATH to your infrastructure.
+  # Install steps once on the target:
+  #   git clone https://github.com/${{ github.repository }} /opt/healthcare
+  #   cd /opt/healthcare && docker compose -f docker-compose.prod.yml up -d
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    # Only deploy on main branch pushes (not tags or PRs)
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy via SSH + Docker Compose
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/healthcare' }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+        run: |
+          echo "Deploying to $SSH_USER@$SSH_HOST:$DEPLOY_PATH ..."
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Inline env vars so they're available to docker compose on the remote host
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              "$SSH_USER@$SSH_HOST" \
+              "cd $DEPLOY_PATH && \
+               DB_PASSWORD='$DB_PASSWORD' \
+               JWT_SECRET='$JWT_SECRET' \
+               STRIPE_SECRET_KEY='$STRIPE_SECRET_KEY' \
+               STRIPE_PUBLISHABLE_KEY='$STRIPE_PUBLISHABLE_KEY' \
+               docker compose -f docker-compose.prod.yml pull && \
+               DB_PASSWORD='$DB_PASSWORD' \
+               JWT_SECRET='$JWT_SECRET' \
+               STRIPE_SECRET_KEY='$STRIPE_SECRET_KEY' \
+               STRIPE_PUBLISHABLE_KEY='$STRIPE_PUBLISHABLE_KEY' \
+               docker compose -f docker-compose.prod.yml up -d --remove-orphans && \
+               docker image prune -f"
+          echo "Deployment complete."

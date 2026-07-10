@@ -50,14 +50,29 @@ cp /opt/healthcare/.env.example /opt/healthcare/.env
 # Edit .env with real secrets
 ```
 
-## How the CD Pipeline Works
+## How the CI/CD Pipeline Works
 
-1. **Trigger:** Push to `main` (or tag `v*`).
-2. **Build & Push:**
+The pipeline is defined in a **single** workflow file (`.github/workflows/ci.yml`).
+This was a deliberate choice: keeping build, test, image, and deploy jobs in one
+file makes the dependency chain explicit and easy to reason about.
+
+```
+unit-tests ──→ integration-tests ──┐
+                                    ├──→ build-and-push ──→ deploy
+frontend ───────────────────────────┘
+```
+
+1. **Trigger:** Push to `main` (or tag `v*`), or pull request against `main`.
+2. **Tests run first** — on every trigger (push, PR, tag):
+   - **unit-tests:** .NET format check, build, unit tests (excluding `Category=Integration`), vulnerability audit.
+   - **integration-tests:** runs after unit-tests succeed; uses Testcontainers for Docker-dependent tests.
+   - **frontend:** Node.js lint, test, and build.
+3. **Gating:** If any test job fails, `build-and-push` is **never started** (its `needs:` block prevents it). A red CI run on `main` blocks deployment entirely.
+4. **Build & Push** (`push` to `main` or `v*` tag only — skipped on PRs):
    - API Docker image → `ghcr.io/<owner>/<repo>/api:<tag>`
    - Frontend Docker image → `ghcr.io/<owner>/<repo>/frontend:<tag>`
    - Tags: `latest`, `<git-sha>`, `<semver>` (on `v*` tags)
-3. **Deploy:**
+5. **Deploy** (`push` to `main` only):
    - SSHes into the target VM using `DEPLOY_SSH_KEY`.
    - Runs `docker compose -f docker-compose.prod.yml pull` to fetch updated images.
    - Runs `docker compose -f docker-compose.prod.yml up -d --remove-orphans` to restart services.
