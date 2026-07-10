@@ -490,12 +490,15 @@ public static class AdapterServiceExtensions
         services.AddScoped<IDomainEventHandler<PatientRecordAccessedEvent>,
             LogPatientRecordAccessedHandler>();
 
-        // Audit Log Handlers
+        // AppointmentCompletedEvent Handlers
+        services.AddScoped<IDomainEventHandler<AppointmentCompletedEvent>,
+            LogAppointmentCompletedHandler>();
 
-        // TODO: Add more handlers as needed:
-        // services.AddScoped<IDomainEventHandler<AppointmentCompletedEvent>, ...>();
-        // services.AddScoped<IDomainEventHandler<AppointmentNoShowEvent>, ...>();
-        // services.AddScoped<IDomainEventHandler<PatientRegisteredEvent>, ...>();
+        // AppointmentNoShowEvent Handlers
+        services.AddScoped<IDomainEventHandler<AppointmentNoShowEvent>,
+            LogAppointmentNoShowHandler>();
+
+        // Audit Log Handlers
     }
 
     /// <summary>

@@ -128,6 +128,72 @@ public sealed class SoftDeleteAndAuditTests
     }
 
     [Fact]
+    public async Task LogAppointmentCompletedHandler_WritesAuditEntry()
+    {
+        var auditLogRepo = new Mock<IAuditLogRepository>();
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var logger = new Mock<ILogger<LogAppointmentCompletedHandler>>();
+
+        auditLogRepo.Setup(r => r.AddAsync(It.IsAny<AuditLogEntry>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(1));
+
+        var handler = new LogAppointmentCompletedHandler(
+            logger.Object, auditLogRepo.Object, unitOfWork.Object);
+
+        var domainEvent = new AppointmentCompletedEvent(
+            appointmentId: 10,
+            patientId: 1,
+            doctorId: 5,
+            scheduledTime: new DateTime(2026, 7, 15, 10, 0, 0, DateTimeKind.Utc));
+
+        await handler.HandleAsync(domainEvent, CancellationToken.None);
+
+        auditLogRepo.Verify(r => r.AddAsync(
+            It.Is<AuditLogEntry>(e =>
+                e.EventType == "AppointmentCompleted" &&
+                e.EntityType == "Appointment" &&
+                e.EntityId == 10),
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task LogAppointmentNoShowHandler_WritesAuditEntry()
+    {
+        var auditLogRepo = new Mock<IAuditLogRepository>();
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var logger = new Mock<ILogger<LogAppointmentNoShowHandler>>();
+
+        auditLogRepo.Setup(r => r.AddAsync(It.IsAny<AuditLogEntry>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(1));
+
+        var handler = new LogAppointmentNoShowHandler(
+            logger.Object, auditLogRepo.Object, unitOfWork.Object);
+
+        var domainEvent = new AppointmentNoShowEvent(
+            appointmentId: 11,
+            patientId: 2,
+            doctorId: 5,
+            scheduledTime: new DateTime(2026, 7, 15, 14, 30, 0, DateTimeKind.Utc));
+
+        await handler.HandleAsync(domainEvent, CancellationToken.None);
+
+        auditLogRepo.Verify(r => r.AddAsync(
+            It.Is<AuditLogEntry>(e =>
+                e.EventType == "AppointmentNoShow" &&
+                e.EntityType == "Appointment" &&
+                e.EntityId == 11),
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task PatientRecordAccessedEvent_IsNotRaised_ForSelfAccess()
     {
         var auditLogRepo = new Mock<IAuditLogRepository>();
