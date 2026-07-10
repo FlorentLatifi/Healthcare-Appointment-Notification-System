@@ -13,6 +13,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const DoctorsListPage = lazy(() => import('./pages/DoctorsListPage'));
 const BookAppointmentPage = lazy(() => import('./pages/BookAppointmentPage'));
 const MyAppointmentsPage = lazy(() => import('./pages/MyAppointmentsPage'));
+const StripePaymentPage = lazy(() => import('./pages/StripePaymentPage'));
 const CreatePatientProfilePage = lazy(() => import('./pages/CreatePatientProfilePage'));
 const DoctorDashboardPage = lazy(() => import('./pages/DoctorDashboardPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
@@ -51,6 +52,7 @@ export default function App() {
               <Route path="/doctors" element={<ProtectedLayout><DoctorsListPage /></ProtectedLayout>} />
               <Route path="/book-appointment/:doctorId" element={<ProtectedLayout allowedRoles={['Patient']}><BookAppointmentPage /></ProtectedLayout>} />
               <Route path="/my-appointments" element={<ProtectedLayout allowedRoles={['Patient']}><MyAppointmentsPage /></ProtectedLayout>} />
+              <Route path="/pay/:appointmentId" element={<ProtectedLayout allowedRoles={['Patient']}><StripePaymentPage /></ProtectedLayout>} />
               <Route path="/create-patient" element={<ProtectedLayout allowedRoles={['Patient']}><CreatePatientProfilePage /></ProtectedLayout>} />
               <Route path="/doctor-dashboard" element={<ProtectedLayout allowedRoles={['Doctor']}><DoctorDashboardPage /></ProtectedLayout>} />
               <Route path="/admin" element={<ProtectedLayout allowedRoles={['Admin']}><AdminDashboardPage /></ProtectedLayout>} />

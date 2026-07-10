@@ -169,30 +169,10 @@ public class AppointmentTimeTests
     [Fact]
     public void IsWithinNext24Hours_WithAppointmentIn23Hours_ShouldReturnTrue()
     {
-        // Arrange - Create appointment exactly 23 hours from now on a weekday
-        var now = DateTime.Now;
-        var futureTime = now.AddHours(23);
-
-        // Ensure it's on a weekday
-        while (futureTime.DayOfWeek == DayOfWeek.Saturday ||
-               futureTime.DayOfWeek == DayOfWeek.Sunday)
-        {
-            futureTime = futureTime.AddDays(1);
-        }
-
-        // Ensure it's on a weekday (default schedule Mon-Fri)
-        while (futureTime.DayOfWeek == DayOfWeek.Saturday ||
-               futureTime.DayOfWeek == DayOfWeek.Sunday)
-        {
-            futureTime = futureTime.AddDays(1);
-        }
-
-        // Ensure it's on 30-minute interval
-        if (futureTime.Minute != 0 && futureTime.Minute != 30)
-        {
-            futureTime = futureTime.Date.AddHours(futureTime.Hour)
-                .AddMinutes(futureTime.Minute >= 30 ? 30 : 0);
-        }
+        // Arrange - ~23 hours from now, rounded to nearest 30-min boundary
+        var candidate = DateTime.Now.AddHours(23);
+        var futureTime = candidate.Date.AddHours(candidate.Hour)
+            .AddMinutes(candidate.Minute >= 30 ? 30 : 0);
 
         var appointmentTime = AppointmentTime.Create(futureTime);
 

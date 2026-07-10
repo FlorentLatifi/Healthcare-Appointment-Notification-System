@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { Button, Card, Badge, Spinner, EmptyState, Modal, Textarea, PageHeader } from '../components/ui';
-import { Calendar, Clock, AlertCircle, CalendarClock } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, CalendarClock, CreditCard } from 'lucide-react';
 import { APPOINTMENT_STATUS } from '../constants/appointmentStatus';
 
 export default function MyAppointmentsPage() {
@@ -16,6 +16,7 @@ export default function MyAppointmentsPage() {
   const [cancelling, setCancelling] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
+  const [paymentStatuses, setPaymentStatuses] = useState({});
 
   useEffect(() => {
     if (!patientId) {
@@ -25,6 +26,28 @@ export default function MyAppointmentsPage() {
     }
     fetchAppointments();
   }, [patientId]);
+
+  const fetchPaymentStatus = useCallback(async (appointmentId) => {
+    try {
+      const { data } = await apiClient.get(`/Payments/appointment/${appointmentId}`);
+      if (data.success && data.data) {
+        setPaymentStatuses((prev) => ({ ...prev, [appointmentId]: data.data.status }));
+      } else {
+        setPaymentStatuses((prev) => ({ ...prev, [appointmentId]: null }));
+      }
+    } catch {
+      setPaymentStatuses((prev) => ({ ...prev, [appointmentId]: null }));
+    }
+  }, []);
+
+  useEffect(() => {
+    const pendingIds = appointments
+      .filter((a) => a.status === APPOINTMENT_STATUS.PENDING)
+      .map((a) => a.id);
+    if (pendingIds.length > 0) {
+      pendingIds.forEach((id) => fetchPaymentStatus(id));
+    }
+  }, [appointments, fetchPaymentStatus]);
 
   const fetchAppointments = async () => {
     setLoading(true);
@@ -120,8 +143,24 @@ export default function MyAppointmentsPage() {
                 </p>
               )}
               {appt.status === APPOINTMENT_STATUS.PENDING && (
-                <div className="mt-3 pt-3 border-t border-border-light">
-                  <Button variant="danger" size="sm" onClick={() => openCancelModal(appt)}>Cancel</Button>
+                <div className="mt-3 pt-3 border-t border-border-light space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-text-muted inline-flex items-center gap-1">
+                      <CreditCard size={12} />
+                      {paymentStatuses[appt.id] === 'Succeeded' ? 'Paid' : 'Payment required'}
+                    </span>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      leftIcon={<CreditCard size={14} />}
+                      onClick={() => navigate(`/pay/${appt.id}`)}
+                    >
+                      Pay Now
+                    </Button>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button variant="ghost" size="sm" onClick={() => openCancelModal(appt)}>Cancel</Button>
+                  </div>
                 </div>
               )}
             </Card>

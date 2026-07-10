@@ -78,8 +78,8 @@ export default function BookAppointmentPage() {
         appointmentType,
       });
       if (data.success) {
-        toast.success('Appointment booked successfully!');
-        navigate('/my-appointments');
+        toast.success('Appointment booked! Redirecting to payment...');
+        navigate(`/pay/${data.data.id}`);
       } else {
         const msg = data.errors?.join('. ') || data.message || 'Booking failed';
         toast.error(msg);

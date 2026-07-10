@@ -75,7 +75,7 @@ describe('BookAppointmentPage', () => {
   });
 
   it('sends correct payload on valid submission', async () => {
-    mockApiClient.post.mockResolvedValue({ data: { success: true } });
+    mockApiClient.post.mockResolvedValue({ data: { success: true, data: { id: 1 } } });
     render(<BookAppointmentPage />);
     await fillAndSubmit('2099-06-15T10:00', 'Regular checkup and consultation.');
 
@@ -88,13 +88,13 @@ describe('BookAppointmentPage', () => {
     });
   });
 
-  it('navigates to my-appointments on success', async () => {
-    mockApiClient.post.mockResolvedValue({ data: { success: true } });
+  it('navigates to payment page on success', async () => {
+    mockApiClient.post.mockResolvedValue({ data: { success: true, data: { id: 99 } } });
     render(<BookAppointmentPage />);
     await fillAndSubmit('2099-06-15T10:00', 'Regular checkup and consultation.');
 
     await vi.waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/my-appointments');
+      expect(mockNavigate).toHaveBeenCalledWith('/pay/99');
     });
   });
 });
