@@ -95,7 +95,7 @@ public sealed class BookAppointmentHandler
         // ── CODE GENERATION ─────────────────────────────────
         // In production, _codeGenerator is RedisAppointmentCodeGenerator
         // (safe across multiple API instances via atomic INCR).
-        // For in-memory/testing, it's AppointmentCodeGenerator.Instance.
+        // For in-memory/testing, DI provides AppointmentCodeGenerator.
         var strategy = PricingStrategySelector.Select(command.AppointmentType);
         var pricingContext = new PricingContext(strategy);
         var finalPrice = pricingContext.ExecutePricing(

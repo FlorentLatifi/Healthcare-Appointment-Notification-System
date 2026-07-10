@@ -116,7 +116,7 @@ public class RefundPaymentHandlerTests
             doctor,
             scheduledTime,
             "Annual checkup and consultation",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.Confirm();
 
@@ -176,7 +176,7 @@ public class RefundPaymentHandlerTests
             doctor,
             scheduledTime,
             "Annual checkup and consultation",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.Confirm();
         appointment.ClearDomainEvents();

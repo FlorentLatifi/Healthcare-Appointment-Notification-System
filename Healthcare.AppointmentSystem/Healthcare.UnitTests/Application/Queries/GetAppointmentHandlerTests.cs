@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Healthcare.Adapters.Persistence.InMemory;
 using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Repositories;
@@ -105,7 +105,7 @@ public class GetAppointmentHandlerTests
             doctor,
             scheduledTime,
             "Annual checkup and blood pressure monitoring",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         if (status == AppointmentStatus.Confirmed)
         {
@@ -425,7 +425,7 @@ public class GetAppointmentHandlerTests
         var scheduledTime = CreateFutureAppointmentTime();
         const string specialReason = "Patient has symptoms: fever, cough & headache (urgent!)";
 
-        var appointment = Appointment.Create(patient, doctor, scheduledTime, specialReason, AppointmentCodeGenerator.Instance);
+        var appointment = Appointment.Create(patient, doctor, scheduledTime, specialReason, new AppointmentCodeGenerator());
         await _appointmentRepository.AddAsync(appointment);
 
         var query = new GetAppointmentQuery(appointment.Id);

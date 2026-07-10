@@ -139,7 +139,7 @@ public class AppointmentReminderBackgroundServiceTests
         var appointment = Appointment.Create(
             patient, doctor, appointmentTime,
             "Annual checkup and consultation",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.Confirm();
 

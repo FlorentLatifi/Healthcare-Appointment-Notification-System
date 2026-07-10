@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Locking;
@@ -22,11 +22,7 @@ public class BookAppointmentHandlerTests
     private readonly Mock<IDomainEventDispatcher> _eventDispatcherMock;
     private readonly Mock<IDistributedLockService> _lockServiceMock;
 
-    // ── SINGLETON PATTERN ──────────────────────────────────────────────────
-    // We use the REAL Singleton instance in tests (not a mock).
-    // This proves the Singleton works in a test environment too.
-    // Alternatively, we could mock IAppointmentCodeGenerator for isolation.
-    // ── ────────────────────────────────────────────────────────────────────
+    // Real injectable implementation (could also mock IAppointmentCodeGenerator).
     private readonly IAppointmentCodeGenerator _codeGenerator;
 
     private readonly BookAppointmentHandler _handler;
@@ -48,8 +44,7 @@ public class BookAppointmentHandlerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(lockHandleMock.Object);
 
-        // Use the real Singleton instance — proves it works end-to-end
-        _codeGenerator = AppointmentCodeGenerator.Instance;
+        _codeGenerator = new AppointmentCodeGenerator();
 
         // Pass all 4 required constructor arguments
         _handler = new BookAppointmentHandler(

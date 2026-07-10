@@ -108,7 +108,7 @@ public sealed class AuthorizationTestWebApplicationFactory : WebApplicationFacto
 
             services.AddSingleton<IDistributedLockService, InMemoryLockService>();
             services.AddSingleton<IDoctorCacheService, InMemoryDoctorCacheService>();
-            services.AddSingleton<IAppointmentCodeGenerator>(_ => AppointmentCodeGenerator.Instance);
+            services.AddSingleton<IAppointmentCodeGenerator, AppointmentCodeGenerator>();
 
             services.AddScoped<IPaymentGateway>(_ => Mock.Of<IPaymentGateway>());
 

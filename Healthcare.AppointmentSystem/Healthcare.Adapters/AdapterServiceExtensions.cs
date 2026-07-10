@@ -157,8 +157,8 @@ public static class AdapterServiceExtensions
 
         services.AddSingleton<IDistributedLockService, InMemoryLockService>();
 
-        services.AddSingleton<IAppointmentCodeGenerator>(
-            _ => AppointmentCodeGenerator.Instance);
+        // DI-managed singleton lifetime (one instance per process) — not a hand-rolled Singleton.
+        services.AddSingleton<IAppointmentCodeGenerator, AppointmentCodeGenerator>();
 
         // Register Redis for refresh token storage (gracefully handles missing Redis)
         services.AddSingleton<IConnectionMultiplexer>(provider =>

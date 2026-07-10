@@ -44,7 +44,7 @@ public sealed class EFCorePaginationTests
                     DateTime.UtcNow.Date.AddDays(i + 30).AddHours(10));
                 var appointment = Appointment.Create(
                     patient, doctor, appointmentTime, $"Checkup #{i}",
-                    AppointmentCodeGenerator.Instance);
+                    new AppointmentCodeGenerator());
                 appointment.ApplyPricingStrategy(
                     doctor.ConsultationFee.Amount, doctor.ConsultationFee.Currency);
                 seedCtx.Appointments.Add(appointment);
@@ -159,7 +159,7 @@ public sealed class EFCorePaginationTests
                 DateTime.UtcNow.Date.AddDays(30).AddHours(10));
             var appointment = Appointment.Create(
                 patient, doctor, appointmentTime, "Payment paging test",
-                AppointmentCodeGenerator.Instance);
+                new AppointmentCodeGenerator());
             seedCtx.Appointments.Add(appointment);
             await seedCtx.SaveChangesAsync();
             appointmentId = appointment.Id;

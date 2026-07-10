@@ -43,7 +43,7 @@ public sealed class AppointmentMapperTests
         var appointment = Appointment.Create(
             patient, doctor, appointmentTime,
             "Routine cardiology checkup",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.Confirm();
         var dto = AppointmentMapper.ToDto(appointment);
@@ -107,7 +107,7 @@ public sealed class AppointmentMapperTests
             doctor,
             appointmentTime,
             "Test reason",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         var field = appointment.GetType()
             .GetField("<Patient>k__BackingField",
@@ -129,7 +129,7 @@ public sealed class AppointmentMapperTests
             TestDataBuilder.ADoctor().Build(),
             appointmentTime,
             "Test reason",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         var field = appointment.GetType()
             .GetField("<Doctor>k__BackingField",

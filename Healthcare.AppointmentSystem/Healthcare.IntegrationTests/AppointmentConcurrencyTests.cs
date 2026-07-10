@@ -51,7 +51,7 @@ public sealed class AppointmentConcurrencyTests : IClassFixture<SqlServerTestFix
 
             var appointment = Appointment.Create(patient, doctor, appointmentTime,
                 "Concurrency test appointment for optimistic locking verification",
-                AppointmentCodeGenerator.Instance);
+                new AppointmentCodeGenerator());
             seedCtx.Appointments.Add(appointment);
             await seedCtx.SaveChangesAsync();
             appointmentId = appointment.Id;

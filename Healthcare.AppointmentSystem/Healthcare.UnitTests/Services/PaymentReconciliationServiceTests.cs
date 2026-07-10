@@ -213,7 +213,7 @@ public class PaymentReconciliationServiceTests
             doctor,
             CreateFutureAppointmentTime(),
             "General medical consultation",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.ClearDomainEvents();
 

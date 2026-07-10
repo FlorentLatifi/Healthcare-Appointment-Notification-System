@@ -48,7 +48,7 @@ public sealed class EFCoreAppointmentSpecialtyTests
                 DateTime.UtcNow.Date.AddDays(10).AddHours(10));
             var appointment = Appointment.Create(
                 patient, doctor, appointmentTime, "Specialty checkup test",
-                AppointmentCodeGenerator.Instance);
+                new AppointmentCodeGenerator());
             appointment.ApplyPricingStrategy(
                 doctor.ConsultationFee.Amount, doctor.ConsultationFee.Currency);
             seedCtx.Appointments.Add(appointment);

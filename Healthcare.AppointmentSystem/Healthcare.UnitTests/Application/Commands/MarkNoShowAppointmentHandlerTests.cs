@@ -130,7 +130,7 @@ public class MarkNoShowAppointmentHandlerTests
             doctor,
             appointmentTime,
             "Annual checkup and consultation",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.Confirm();
 
@@ -217,7 +217,7 @@ public class MarkNoShowAppointmentHandlerTests
             doctor,
             appointmentTime,
             "Routine checkup and blood work",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.ClearDomainEvents();
 

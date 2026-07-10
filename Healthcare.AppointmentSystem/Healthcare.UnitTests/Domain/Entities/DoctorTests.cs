@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Healthcare.Domain.Common;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -894,7 +894,7 @@ public class DoctorTests
             patient, doctor,
             AppointmentTime.Create(time),
             "Test reason for appointment that is long enough",
-            Healthcare.Adapters.Services.AppointmentCodeGenerator.Instance);
+            new Healthcare.Adapters.Services.AppointmentCodeGenerator());
 
         typeof(Appointment).GetProperty("Id",
             System.Reflection.BindingFlags.Public |

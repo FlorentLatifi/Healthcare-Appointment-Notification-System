@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Healthcare.Domain.Common;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -58,7 +58,7 @@ public class AppointmentTests
     {
         var futureDate = DateTime.Now.AddDays(7).Date;
 
-        // ✅ CRITICAL FIX: Skip weekends
+        // ? CRITICAL FIX: Skip weekends
         while (futureDate.DayOfWeek == DayOfWeek.Saturday ||
                futureDate.DayOfWeek == DayOfWeek.Sunday)
         {
@@ -81,7 +81,7 @@ public class AppointmentTests
         var scheduledTime = CreateFutureAppointmentTime();
 
         // Act
-        var appointment = Appointment.Create(patient, doctor, scheduledTime, ValidReason, AppointmentCodeGenerator.Instance);
+        var appointment = Appointment.Create(patient, doctor, scheduledTime, ValidReason, new AppointmentCodeGenerator());
 
         // Assert
         appointment.Should().NotBeNull();
@@ -102,7 +102,7 @@ public class AppointmentTests
         var scheduledTime = CreateFutureAppointmentTime();
 
         // Act
-        var appointment = Appointment.Create(patient, doctor, scheduledTime, ValidReason, AppointmentCodeGenerator.Instance);
+        var appointment = Appointment.Create(patient, doctor, scheduledTime, ValidReason, new AppointmentCodeGenerator());
 
         // Assert
         appointment.DomainEvents.Should().ContainSingle();
@@ -126,7 +126,7 @@ public class AppointmentTests
         var scheduledTime = CreateFutureAppointmentTime();
 
         // Act
-        Action act = () => Appointment.Create(patient, doctor, scheduledTime, ValidReason, AppointmentCodeGenerator.Instance);
+        Action act = () => Appointment.Create(patient, doctor, scheduledTime, ValidReason, new AppointmentCodeGenerator());
 
         // Assert
         act.Should().Throw<InvalidOperationException>()
@@ -144,7 +144,7 @@ public class AppointmentTests
         var scheduledTime = CreateFutureAppointmentTime();
 
         // Act
-        Action act = () => Appointment.Create(patient, doctor, scheduledTime, ValidReason, AppointmentCodeGenerator.Instance);
+        Action act = () => Appointment.Create(patient, doctor, scheduledTime, ValidReason, new AppointmentCodeGenerator());
 
         // Assert
         act.Should().Throw<InvalidOperationException>()
@@ -162,7 +162,7 @@ public class AppointmentTests
         var scheduledTime = CreateFutureAppointmentTime();
 
         // Act
-        Action act = () => Appointment.Create(patient, doctor, scheduledTime, ValidReason, AppointmentCodeGenerator.Instance);
+        Action act = () => Appointment.Create(patient, doctor, scheduledTime, ValidReason, new AppointmentCodeGenerator());
 
         // Assert
         act.Should().Throw<InvalidOperationException>()
@@ -180,7 +180,7 @@ public class AppointmentTests
         var scheduledTime = CreateFutureAppointmentTime();
 
         // Act
-        Action act = () => Appointment.Create(patient, doctor, scheduledTime, shortReason, AppointmentCodeGenerator.Instance);
+        Action act = () => Appointment.Create(patient, doctor, scheduledTime, shortReason, new AppointmentCodeGenerator());
 
         // Assert
         act.Should().Throw<ArgumentException>()
@@ -200,7 +200,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.ClearDomainEvents();
 
@@ -222,7 +222,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.ClearDomainEvents();
 
@@ -248,7 +248,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         var statusProperty = typeof(Appointment).GetProperty("Status");
         statusProperty.Should().NotBeNull();
@@ -277,7 +277,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         if (startStatus == AppointmentStatus.Confirmed)
         {
@@ -306,7 +306,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.ClearDomainEvents();
 
@@ -331,7 +331,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         typeof(Appointment)
             .GetProperty("Status")!
@@ -355,7 +355,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         // Act
         Action act = () => appointment.Cancel(shortReason);
@@ -378,7 +378,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.Confirm();
         appointment.ClearDomainEvents();
@@ -403,7 +403,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.Confirm();
         appointment.ClearDomainEvents();
@@ -429,7 +429,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         typeof(Appointment)
             .GetProperty("Status")!
@@ -453,7 +453,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.Confirm();
 
@@ -481,7 +481,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         typeof(Appointment)
             .GetProperty("Status")!
@@ -505,7 +505,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         typeof(Appointment)
             .GetProperty("Status")!
@@ -516,6 +516,98 @@ public class AppointmentTests
 
         // Assert
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GetAllowedTransitions_FromPending_ShouldAllowConfirmAndCancel()
+    {
+        var appointment = Appointment.Create(
+            CreateTestPatient(),
+            CreateTestDoctor(),
+            CreateFutureAppointmentTime(),
+            ValidReason,
+            new AppointmentCodeGenerator());
+
+        appointment.GetAllowedTransitions().Should().BeEquivalentTo(new[]
+        {
+            AppointmentStatus.Confirmed,
+            AppointmentStatus.Cancelled
+        });
+    }
+
+    [Fact]
+    public void GetAllowedTransitions_FromConfirmed_ShouldAllowCompleteCancelAndNoShow()
+    {
+        var appointment = Appointment.Create(
+            CreateTestPatient(),
+            CreateTestDoctor(),
+            CreateFutureAppointmentTime(),
+            ValidReason,
+            new AppointmentCodeGenerator());
+        appointment.Confirm();
+
+        appointment.GetAllowedTransitions().Should().BeEquivalentTo(new[]
+        {
+            AppointmentStatus.Completed,
+            AppointmentStatus.Cancelled,
+            AppointmentStatus.NoShow
+        });
+    }
+
+    [Fact]
+    public void GetAllowedTransitions_FromTerminal_ShouldBeEmpty()
+    {
+        var appointment = Appointment.Create(
+            CreateTestPatient(),
+            CreateTestDoctor(),
+            CreateFutureAppointmentTime(),
+            ValidReason,
+            new AppointmentCodeGenerator());
+        appointment.Cancel("Patient requested cancellation due to travel");
+
+        appointment.GetAllowedTransitions().Should().BeEmpty();
+        appointment.IsTerminal().Should().BeTrue();
+    }
+
+    [Fact]
+    public void Confirm_OnSoftDeletedAppointment_ShouldThrow()
+    {
+        var appointment = Appointment.Create(
+            CreateTestPatient(),
+            CreateTestDoctor(),
+            CreateFutureAppointmentTime(),
+            ValidReason,
+            new AppointmentCodeGenerator());
+        appointment.Delete();
+
+        Action act = () => appointment.Confirm();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*soft-deleted*");
+    }
+
+    [Fact]
+    public void Reschedule_FromTerminalStatus_ShouldThrowInvalidAppointmentStateException()
+    {
+        var appointment = Appointment.Create(
+            CreateTestPatient(),
+            CreateTestDoctor(),
+            CreateFutureAppointmentTime(),
+            ValidReason,
+            new AppointmentCodeGenerator());
+        appointment.Cancel("Patient requested cancellation due to travel");
+
+        // Different valid future slot than CreateFutureAppointmentTime() (which uses +7 days @ 10:00)
+        var futureDate = DateTime.Now.AddDays(21).Date;
+        while (futureDate.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+        {
+            futureDate = futureDate.AddDays(1);
+        }
+        var newTime = AppointmentTime.Create(futureDate.AddHours(14));
+
+        Action act = () => appointment.Reschedule(newTime);
+
+        act.Should().Throw<InvalidAppointmentStateException>();
     }
 
     #endregion
@@ -531,7 +623,7 @@ public class AppointmentTests
             CreateTestDoctor(),
             CreateFutureAppointmentTime(),
             ValidReason,
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.DomainEvents.Should().HaveCount(1);
 

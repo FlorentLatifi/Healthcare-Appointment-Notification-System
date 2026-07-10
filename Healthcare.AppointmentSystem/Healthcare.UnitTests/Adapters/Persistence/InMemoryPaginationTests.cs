@@ -34,7 +34,7 @@ public sealed class InMemoryPaginationTests
                 DateTime.UtcNow.Date.AddDays(i + 30).AddHours(10));
             var appointment = Appointment.Create(
                 patient, doctor, appointmentTime, $"Medical checkup #{i}",
-                AppointmentCodeGenerator.Instance);
+                new AppointmentCodeGenerator());
             await _appointmentRepo.AddAsync(appointment);
         }
 
@@ -78,7 +78,7 @@ public sealed class InMemoryPaginationTests
                 DateTime.UtcNow.Date.AddDays(i + 30).AddHours(10));
             var appointment = Appointment.Create(
                 patient, doctor, appointmentTime, $"Medical checkup #{i}",
-                AppointmentCodeGenerator.Instance);
+                new AppointmentCodeGenerator());
             await _appointmentRepo.AddAsync(appointment);
         }
 
@@ -103,7 +103,7 @@ public sealed class InMemoryPaginationTests
                 DateTime.UtcNow.Date.AddDays(i + 30).AddHours(10));
             var appointment = Appointment.Create(
                 patient, doctor, appointmentTime, $"Medical checkup #{i}",
-                AppointmentCodeGenerator.Instance);
+                new AppointmentCodeGenerator());
             await _appointmentRepo.AddAsync(appointment);
         }
 

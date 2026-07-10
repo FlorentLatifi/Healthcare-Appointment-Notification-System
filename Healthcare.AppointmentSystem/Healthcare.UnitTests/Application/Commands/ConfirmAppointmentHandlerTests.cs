@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Healthcare.Adapters.Events;
 using Healthcare.Adapters.Persistence.InMemory;
 using Healthcare.Application.Commands.ConfirmAppointment;
@@ -28,7 +28,7 @@ namespace Healthcare.UnitTests.Application.Commands;
 ///   valid reason (>= 10 chars) is supplied
 /// - Override rejected when the reason is missing/too short
 /// - Invalid confirmation from non-pending statuses (payment check is skipped
-///   there — the domain's own state-transition error takes precedence)
+///   there � the domain's own state-transition error takes precedence)
 /// - Appointment not found scenarios
 /// - Domain events dispatching
 /// </remarks>
@@ -113,7 +113,7 @@ public class ConfirmAppointmentHandlerTests
             doctor,
             CreateFutureAppointmentTime(),
             "General medical consultation",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.ClearDomainEvents();
 

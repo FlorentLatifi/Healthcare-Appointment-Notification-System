@@ -109,7 +109,7 @@ public class CompleteAppointmentHandlerTests
             doctor,
             scheduledTime,
             "Annual checkup and consultation",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.Confirm();
         appointment.ClearDomainEvents();
@@ -232,7 +232,7 @@ public class CompleteAppointmentHandlerTests
             doctor,
             scheduledTime,
             "Routine checkup and blood work",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.ClearDomainEvents();
 

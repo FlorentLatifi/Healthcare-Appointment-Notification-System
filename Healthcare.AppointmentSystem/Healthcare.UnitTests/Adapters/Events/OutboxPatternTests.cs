@@ -30,7 +30,7 @@ public sealed class OutboxPatternTests
         var appointment = Appointment.Create(
             patient, doctor,
             AppointmentTime.Create(DateTime.UtcNow.Date.AddDays(10).AddHours(10)),
-            "Outbox test", AppointmentCodeGenerator.Instance);
+            "Outbox test", new AppointmentCodeGenerator());
         appointment.ApplyPricingStrategy(
             doctor.ConsultationFee.Amount, doctor.ConsultationFee.Currency);
         appointment.Confirm();

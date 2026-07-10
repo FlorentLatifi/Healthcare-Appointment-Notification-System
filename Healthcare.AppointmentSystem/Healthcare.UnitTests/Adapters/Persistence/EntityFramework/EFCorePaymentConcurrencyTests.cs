@@ -71,7 +71,7 @@ public sealed class EFCorePaymentConcurrencyTests
         var appointment = Appointment.Create(
             patient, doctor, scheduledTime,
             "Payment concurrency test",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         appointment.ClearDomainEvents();
         doctor.ClearDomainEvents();

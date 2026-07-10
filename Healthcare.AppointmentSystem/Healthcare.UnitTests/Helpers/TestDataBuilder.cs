@@ -1,4 +1,4 @@
-﻿using Healthcare.Domain.Entities;
+using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Adapters.Services;
 using Healthcare.Domain.ValueObjects;
@@ -241,7 +241,7 @@ public class TestDataBuilder
             var doctor = _doctor ?? new DoctorBuilder().Build();
             var appointmentTime = AppointmentTime.Create(_scheduledTime);
 
-            return Appointment.Create(patient, doctor, appointmentTime, _reason, AppointmentCodeGenerator.Instance);
+            return Appointment.Create(patient, doctor, appointmentTime, _reason, new AppointmentCodeGenerator());
         }
 
         private static DateTime GetNextWeekday(DayOfWeek targetDay)

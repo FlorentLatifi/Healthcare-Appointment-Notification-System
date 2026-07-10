@@ -17,7 +17,7 @@ public class IcsCalendarServiceTests
         var doctor = new TestDataBuilder.DoctorBuilder().Build();
         var future = DateTime.UtcNow.Date.AddDays(1).AddHours(10);
         var scheduledTime = AppointmentTime.Create(future);
-        return Appointment.Create(patient, doctor, scheduledTime, "Routine checkup", AppointmentCodeGenerator.Instance);
+        return Appointment.Create(patient, doctor, scheduledTime, "Routine checkup", new AppointmentCodeGenerator());
     }
 
     [Fact]

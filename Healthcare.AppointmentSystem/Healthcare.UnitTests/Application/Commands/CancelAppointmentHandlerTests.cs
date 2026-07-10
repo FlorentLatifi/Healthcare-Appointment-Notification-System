@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Healthcare.Adapters.Events;
 using Healthcare.Adapters.Persistence.InMemory;
 using Healthcare.Application.Commands.CancelAppointment;
@@ -127,7 +127,7 @@ public class CancelAppointmentHandlerTests
             doctor,
             scheduledTime,
             "Annual checkup and consultation",
-            AppointmentCodeGenerator.Instance);
+            new AppointmentCodeGenerator());
 
         if (status == AppointmentStatus.Confirmed)
         {

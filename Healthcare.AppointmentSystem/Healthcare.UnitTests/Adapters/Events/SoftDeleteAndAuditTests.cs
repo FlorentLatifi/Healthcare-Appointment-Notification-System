@@ -30,7 +30,7 @@ public sealed class SoftDeleteAndAuditTests
         var appointment = Appointment.Create(
             patient, doctor,
             AppointmentTime.Create(DateTime.UtcNow.Date.AddDays(5).AddHours(10)),
-            "Soft delete integration test", AppointmentCodeGenerator.Instance);
+            "Soft delete integration test", new AppointmentCodeGenerator());
         appointment.ApplyPricingStrategy(
             doctor.ConsultationFee.Amount, doctor.ConsultationFee.Currency);
         return appointment;
