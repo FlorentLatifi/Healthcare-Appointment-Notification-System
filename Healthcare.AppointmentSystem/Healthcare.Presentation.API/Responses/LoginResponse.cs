@@ -30,4 +30,14 @@ public sealed class LoginResponse
     /// Gets or sets the user role.
     /// </summary>
     public string Role { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the patient ID if the user has a linked patient profile.
+    /// </summary>
+    public int? PatientId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the doctor ID if the user has a linked doctor profile.
+    /// </summary>
+    public int? DoctorId { get; set; }
 }

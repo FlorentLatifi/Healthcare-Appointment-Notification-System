@@ -18,6 +18,8 @@ function TestConsumer() {
       <span data-testid="isAuth">{String(auth.isAuthenticated)}</span>
       <span data-testid="user">{auth.user ? JSON.stringify(auth.user) : 'null'}</span>
       <span data-testid="token">{auth.token ?? 'null'}</span>
+      <span data-testid="patientId">{auth.patientId ?? 'null'}</span>
+      <span data-testid="doctorId">{auth.doctorId ?? 'null'}</span>
       <span data-testid="loading">{String(auth.loading)}</span>
       <button data-testid="loginBtn" onClick={() => { auth.login('testuser', 'pass123').catch(() => {}); }}>Login</button>
       <button data-testid="registerBtn" onClick={async () => { await auth.register('newuser', 'e@e.com', 'pass', 'Patient'); }}>Register</button>
@@ -44,7 +46,17 @@ function mockHasSession() {
   mockPost.mockResolvedValueOnce({
     data: {
       success: true,
-      data: { token: 'restored-token', username: 'restoreduser', role: 'Patient' },
+      data: { token: 'restored-token', username: 'restoreduser', role: 'Patient', patientId: 42, doctorId: null },
+    },
+  });
+}
+
+/** Helper: make the session-restore effect return a doctor session. */
+function mockHasDoctorSession() {
+  mockPost.mockResolvedValueOnce({
+    data: {
+      success: true,
+      data: { token: 'restored-token', username: 'drwho', role: 'Doctor', patientId: null, doctorId: 7 },
     },
   });
 }
@@ -69,7 +81,7 @@ describe('AuthContext', () => {
     mockPost.mockResolvedValueOnce({
       data: {
         success: true,
-        data: { token: 'abc123', username: 'testuser', role: 'Patient' },
+        data: { token: 'abc123', username: 'testuser', role: 'Patient', patientId: 10, doctorId: null },
       },
     });
 
@@ -81,6 +93,8 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('token')).toHaveTextContent('abc123');
       expect(screen.getByTestId('user')).toHaveTextContent('testuser');
       expect(screen.getByTestId('user')).toHaveTextContent('Patient');
+      expect(screen.getByTestId('patientId')).toHaveTextContent('10');
+      expect(screen.getByTestId('doctorId')).toHaveTextContent('null');
     });
     expect(mockPost).toHaveBeenCalledWith('/Auth/login', { username: 'testuser', password: 'pass123' });
   });
@@ -119,7 +133,7 @@ describe('AuthContext', () => {
   it('logout() clears all state', async () => {
     mockNoSession();
     mockPost.mockResolvedValueOnce({
-      data: { success: true, data: { token: 'abc', username: 'u', role: 'Admin' } },
+      data: { success: true, data: { token: 'abc', username: 'u', role: 'Admin', patientId: null, doctorId: null } },
     });
 
     renderWithProvider();
@@ -134,6 +148,8 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('isAuth')).toHaveTextContent('false');
       expect(screen.getByTestId('user')).toHaveTextContent('null');
       expect(screen.getByTestId('token')).toHaveTextContent('null');
+      expect(screen.getByTestId('patientId')).toHaveTextContent('null');
+      expect(screen.getByTestId('doctorId')).toHaveTextContent('null');
     });
   });
 
@@ -151,14 +167,14 @@ describe('AuthContext', () => {
     });
 
     resolvePromise({
-      data: { success: true, data: { token: 't', username: 'u', role: 'Patient' } },
+      data: { success: true, data: { token: 't', username: 'u', role: 'Patient', patientId: null, doctorId: null } },
     });
     await clickPromise;
 
     await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
   });
 
-  it('restores session from refresh cookie on mount', async () => {
+  it('restores session with patientId from refresh cookie on mount', async () => {
     mockHasSession();
 
     renderWithProvider();
@@ -167,13 +183,47 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('isAuth')).toHaveTextContent('true');
       expect(screen.getByTestId('token')).toHaveTextContent('restored-token');
       expect(screen.getByTestId('user')).toHaveTextContent('restoreduser');
+      expect(screen.getByTestId('patientId')).toHaveTextContent('42');
+      expect(screen.getByTestId('doctorId')).toHaveTextContent('null');
+    });
+  });
+
+  it('restores session with doctorId from refresh cookie on mount', async () => {
+    mockHasDoctorSession();
+
+    renderWithProvider();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('isAuth')).toHaveTextContent('true');
+      expect(screen.getByTestId('token')).toHaveTextContent('restored-token');
+      expect(screen.getByTestId('user')).toHaveTextContent('drwho');
+      expect(screen.getByTestId('patientId')).toHaveTextContent('null');
+      expect(screen.getByTestId('doctorId')).toHaveTextContent('7');
+    });
+  });
+
+  it('login() sets patientId and doctorId from response', async () => {
+    mockNoSession();
+    mockPost.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: { token: 'doc-token', username: 'drwho', role: 'Doctor', patientId: null, doctorId: 99 },
+      },
+    });
+
+    renderWithProvider();
+    await userEvent.click(screen.getByTestId('loginBtn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('patientId')).toHaveTextContent('null');
+      expect(screen.getByTestId('doctorId')).toHaveTextContent('99');
     });
   });
 
   it('logout() calls server-side revocation', async () => {
     mockNoSession();
     mockPost.mockResolvedValueOnce({
-      data: { success: true, data: { token: 'abc', username: 'u', role: 'Admin' } },
+      data: { success: true, data: { token: 'abc', username: 'u', role: 'Admin', patientId: null, doctorId: null } },
     });
 
     renderWithProvider();

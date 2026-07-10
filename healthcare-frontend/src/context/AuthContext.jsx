@@ -33,6 +33,8 @@ export function AuthProvider({ children }) {
         if (data.success) {
           setToken(data.data.token);
           setUser({ username: data.data.username, role: data.data.role });
+          setPatientId(data.data.patientId ?? null);
+          setDoctorId(data.data.doctorId ?? null);
         }
       } catch {
         // No valid refresh cookie — user stays logged out
@@ -50,6 +52,8 @@ export function AuthProvider({ children }) {
       }
       setToken(data.data.token);
       setUser({ username: data.data.username, role: data.data.role });
+      setPatientId(data.data.patientId ?? null);
+      setDoctorId(data.data.doctorId ?? null);
       return data.data;
     } finally {
       setLoading(false);

@@ -90,7 +90,9 @@ public sealed class AuthController : ControllerBase
             Token = result.AccessToken,
             ExpiresAt = result.ExpiresAt,
             Username = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "",
-            Role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? ""
+            Role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? "",
+            PatientId = int.TryParse(jwtToken.Claims.FirstOrDefault(c => c.Type == "patient_id")?.Value, out var pid) ? pid : null,
+            DoctorId = int.TryParse(jwtToken.Claims.FirstOrDefault(c => c.Type == "doctor_id")?.Value, out var did) ? did : null
         };
     }
 
@@ -355,13 +357,17 @@ public sealed class AuthController : ControllerBase
         var username = User.FindFirst(ClaimTypes.Name)?.Value;
         var email = User.FindFirst(ClaimTypes.Email)?.Value;
         var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        int? patientId = int.TryParse(User.FindFirst("patient_id")?.Value, out var pid) ? pid : null;
+        int? doctorId = int.TryParse(User.FindFirst("doctor_id")?.Value, out var did) ? did : null;
 
         var userInfo = new
         {
             UserId = userId,
             Username = username,
             Email = email,
-            Role = role
+            Role = role,
+            PatientId = patientId,
+            DoctorId = doctorId
         };
 
         return Ok(ApiResponse<object>.SuccessResponse(
