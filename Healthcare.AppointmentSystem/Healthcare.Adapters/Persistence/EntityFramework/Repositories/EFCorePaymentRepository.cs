@@ -19,40 +19,37 @@ public sealed class EFCorePaymentRepository : IPaymentRepository
 
     public async Task<Payment?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
+        // Commands mutate Payment; Appointment join only when needed by callers.
         return await _context.Payments
-            .Include(p => p.Appointment)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
 
     public async Task<Payment?> GetByAppointmentIdAsync(int appointmentId, CancellationToken cancellationToken = default)
     {
         return await _context.Payments
-            .Include(p => p.Appointment)
             .FirstOrDefaultAsync(p => p.AppointmentId == appointmentId, cancellationToken);
     }
 
     public async Task<Payment?> GetByTransactionIdAsync(string transactionId, CancellationToken cancellationToken = default)
     {
         return await _context.Payments
-            .Include(p => p.Appointment)
             .FirstOrDefaultAsync(p => p.TransactionId != null && p.TransactionId.Value == transactionId, cancellationToken);
     }
 
     public async Task<IEnumerable<Payment>> GetByStatusAsync(PaymentStatus status, CancellationToken cancellationToken = default)
     {
         return await _context.Payments
-            .Include(p => p.Appointment)
-            .Where(p => p.Status == status)
             .AsNoTracking()
+            .Where(p => p.Status == status)
             .ToListAsync(cancellationToken);
     }
 
     public async Task<IEnumerable<Payment>> GetByPatientIdAsync(int patientId, CancellationToken cancellationToken = default)
     {
+        // Join only when filtering by patient (AppointmentId is unique on Payments)
         return await _context.Payments
-            .Include(p => p.Appointment)
-            .Where(p => p.Appointment!.PatientId == patientId)
             .AsNoTracking()
+            .Where(p => p.Appointment != null && p.Appointment.PatientId == patientId)
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync(cancellationToken);
     }
@@ -60,7 +57,6 @@ public sealed class EFCorePaymentRepository : IPaymentRepository
     public async Task<IEnumerable<Payment>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Payments
-            .Include(p => p.Appointment)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }
@@ -70,13 +66,10 @@ public sealed class EFCorePaymentRepository : IPaymentRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Payments
-            .Include(p => p.Appointment)
-            .AsNoTracking();
+        var totalCount = await _context.Payments.CountAsync(cancellationToken);
 
-        var totalCount = await query.CountAsync(cancellationToken);
-
-        var items = await query
+        var items = await _context.Payments
+            .AsNoTracking()
             .OrderByDescending(p => p.CreatedAt)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)

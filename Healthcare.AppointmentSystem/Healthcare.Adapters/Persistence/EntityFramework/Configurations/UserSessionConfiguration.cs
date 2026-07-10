@@ -28,6 +28,11 @@ public sealed class UserSessionConfiguration : IEntityTypeConfiguration<UserSess
         builder.HasIndex(s => new { s.UserId, s.FamilyId })
             .HasDatabaseName("IX_UserSessions_UserId_FamilyId");
 
+        // Active sessions: WHERE UserId = @id AND RevokedAt IS NULL ORDER BY LastUsedAt DESC
+        builder.HasIndex(s => new { s.UserId, s.LastUsedAt })
+            .HasDatabaseName("IX_UserSessions_User_Active")
+            .HasFilter("[RevokedAt] IS NULL");
+
         builder.Ignore(s => s.DomainEvents);
     }
 }

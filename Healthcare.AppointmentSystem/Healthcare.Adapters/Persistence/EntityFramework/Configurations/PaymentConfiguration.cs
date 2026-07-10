@@ -93,11 +93,15 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             .IsUnique()
             .HasDatabaseName("IX_Payments_AppointmentId");
 
+        // Stripe / gateway lookups (unique when present)
         builder.HasIndex(p => p.TransactionId)
-            .HasDatabaseName("IX_Payments_TransactionId");
+            .IsUnique()
+            .HasDatabaseName("IX_Payments_TransactionId")
+            .HasFilter("[TransactionId] IS NOT NULL");
 
-        builder.HasIndex(p => p.Status)
-            .HasDatabaseName("IX_Payments_Status");
+        // Revenue reports: WHERE Status = Succeeded AND PaidAt >= @from AND PaidAt < @to
+        builder.HasIndex(p => new { p.Status, p.PaidAt })
+            .HasDatabaseName("IX_Payments_Status_PaidAt");
 
         // Ignore domain events
         builder.Ignore(p => p.DomainEvents);

@@ -16,6 +16,11 @@ public sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<Outbox
         builder.Property(m => m.ProcessedAt);
         builder.Property(m => m.Error).HasMaxLength(2048);
         builder.Property(m => m.RetryCount).IsRequired().HasDefaultValue(0);
-        builder.HasIndex(m => m.ProcessedAt);
+
+        // Relay: WHERE ProcessedAt IS NULL AND RetryCount < N ORDER BY OccurredOn
+        // Filtered index avoids scanning historical processed rows.
+        builder.HasIndex(m => new { m.OccurredOn, m.RetryCount })
+            .HasDatabaseName("IX_OutboxMessages_Pending")
+            .HasFilter("[ProcessedAt] IS NULL");
     }
 }

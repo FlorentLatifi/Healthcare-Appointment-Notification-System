@@ -21,8 +21,9 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLogEntry>
         builder.Property(a => a.ModifiedAt).IsRequired(false);
 
         builder.HasIndex(a => a.EventType).HasDatabaseName("IX_AuditLogs_EventType");
-        builder.HasIndex(a => a.EntityType).HasDatabaseName("IX_AuditLogs_EntityType");
-        builder.HasIndex(a => new { a.EntityType, a.EntityId }).HasDatabaseName("IX_AuditLogs_Entity");
+        // Entity history timeline: WHERE EntityType+EntityId ORDER BY OccurredOn DESC
+        builder.HasIndex(a => new { a.EntityType, a.EntityId, a.OccurredOn })
+            .HasDatabaseName("IX_AuditLogs_Entity_Time");
         builder.HasIndex(a => a.OccurredOn).HasDatabaseName("IX_AuditLogs_OccurredOn");
         builder.Ignore(a => a.DomainEvents);
     }

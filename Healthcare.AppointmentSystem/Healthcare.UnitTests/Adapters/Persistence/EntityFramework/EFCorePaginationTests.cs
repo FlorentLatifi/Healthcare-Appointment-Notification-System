@@ -38,13 +38,15 @@ public sealed class EFCorePaginationTests
             seedCtx.Patients.Add(patient);
             await seedCtx.SaveChangesAsync();
 
+            // Shared generator so ReferenceCode sequences stay unique under the unique index
+            var codeGenerator = new AppointmentCodeGenerator();
             for (int i = 0; i < 25; i++)
             {
                 var appointmentTime = AppointmentTime.Create(
                     DateTime.UtcNow.Date.AddDays(i + 30).AddHours(10));
                 var appointment = Appointment.Create(
                     patient, doctor, appointmentTime, $"Checkup #{i}",
-                    new AppointmentCodeGenerator());
+                    codeGenerator);
                 appointment.ApplyPricingStrategy(
                     doctor.ConsultationFee.Amount, doctor.ConsultationFee.Currency);
                 seedCtx.Appointments.Add(appointment);
@@ -147,27 +149,33 @@ public sealed class EFCorePaginationTests
             .WithEmail("payment.paging.patient@test.com")
             .Build();
 
-        int appointmentId;
         await using (var seedCtx = new SqliteCompatibleDbContext(options))
         {
             await seedCtx.Database.EnsureCreatedAsync();
             seedCtx.Doctors.Add(doctor);
             seedCtx.Patients.Add(patient);
-            await seedCtx.SaveChangesAsync();
 
-            var appointmentTime = AppointmentTime.Create(
-                DateTime.UtcNow.Date.AddDays(30).AddHours(10));
-            var appointment = Appointment.Create(
-                patient, doctor, appointmentTime, "Payment paging test",
-                new AppointmentCodeGenerator());
-            seedCtx.Appointments.Add(appointment);
-            await seedCtx.SaveChangesAsync();
-            appointmentId = appointment.Id;
-
+            // One payment per appointment (unique AppointmentId index).
+            // Add all appointments in one unit of work so Patient/Doctor are not re-attached.
+            var codeGenerator = new AppointmentCodeGenerator();
+            var appointments = new List<Appointment>();
             for (int i = 0; i < 20; i++)
             {
-                var payment = Payment.Create(appointmentId, Money.Create(100, "USD"));
-                seedCtx.Payments.Add(payment);
+                var appointmentTime = AppointmentTime.Create(
+                    DateTime.UtcNow.Date.AddDays(30 + i).AddHours(10));
+                var appointment = Appointment.Create(
+                    patient, doctor, appointmentTime, $"Payment paging test {i}",
+                    codeGenerator);
+                appointment.ApplyPricingStrategy(
+                    doctor.ConsultationFee.Amount, doctor.ConsultationFee.Currency);
+                seedCtx.Appointments.Add(appointment);
+                appointments.Add(appointment);
+            }
+            await seedCtx.SaveChangesAsync();
+
+            foreach (var appointment in appointments)
+            {
+                seedCtx.Payments.Add(Payment.Create(appointment.Id, Money.Create(100, "USD")));
             }
             await seedCtx.SaveChangesAsync();
         }

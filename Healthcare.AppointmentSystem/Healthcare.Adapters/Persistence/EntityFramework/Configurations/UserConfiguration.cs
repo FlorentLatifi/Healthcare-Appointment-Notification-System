@@ -66,6 +66,19 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsUnique()
             .HasDatabaseName("IX_Users_Email");
 
+        // Bootstrap / admin checks: Any(u => u.Role == Admin)
+        builder.HasIndex(u => u.Role)
+            .HasDatabaseName("IX_Users_Role");
+
+        // Link reverse lookups when promoting/linking patient or doctor accounts
+        builder.HasIndex(u => u.PatientId)
+            .HasDatabaseName("IX_Users_PatientId")
+            .HasFilter("[PatientId] IS NOT NULL");
+
+        builder.HasIndex(u => u.DoctorId)
+            .HasDatabaseName("IX_Users_DoctorId")
+            .HasFilter("[DoctorId] IS NOT NULL");
+
         // Ignore domain events
         builder.Ignore(u => u.DomainEvents);
     }

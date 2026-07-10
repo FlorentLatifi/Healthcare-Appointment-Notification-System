@@ -11,18 +11,11 @@ namespace Healthcare.Adapters.Persistence.EntityFramework.Repositories;
 /// Entity Framework Core implementation of IAppointmentRepository.
 /// </summary>
 /// <remarks>
-/// 
-/// This adapter:
-/// - Implements the PORT (IAppointmentRepository) defined in Application layer
-/// - Uses Entity Framework Core for data access
-/// - Translates domain queries to SQL via LINQ
-/// - Eagerly loads navigation properties to build complete aggregates
-/// - Is REPLACEABLE without touching Domain or Application code
-/// 
-/// Performance Considerations:
-/// - Uses .AsNoTracking() for read-only queries (better performance)
-/// - Includes related entities (.Include) to avoid N+1 queries
-/// - Applies proper indexing via entity configurations
+/// Performance notes:
+/// - Explicit <c>Include</c>/<c>ThenInclude</c> for UI aggregates (no lazy loading).
+/// - <c>AsNoTracking</c> on pure reads.
+/// - Availability / analytics paths avoid loading Patient/Doctor graphs.
+/// - Counts use projection without Includes.
 /// </remarks>
 public sealed class EFCoreAppointmentRepository : IAppointmentRepository
 {
@@ -33,22 +26,17 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         _context = context;
     }
 
+    /// <summary>Tracked aggregate with navigations — for command handlers that mutate.</summary>
     public async Task<Appointment?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        return await _context.Appointments
-            .Include(a => a.Patient)
-            .Include(a => a.Doctor)
-            .ThenInclude(d => d.SpecialtyEntries)
+        return await AppointmentAggregate()
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
     }
 
     public async Task<IEnumerable<Appointment>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.Appointments
-            .Include(a => a.Patient)
-            .Include(a => a.Doctor)
-            .ThenInclude(d => d.SpecialtyEntries)
-            .AsNoTracking()
+        return await AppointmentAggregateReadOnly()
+            .OrderByDescending(a => a.ScheduledTime)
             .ToListAsync(cancellationToken);
     }
 
@@ -57,15 +45,10 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Appointments
-            .Include(a => a.Patient)
-            .Include(a => a.Doctor)
-            .ThenInclude(d => d.SpecialtyEntries)
-            .AsNoTracking();
+        // Count without joins — Include would force unnecessary JOIN work for COUNT(*)
+        var totalCount = await _context.Appointments.CountAsync(cancellationToken);
 
-        var totalCount = await query.CountAsync(cancellationToken);
-
-        var items = await query
+        var items = await AppointmentAggregateReadOnly()
             .OrderByDescending(a => a.ScheduledTime)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -78,12 +61,8 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         int patientId,
         CancellationToken cancellationToken = default)
     {
-        return await _context.Appointments
-            .Include(a => a.Patient)
-            .Include(a => a.Doctor)
-            .ThenInclude(d => d.SpecialtyEntries)
+        return await AppointmentAggregateReadOnly()
             .Where(a => a.PatientId == patientId)
-            .AsNoTracking()
             .OrderByDescending(a => a.ScheduledTime)
             .ToListAsync(cancellationToken);
     }
@@ -94,16 +73,11 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Appointments
-            .Include(a => a.Patient)
-            .Include(a => a.Doctor)
-            .ThenInclude(d => d.SpecialtyEntries)
+        var baseQuery = _context.Appointments.Where(a => a.PatientId == patientId);
+        var totalCount = await baseQuery.CountAsync(cancellationToken);
+
+        var items = await AppointmentAggregateReadOnly()
             .Where(a => a.PatientId == patientId)
-            .AsNoTracking();
-
-        var totalCount = await query.CountAsync(cancellationToken);
-
-        var items = await query
             .OrderByDescending(a => a.ScheduledTime)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -116,12 +90,8 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         int doctorId,
         CancellationToken cancellationToken = default)
     {
-        return await _context.Appointments
-            .Include(a => a.Patient)
-            .Include(a => a.Doctor)
-            .ThenInclude(d => d.SpecialtyEntries)
+        return await AppointmentAggregateReadOnly()
             .Where(a => a.DoctorId == doctorId)
-            .AsNoTracking()
             .OrderByDescending(a => a.ScheduledTime)
             .ToListAsync(cancellationToken);
     }
@@ -132,16 +102,11 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Appointments
-            .Include(a => a.Patient)
-            .Include(a => a.Doctor)
-            .ThenInclude(d => d.SpecialtyEntries)
+        var baseQuery = _context.Appointments.Where(a => a.DoctorId == doctorId);
+        var totalCount = await baseQuery.CountAsync(cancellationToken);
+
+        var items = await AppointmentAggregateReadOnly()
             .Where(a => a.DoctorId == doctorId)
-            .AsNoTracking();
-
-        var totalCount = await query.CountAsync(cancellationToken);
-
-        var items = await query
             .OrderByDescending(a => a.ScheduledTime)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -150,6 +115,10 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         return new PagedResult<Appointment>(items, pageNumber, pageSize, totalCount);
     }
 
+    /// <summary>
+    /// Used for double-booking / availability. Does NOT load Patient/Doctor graphs —
+    /// only appointment rows for the doctor's day (uses IX_Appointments_Doctor_Time).
+    /// </summary>
     public async Task<IEnumerable<Appointment>> GetByDoctorAndDateAsync(
         int doctorId,
         DateTime date,
@@ -159,13 +128,11 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         var endOfDay = startOfDay.AddDays(1);
 
         return await _context.Appointments
-            .Include(a => a.Patient)
-            .Include(a => a.Doctor)
-            .ThenInclude(d => d.SpecialtyEntries)
+            .AsNoTracking()
             .Where(a => a.DoctorId == doctorId &&
                        a.ScheduledTime.Value >= startOfDay &&
                        a.ScheduledTime.Value < endOfDay)
-            .AsNoTracking()
+            .OrderBy(a => a.ScheduledTime)
             .ToListAsync(cancellationToken);
     }
 
@@ -173,15 +140,16 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         AppointmentStatus status,
         CancellationToken cancellationToken = default)
     {
-        return await _context.Appointments
-            .Include(a => a.Patient)
-            .Include(a => a.Doctor)
-            .ThenInclude(d => d.SpecialtyEntries)
+        return await AppointmentAggregateReadOnly()
             .Where(a => a.Status == status)
-            .AsNoTracking()
+            .OrderByDescending(a => a.ScheduledTime)
             .ToListAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Reminder job: only needs Patient (email prefs) + appointment fields.
+    /// Uses filtered index IX_Appointments_Reminders when Status/RemindedAt predicates match.
+    /// </summary>
     public async Task<IEnumerable<Appointment>> GetAppointmentsNeedingRemindersAsync(
         CancellationToken cancellationToken = default)
     {
@@ -189,14 +157,13 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         var twentyFourHoursFromNow = now.AddHours(24);
 
         return await _context.Appointments
+            .AsNoTracking()
             .Include(a => a.Patient)
-            .Include(a => a.Doctor)
-            .ThenInclude(d => d.SpecialtyEntries)
             .Where(a => a.Status == AppointmentStatus.Confirmed &&
                        a.ScheduledTime.Value > now &&
                        a.ScheduledTime.Value <= twentyFourHoursFromNow &&
                        a.RemindedAt == null)
-            .AsNoTracking()
+            .OrderBy(a => a.ScheduledTime)
             .ToListAsync(cancellationToken);
     }
 
@@ -224,7 +191,9 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
 
     public async Task<StatusCountsResult> GetStatusCountsAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
     {
+        // Single scan, no navigations — uses IX_Appointments_Status_Time / ScheduledTime range
         var counts = await _context.Appointments
+            .AsNoTracking()
             .Where(a => a.ScheduledTime.Value >= from && a.ScheduledTime.Value < to)
             .GroupBy(a => 1)
             .Select(g => new StatusCountsResult(
@@ -241,6 +210,7 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
     public async Task<List<DailyVolumeResult>> GetDailyVolumeAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
     {
         return await _context.Appointments
+            .AsNoTracking()
             .Where(a => a.ScheduledTime.Value >= from && a.ScheduledTime.Value < to)
             .GroupBy(a => new { a.ScheduledTime.Value.Year, a.ScheduledTime.Value.Month, a.ScheduledTime.Value.Day })
             .Select(g => new DailyVolumeResult(
@@ -268,6 +238,15 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
             .ThenBy(r => r.Week)
             .ToList();
     }
+
+    private IQueryable<Appointment> AppointmentAggregate() =>
+        _context.Appointments
+            .Include(a => a.Patient)
+            .Include(a => a.Doctor)
+            .ThenInclude(d => d.SpecialtyEntries);
+
+    private IQueryable<Appointment> AppointmentAggregateReadOnly() =>
+        AppointmentAggregate().AsNoTracking();
 
     private static (int Year, int Week) GetIsoWeek(DateTime date)
     {
