@@ -1,25 +1,27 @@
 using System.Net;
+using System.Security.Claims;
+using System.Text.Encodings.Web;
 using Asp.Versioning;
 using FluentAssertions;
-using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Commands.CancelAppointment;
 using Healthcare.Application.Commands.CompleteAppointment;
-using Healthcare.Application.Commands.ConfirmAppointment;
 using Healthcare.Application.Commands.MarkNoShowAppointment;
 using Healthcare.Application.Common;
-using Healthcare.Application.DTOs;
-
+using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Application.Queries.GetAppointment;
-using Healthcare.Application.Ports.Events;
 using Healthcare.Presentation.API.Controllers;
 using Healthcare.Presentation.API.Middleware;
-using Healthcare.Presentation.API.Responses;
+using MediatR;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace Healthcare.IntegrationTests;
@@ -76,21 +78,28 @@ public sealed class SensitiveDataLeakTests
                 });
 
                 services.AddRouting();
+                services.AddLogging();
 
-                var repoMock = new Mock<IAppointmentRepository>();
-                repoMock.Setup(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-                    .ThrowsAsync(new TimeoutException(
-                        "Secret: Server=prod;Database=Healthcare;UID=sa;PWD=pass123!"));
-                services.AddScoped<IAppointmentRepository>(_ => repoMock.Object);
+                services.AddAuthentication("Test")
+                    .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", _ => { });
+                services.AddAuthorization(options =>
+                {
+                    options.DefaultPolicy = new AuthorizationPolicyBuilder("Test")
+                        .RequireAuthenticatedUser()
+                        .Build();
+                });
 
                 services.AddScoped<IUnitOfWork>(_ => Mock.Of<IUnitOfWork>());
-
-                services.AddScoped<
-                    IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>>,
-                    GetAppointmentHandler>();
                 services.AddScoped<IDomainEventDispatcher>(_ => Mock.Of<IDomainEventDispatcher>());
-                services.AddScoped(_ => Mock.Of<ICommandHandler<BookAppointmentCommand, Result<int>>>());
-                services.AddScoped(_ => Mock.Of<ICommandHandler<ConfirmAppointmentCommand, Result>>());
+
+                // Controller dispatches GetAppointment via MediatR; force a secret-bearing exception.
+                var mediatorMock = new Mock<IMediator>();
+                mediatorMock
+                    .Setup(m => m.Send(It.IsAny<GetAppointmentQuery>(), It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(new TimeoutException(
+                        "Secret: Server=prod;Database=Healthcare;UID=sa;PWD=pass123!"));
+                services.AddScoped<IMediator>(_ => mediatorMock.Object);
+
                 services.AddScoped(_ => Mock.Of<ICommandHandler<CancelAppointmentCommand, Result>>());
                 services.AddScoped(_ => Mock.Of<ICommandHandler<CompleteAppointmentCommand, Result>>());
                 services.AddScoped(_ => Mock.Of<ICommandHandler<MarkNoShowAppointmentCommand, Result>>());
@@ -99,6 +108,8 @@ public sealed class SensitiveDataLeakTests
             {
                 app.UseMiddleware<ExceptionHandlingMiddleware>();
                 app.UseRouting();
+                app.UseAuthentication();
+                app.UseAuthorization();
                 app.UseEndpoints(endpoints => endpoints.MapControllers());
             }));
 
@@ -113,5 +124,31 @@ public sealed class SensitiveDataLeakTests
         body.Should().NotContain("PWD=pass123");
         body.Should().Contain("An internal server error occurred");
         body.Should().NotContain("StackTrace");
+    }
+
+    /// <summary>Authenticates every request as Admin for isolated pipeline tests.</summary>
+    private sealed class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+    {
+        public TestAuthHandler(
+            IOptionsMonitor<AuthenticationSchemeOptions> options,
+            ILoggerFactory logger,
+            UrlEncoder encoder)
+            : base(options, logger, encoder)
+        {
+        }
+
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            var identity = new ClaimsIdentity(
+                new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, "1"),
+                    new Claim(ClaimTypes.Role, "Admin"),
+                    new Claim(ClaimTypes.Name, "test-admin")
+                },
+                Scheme.Name);
+            var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme.Name);
+            return Task.FromResult(AuthenticateResult.Success(ticket));
+        }
     }
 }

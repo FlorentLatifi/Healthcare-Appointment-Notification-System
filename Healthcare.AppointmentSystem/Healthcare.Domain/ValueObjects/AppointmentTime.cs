@@ -33,20 +33,15 @@ public sealed class AppointmentTime : ValueObject
     }
 
     /// <summary>
-    /// Creates a new AppointmentTime value object with global business rule validation.
-    /// Doctor-specific rules (working hours, days off) are validated separately.
+    /// Creates a new AppointmentTime for booking / reschedule paths.
+    /// Enforces future time, minimum advance notice, and 30-minute intervals.
     /// </summary>
-    /// <param name="dateTime">The desired appointment date and time.</param>
-    /// <returns>A valid AppointmentTime value object.</returns>
     /// <exception cref="InvalidAppointmentTimeException">
-    /// Thrown when the time violates any global business rule.
+    /// Thrown when the time violates any global booking rule.
     /// </exception>
     public static AppointmentTime Create(DateTime dateTime)
     {
-        var utcDateTime = dateTime.Kind == DateTimeKind.Utc
-            ? dateTime
-            : dateTime.ToUniversalTime();
-
+        var utcDateTime = NormalizeToUtc(dateTime);
         var localDateTime = utcDateTime.ToLocalTime();
 
         if (localDateTime <= DateTime.Now)
@@ -61,6 +56,44 @@ public sealed class AppointmentTime : ValueObject
                 $"Appointments must be booked at least {MinimumAdvanceHours} hour(s) in advance.");
         }
 
+        EnsureValidClockShape(localDateTime);
+
+        return new AppointmentTime(utcDateTime);
+    }
+
+    /// <summary>
+    /// Rehydrates an AppointmentTime from persisted storage without re-applying
+    /// booking rules (future / advance notice). Use only when loading from the database.
+    /// </summary>
+    /// <remarks>
+    /// Calling <see cref="Create"/> on read would throw for past completed appointments
+    /// and for confirmed slots that fall inside the one-hour advance window as wall-clock advances.
+    /// </remarks>
+    public static AppointmentTime FromPersistence(DateTime dateTime)
+    {
+        var utcDateTime = NormalizeToUtc(dateTime);
+        // Structural sanity only — historical rows must still load.
+        var localDateTime = utcDateTime.ToLocalTime();
+        if (localDateTime.Second != 0 || localDateTime.Millisecond != 0)
+        {
+            // Truncate rather than fail: legacy data should not break reads.
+            utcDateTime = new DateTime(
+                utcDateTime.Year, utcDateTime.Month, utcDateTime.Day,
+                utcDateTime.Hour, utcDateTime.Minute, 0, DateTimeKind.Utc);
+        }
+
+        return new AppointmentTime(utcDateTime);
+    }
+
+    private static DateTime NormalizeToUtc(DateTime dateTime)
+    {
+        return dateTime.Kind == DateTimeKind.Utc
+            ? dateTime
+            : dateTime.ToUniversalTime();
+    }
+
+    private static void EnsureValidClockShape(DateTime localDateTime)
+    {
         if (localDateTime.Minute != 0 && localDateTime.Minute != 30)
         {
             throw new InvalidAppointmentTimeException(
@@ -72,8 +105,6 @@ public sealed class AppointmentTime : ValueObject
             throw new InvalidAppointmentTimeException(
                 "Appointment time must not include seconds or milliseconds.");
         }
-
-        return new AppointmentTime(utcDateTime);
     }
 
     /// <summary>

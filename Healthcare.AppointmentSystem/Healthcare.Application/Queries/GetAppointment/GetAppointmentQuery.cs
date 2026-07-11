@@ -1,17 +1,13 @@
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
+using MediatR;
 
 namespace Healthcare.Application.Queries.GetAppointment;
 
 /// <summary>
-/// Query to get a single appointment by ID.
+/// Query to get a single appointment by ID (MediatR + legacy IQuery during migration).
 /// </summary>
-/// <remarks>
-/// 
-/// Queries are read-only operations that return data without modifying state.
-/// They are optimized for reading and can bypass domain entities if needed.
-/// </remarks>
-public sealed class GetAppointmentQuery : IQuery<Result<AppointmentDto>>
+public sealed class GetAppointmentQuery : IRequest<Result<AppointmentDto>>, IQuery<Result<AppointmentDto>>
 {
     /// <summary>
     /// Gets or sets the appointment ID.

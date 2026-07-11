@@ -48,6 +48,21 @@ Do **not** ship default credentials. On a fresh production database:
 
 Demo doctor data is for Development / local Docker only.
 
+## Production network surface
+
+`docker-compose.prod.yml` does **not** publish SQL Server or Redis host ports.
+They are reachable only on the Docker network by the API container. Prefer
+SSH tunnels or a bastion for operational access instead of binding `1433`/`6379`
+publicly.
+
+Public endpoints:
+
+| Path | Auth | Purpose |
+|------|------|---------|
+| `/health` | Anonymous | Liveness (`{ "status": "Healthy" }` only) |
+| `/health/details` | **Admin** JWT | Dependency breakdown for operators |
+| `8080` (API), `80` (frontend) | App rules | Application traffic |
+
 ## Seeding security summary
 
 | Concern | Production behavior |

@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text.Json;
+using FluentValidation;
+using Healthcare.Application.Common;
 using Healthcare.Domain.Common;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.EntityFrameworkCore;
@@ -7,25 +9,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Healthcare.Presentation.API.Middleware;
 
 /// <summary>
-/// Global exception handling middleware.
+/// Global exception handling middleware — consistent API errors, no secret leakage in Production.
 /// </summary>
-/// <remarks>
-/// 
-/// This middleware:
-/// - Catches ALL unhandled exceptions
-/// - Logs errors with details
-/// - Returns consistent error responses
-/// - Hides sensitive info in production
-/// 
-/// Error Response Structure:
-/// {
-///   "type": "ValidationError",
-///   "message": "Invalid input data",
-///   "errors": ["Email is required"],
-///   "timestamp": "2025-01-15T10:30:00Z",
-///   "path": "/api/appointments"
-/// }
-/// </remarks>
 public sealed class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
@@ -64,56 +49,29 @@ public sealed class ExceptionHandlingMiddleware
     {
         context.Response.ContentType = "application/json";
 
+        var (statusCode, message, type, code) = MapException(exception);
+
         var errorResponse = new ErrorResponse
         {
-            Type = exception.GetType().Name,
-            Message = exception.Message,
+            Type = type,
+            Message = message,
+            Code = code,
             Timestamp = DateTime.UtcNow,
             Path = context.Request.Path
         };
 
-        // Include stack trace in development only
         if (_environment.IsDevelopment())
         {
             errorResponse.StackTrace = exception.StackTrace;
         }
 
-        // Set appropriate status code based on exception type
-        context.Response.StatusCode = exception switch
-        {
-            DbUpdateConcurrencyException => (int)HttpStatusCode.Conflict,
-            DbUpdateException => (int)HttpStatusCode.Conflict,
-            DomainException => (int)HttpStatusCode.BadRequest,
-            ArgumentException => (int)HttpStatusCode.InternalServerError,
-            InvalidOperationException => (int)HttpStatusCode.InternalServerError,
-            UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
-            KeyNotFoundException => (int)HttpStatusCode.NotFound,
-            _ => (int)HttpStatusCode.InternalServerError
-        };
-
-        // Populate the error code for domain exceptions
-        if (exception is DomainException domainEx)
-        {
-            errorResponse.Code = domainEx.ErrorCode;
-        }
-
-        // Override message for concurrency exceptions so the caller gets a clear,
-        // actionable error instead of a raw SQL message.
-        if (exception is DbUpdateConcurrencyException)
-        {
-            errorResponse.Message = "The record was modified by another process. Reload and retry.";
-        }
-        else if (exception is DbUpdateException)
-        {
-            errorResponse.Message = "This record cannot be removed because related records exist.";
-        }
-
-        // For unexpected internal errors (HTTP 5xx), hide the original message
-        // in non-development environments to avoid leaking sensitive internals.
-        if (context.Response.StatusCode >= 500 && !_environment.IsDevelopment())
+        // Never leak raw SQL / internals for non-development environments on any status.
+        if (!_environment.IsDevelopment() && statusCode >= 500)
         {
             errorResponse.Message = "An internal server error occurred. Please try again later.";
         }
+
+        context.Response.StatusCode = statusCode;
 
         var options = new JsonSerializerOptions
         {
@@ -122,5 +80,77 @@ public sealed class ExceptionHandlingMiddleware
 
         var json = JsonSerializer.Serialize(errorResponse, options);
         await context.Response.WriteAsync(json);
+    }
+
+    private static (int StatusCode, string Message, string Type, string? Code) MapException(Exception exception)
+    {
+        return exception switch
+        {
+            ValidationException validationEx => (
+                (int)HttpStatusCode.BadRequest,
+                string.Join(" ", validationEx.Errors.Select(e => e.ErrorMessage).Distinct()),
+                nameof(ValidationException),
+                "VALIDATION_ERROR"),
+
+            DbUpdateConcurrencyException => (
+                (int)HttpStatusCode.Conflict,
+                "The record was modified by another process. Reload and retry.",
+                nameof(DbUpdateConcurrencyException),
+                "CONCURRENCY_CONFLICT"),
+
+            DbUpdateException dbEx when DbConstraintErrors.IsUniqueViolation(dbEx) => (
+                (int)HttpStatusCode.Conflict,
+                "A conflicting record already exists.",
+                nameof(DbUpdateException),
+                "UNIQUE_CONSTRAINT"),
+
+            DbUpdateException dbEx when DbConstraintErrors.IsForeignKeyViolation(dbEx) => (
+                (int)HttpStatusCode.Conflict,
+                "This record cannot be removed because related records exist.",
+                nameof(DbUpdateException),
+                "FOREIGN_KEY_CONSTRAINT"),
+
+            DbUpdateException => (
+                (int)HttpStatusCode.Conflict,
+                "The data could not be saved due to a database constraint.",
+                nameof(DbUpdateException),
+                "DB_CONSTRAINT"),
+
+            DomainException domainEx => (
+                (int)HttpStatusCode.BadRequest,
+                domainEx.Message,
+                domainEx.GetType().Name,
+                domainEx.ErrorCode),
+
+            UnauthorizedAccessException uaEx => (
+                (int)HttpStatusCode.Unauthorized,
+                uaEx.Message,
+                nameof(UnauthorizedAccessException),
+                null),
+
+            KeyNotFoundException knf => (
+                (int)HttpStatusCode.NotFound,
+                knf.Message,
+                nameof(KeyNotFoundException),
+                null),
+
+            ArgumentException argEx => (
+                (int)HttpStatusCode.BadRequest,
+                argEx.Message,
+                nameof(ArgumentException),
+                null),
+
+            InvalidOperationException invOp => (
+                (int)HttpStatusCode.BadRequest,
+                invOp.Message,
+                nameof(InvalidOperationException),
+                null),
+
+            _ => (
+                (int)HttpStatusCode.InternalServerError,
+                exception.Message,
+                exception.GetType().Name,
+                null)
+        };
     }
 }

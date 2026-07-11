@@ -22,10 +22,29 @@ public class ExceptionHandlingMiddlewareTests
     }
 
     [Fact]
-    public async Task DbUpdateException_Returns409ConflictWithCleanMessage()
+    public async Task DbUpdateException_Unique_Returns409WithConflictMessage()
     {
         var context = CreateContext();
-        var middleware = CreateMiddleware(_ => throw new DbUpdateException("Cannot insert duplicate key"));
+        var middleware = CreateMiddleware(_ =>
+            throw new DbUpdateException("Cannot insert duplicate key", new Exception("UNIQUE constraint failed: IX_Appointments_ReferenceCode")));
+
+        await middleware.InvokeAsync(context);
+
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Conflict);
+
+        var body = await ReadBodyAsync(context);
+        body.Should().Contain("A conflicting record already exists.");
+        body.Should().Contain("UNIQUE_CONSTRAINT");
+    }
+
+    [Fact]
+    public async Task DbUpdateException_ForeignKey_Returns409WithRelatedRecordsMessage()
+    {
+        var context = CreateContext();
+        var middleware = CreateMiddleware(_ =>
+            throw new DbUpdateException(
+                "The DELETE statement conflicted with the REFERENCE constraint",
+                new Exception("REFERENCE constraint \"FK_Appointments_Patients\"")));
 
         await middleware.InvokeAsync(context);
 
@@ -36,21 +55,21 @@ public class ExceptionHandlingMiddlewareTests
     }
 
     [Fact]
-    public async Task ArgumentException_Returns500()
+    public async Task ArgumentException_Returns400()
     {
         var context = CreateContext();
         var middleware = CreateMiddleware(_ => throw new ArgumentException("Invalid argument"));
 
         await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.InternalServerError);
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Exception_Returns500WithTypeAndMessageInResponse()
     {
         var context = CreateContext();
-        var middleware = CreateMiddleware(_ => throw new InvalidOperationException("Something broke"));
+        var middleware = CreateMiddleware(_ => throw new Exception("Something broke"));
 
         await middleware.InvokeAsync(context);
 
@@ -58,7 +77,7 @@ public class ExceptionHandlingMiddlewareTests
 
         var body = await ReadBodyAsync(context);
         body.Should().Contain("Something broke");
-        body.Should().Contain("InvalidOperationException");
+        body.Should().Contain("\"type\":\"Exception\"");
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Payments;
 using Healthcare.Application.Ports.Repositories;
+using Healthcare.Domain.Common;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
@@ -127,9 +128,13 @@ public sealed class PaymentReconciliationService : IPaymentReconciliationService
             {
                 appointment.Confirm();
             }
-            catch (Exception ex)
+            catch (InvalidOperationException)
             {
-                // Already confirmed or in a state that can't transition — fine.
+                // Already confirmed or past — expected race; leave as-is.
+            }
+            catch (DomainException)
+            {
+                // Invalid status transition (e.g. already completed) — expected race.
             }
         }
         else
@@ -143,9 +148,7 @@ public sealed class PaymentReconciliationService : IPaymentReconciliationService
 
     private static bool IsUniqueConstraintViolation(DbUpdateException ex)
     {
-        var message = ex.InnerException?.Message ?? ex.Message;
-        return message.Contains("IX_Payments_AppointmentId") ||
-               (message.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase) &&
-                message.Contains("AppointmentId", StringComparison.OrdinalIgnoreCase));
+        return DbConstraintErrors.IsUniqueViolation(
+            ex, "IX_Payments_AppointmentId", "AppointmentId");
     }
 }

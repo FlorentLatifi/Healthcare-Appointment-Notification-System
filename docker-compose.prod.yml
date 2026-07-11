@@ -4,8 +4,9 @@ services:
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-    ports:
-      - "1433:1433"
+    # No host ports — SQL is only reachable on the compose network (not public internet).
+    expose:
+      - "1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
     healthcheck:
@@ -17,8 +18,9 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    # No host ports — Redis is internal to the compose network only.
+    expose:
+      - "6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

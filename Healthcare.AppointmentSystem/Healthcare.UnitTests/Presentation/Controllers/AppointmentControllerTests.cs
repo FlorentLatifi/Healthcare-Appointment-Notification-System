@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using FluentAssertions;
 using Healthcare.Adapters.Persistence.InMemory;
-using Healthcare.Application.Commands.BookAppointment;
 using Healthcare.Application.Commands.CancelAppointment;
 using Healthcare.Application.Commands.CompleteAppointment;
 using Healthcare.Application.Commands.ConfirmAppointment;
@@ -15,23 +14,22 @@ using Healthcare.Application.Queries.GetAppointment;
 using Healthcare.Domain.Entities;
 using Healthcare.Presentation.API.Controllers;
 using Healthcare.Presentation.API.Requests;
+using Healthcare.UnitTests.Helpers;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using Healthcare.UnitTests.Helpers;
 
 namespace Healthcare.UnitTests.Presentation.Controllers;
 
 public class AppointmentControllerTests
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly Mock<IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>>> _getHandlerMock;
+    private readonly Mock<IMediator> _mediatorMock;
     private readonly Mock<ICommandHandler<CompleteAppointmentCommand, Result>> _completeHandlerMock;
     private readonly Mock<ICommandHandler<MarkNoShowAppointmentCommand, Result>> _markNoShowHandlerMock;
-    private readonly Mock<ICommandHandler<BookAppointmentCommand, Result<int>>> _bookHandlerMock;
-    private readonly Mock<ICommandHandler<ConfirmAppointmentCommand, Result>> _confirmHandlerMock;
     private readonly Mock<ICommandHandler<CancelAppointmentCommand, Result>> _cancelHandlerMock;
     private readonly Mock<ILogger<AppointmentsController>> _loggerMock;
     private readonly Mock<IDomainEventDispatcher> _eventDispatcherMock;
@@ -55,22 +53,18 @@ public class AppointmentControllerTests
             auditLogRepo,
             Mock.Of<IUserSessionRepository>());
 
-        _getHandlerMock = new Mock<IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>>>();
+        _mediatorMock = new Mock<IMediator>();
         _completeHandlerMock = new Mock<ICommandHandler<CompleteAppointmentCommand, Result>>();
         _markNoShowHandlerMock = new Mock<ICommandHandler<MarkNoShowAppointmentCommand, Result>>();
-        _bookHandlerMock = new Mock<ICommandHandler<BookAppointmentCommand, Result<int>>>();
-        _confirmHandlerMock = new Mock<ICommandHandler<ConfirmAppointmentCommand, Result>>();
         _cancelHandlerMock = new Mock<ICommandHandler<CancelAppointmentCommand, Result>>();
         _loggerMock = new Mock<ILogger<AppointmentsController>>();
         _eventDispatcherMock = new Mock<IDomainEventDispatcher>();
 
         _controller = new AppointmentsController(
-            _bookHandlerMock.Object,
-            _confirmHandlerMock.Object,
+            _mediatorMock.Object,
             _cancelHandlerMock.Object,
             _completeHandlerMock.Object,
             _markNoShowHandlerMock.Object,
-            _getHandlerMock.Object,
             _unitOfWork,
             _loggerMock.Object,
             _eventDispatcherMock.Object);
@@ -81,8 +75,7 @@ public class AppointmentControllerTests
     {
         var (appointment, patient, _) = await CreateAppointmentInDbAsync();
         var dto = AppointmentMapper.ToDto(appointment);
-        _getHandlerMock.Setup(h => h.HandleAsync(It.IsAny<GetAppointmentQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<AppointmentDto>.Success(dto));
+        SetupGetAppointment(dto);
         SetPatientPrincipal(patient.Id);
 
         var result = await _controller.GetAppointmentById(appointment.Id, CancellationToken.None);
@@ -96,8 +89,7 @@ public class AppointmentControllerTests
         var (appointmentA, patientA, _) = await CreateAppointmentInDbAsync();
         var (_, patientB, _) = await CreateAnotherPatientAndDoctorAsync();
         var dto = AppointmentMapper.ToDto(appointmentA);
-        _getHandlerMock.Setup(h => h.HandleAsync(It.IsAny<GetAppointmentQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<AppointmentDto>.Success(dto));
+        SetupGetAppointment(dto);
         SetPatientPrincipal(patientB.Id);
 
         var result = await _controller.GetAppointmentById(appointmentA.Id, CancellationToken.None);
@@ -110,8 +102,7 @@ public class AppointmentControllerTests
     {
         var (appointment, _, doctor) = await CreateAppointmentInDbAsync();
         var dto = AppointmentMapper.ToDto(appointment);
-        _getHandlerMock.Setup(h => h.HandleAsync(It.IsAny<GetAppointmentQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<AppointmentDto>.Success(dto));
+        SetupGetAppointment(dto);
         SetDoctorPrincipal(doctor.Id);
 
         var result = await _controller.GetAppointmentById(appointment.Id, CancellationToken.None);
@@ -125,8 +116,7 @@ public class AppointmentControllerTests
         var (appointmentA, _, doctorA) = await CreateAppointmentInDbAsync();
         var (_, _, doctorB) = await CreateAnotherPatientAndDoctorAsync();
         var dto = AppointmentMapper.ToDto(appointmentA);
-        _getHandlerMock.Setup(h => h.HandleAsync(It.IsAny<GetAppointmentQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<AppointmentDto>.Success(dto));
+        SetupGetAppointment(dto);
         SetDoctorPrincipal(doctorB.Id);
 
         var result = await _controller.GetAppointmentById(appointmentA.Id, CancellationToken.None);
@@ -139,8 +129,7 @@ public class AppointmentControllerTests
     {
         var (appointment, _, _) = await CreateAppointmentInDbAsync();
         var dto = AppointmentMapper.ToDto(appointment);
-        _getHandlerMock.Setup(h => h.HandleAsync(It.IsAny<GetAppointmentQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<AppointmentDto>.Success(dto));
+        SetupGetAppointment(dto);
         SetAdminPrincipal();
 
         var result = await _controller.GetAppointmentById(appointment.Id, CancellationToken.None);
@@ -221,8 +210,7 @@ public class AppointmentControllerTests
     {
         var (appointment, _, doctor) = await CreateAppointmentInDbAsync();
         SetDoctorPrincipal(doctor.Id);
-        _confirmHandlerMock.Setup(h => h.HandleAsync(It.IsAny<ConfirmAppointmentCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success());
+        SetupConfirmSuccess();
 
         var result = await _controller.ConfirmAppointment(appointment.Id,
             new ConfirmAppointmentRequest(), CancellationToken.None);
@@ -248,8 +236,7 @@ public class AppointmentControllerTests
     {
         var (appointment, _, _) = await CreateAppointmentInDbAsync();
         SetAdminPrincipal();
-        _confirmHandlerMock.Setup(h => h.HandleAsync(It.IsAny<ConfirmAppointmentCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success());
+        SetupConfirmSuccess();
 
         var result = await _controller.ConfirmAppointment(appointment.Id,
             new ConfirmAppointmentRequest { OverridePaymentRequirement = true }, CancellationToken.None);
@@ -380,6 +367,20 @@ public class AppointmentControllerTests
         var result = await _controller.GetAppointmentsByDoctor(doctorA.Id, 1, 20, CancellationToken.None);
 
         result.Should().BeOfType<ForbidResult>();
+    }
+
+    private void SetupGetAppointment(AppointmentDto dto)
+    {
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetAppointmentQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<AppointmentDto>.Success(dto));
+    }
+
+    private void SetupConfirmSuccess()
+    {
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<ConfirmAppointmentCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
     }
 
     private async Task<(Appointment Appointment, Patient Patient, Doctor Doctor)> CreateAppointmentInDbAsync()

@@ -1,17 +1,13 @@
 using Healthcare.Application.Common;
 using Healthcare.Domain.Enums;
+using MediatR;
 
 namespace Healthcare.Application.Commands.BookAppointment;
 
 /// <summary>
-/// Command to book a new appointment.
+/// Command to book a new appointment (MediatR + legacy ICommand during migration).
 /// </summary>
-/// <remarks>
-/// 
-/// IMPORTANT: Must implement ICommand of Result of int  
-/// so ICommandHandler constraint is satisfied.
-/// </remarks>
-public sealed class BookAppointmentCommand : ICommand<Result<int>>
+public sealed class BookAppointmentCommand : IRequest<Result<int>>, ICommand<Result<int>>, ITransactionalRequest
 {
     public int PatientId { get; set; }
     public int DoctorId { get; set; }

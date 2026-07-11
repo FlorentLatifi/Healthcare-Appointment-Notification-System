@@ -35,7 +35,8 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
         builder.Property(a => a.ScheduledTime)
             .HasConversion(
                 time => time.Value,
-                value => AppointmentTime.Create(value))
+                // FromPersistence: do not re-validate future/advance rules on every load
+                value => AppointmentTime.FromPersistence(value))
             .IsRequired()
             .HasColumnName("ScheduledTime");
 

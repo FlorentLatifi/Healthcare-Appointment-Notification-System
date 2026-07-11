@@ -1,11 +1,12 @@
 using Healthcare.Application.Common;
+using MediatR;
 
 namespace Healthcare.Application.Commands.ConfirmAppointment;
 
 /// <summary>
-/// Command to confirm an appointment.
+/// Command to confirm an appointment (MediatR + legacy ICommand during migration).
 /// </summary>
-public sealed class ConfirmAppointmentCommand : ICommand<Result>
+public sealed class ConfirmAppointmentCommand : IRequest<Result>, ICommand<Result>, ITransactionalRequest
 {
     /// <summary>
     /// Gets or sets the appointment ID to confirm.

@@ -5,19 +5,8 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 namespace Healthcare.Presentation.API.HealthChecks;
 
 /// <summary>
-/// Health check for database connectivity.
+/// Health check for database connectivity only — no business-data counts.
 /// </summary>
-/// <remarks>
-/// 
-/// This checks:
-/// - Database connection is alive
-/// - Can execute simple query
-/// - Response time is acceptable
-/// 
-/// Status:
-/// - Healthy: Database is reachable and responsive
-/// - Unhealthy: Cannot connect to database
-/// </remarks>
 public class DatabaseHealthCheck : IHealthCheck
 {
     private readonly HealthcareDbContext _context;
@@ -37,7 +26,6 @@ public class DatabaseHealthCheck : IHealthCheck
     {
         try
         {
-            // Try to connect and execute a simple query
             var canConnect = await _context.Database.CanConnectAsync(cancellationToken);
 
             if (!canConnect)
@@ -46,12 +34,10 @@ public class DatabaseHealthCheck : IHealthCheck
                 return HealthCheckResult.Unhealthy("Cannot connect to database");
             }
 
-            // Execute a simple query to verify full connectivity
-            var count = await _context.Patients.CountAsync(cancellationToken);
+            // Lightweight round-trip without reading application tables / row counts.
+            await _context.Database.ExecuteSqlRawAsync("SELECT 1", cancellationToken);
 
-            _logger.LogInformation("Database health check passed. Patient count: {Count}", count);
-
-            return HealthCheckResult.Healthy($"Database is healthy. {count} patients in system.");
+            return HealthCheckResult.Healthy("Database is reachable.");
         }
         catch (Exception ex)
         {

@@ -21,8 +21,10 @@ using Healthcare.Application.Ports.Payments;
 using Healthcare.Application.Queries.Analytics;
 using Healthcare.Application.Queries.GetAppointment;
 
+using Healthcare.Application;
 using Healthcare.Application.Services;
 using Healthcare.Adapters.Persistence.EntityFramework;
+using Healthcare.Presentation.API.Authorization;
 using Healthcare.Presentation.API.Configuration;
 using Healthcare.Presentation.API.Middleware;
 using Healthcare.Presentation.API.Services;
@@ -48,9 +50,11 @@ try
     // ── Security ────────────────────────────────────────────
     builder.Services.AddSecurityServices(builder.Configuration, builder.Environment);
 
-    // ── Application Layer ───────────────────────────────────
-    builder.Services.AddScoped<ICommandHandler<BookAppointmentCommand, Result<int>>, BookAppointmentHandler>();
-    builder.Services.AddScoped<ICommandHandler<ConfirmAppointmentCommand, Result>, ConfirmAppointmentHandler>();
+    // ── Application Layer (MediatR + pipeline behaviors) ────
+    builder.Services.AddApplication();
+
+    // Legacy ICommandHandler / IQueryHandler registrations (handlers not yet fully on IMediator in controllers).
+    // BookAppointment / ConfirmAppointment / GetAppointment are resolved via MediatR only.
     builder.Services.AddScoped<ICommandHandler<CancelAppointmentCommand, Result>, CancelAppointmentHandler>();
     builder.Services.AddScoped<ICommandHandler<CompleteAppointmentCommand, Result>, CompleteAppointmentHandler>();
     builder.Services.AddScoped<ICommandHandler<MarkNoShowAppointmentCommand, Result>, MarkNoShowAppointmentHandler>();
@@ -65,7 +69,6 @@ try
     builder.Services.AddScoped<IQueryHandler<GetRevenueReportQuery, Result<RevenueReportDto>>, GetRevenueReportHandler>();
     builder.Services.AddScoped<IQueryHandler<GetNoShowRateQuery, Result<NoShowRateDto>>, GetNoShowRateHandler>();
     builder.Services.AddScoped<IQueryHandler<GetAppointmentVolumeQuery, Result<AppointmentVolumeDto>>, GetAppointmentVolumeHandler>();
-    builder.Services.AddScoped<IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>>, GetAppointmentHandler>();
 
     builder.Services.AddScoped<IPaymentReconciliationService, PaymentReconciliationService>();
 
@@ -160,7 +163,22 @@ try
     app.MapControllers();
 
     // ── Health Check Endpoints ──────────────────────────────
-    app.MapHealthChecks("/health");
+    // Public liveness: status only (no detailed dependency dump).
+    app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = _ => true,
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    status = report.Status.ToString()
+                }));
+        }
+    });
+
+    // Detailed diagnostics: Admin only (avoids leaking check data to anonymous clients).
     app.MapHealthChecks("/health/details", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
     {
         ResponseWriter = async (context, report) =>
@@ -181,7 +199,7 @@ try
             }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
             await context.Response.WriteAsync(result);
         }
-    });
+    }).RequireAuthorization(policy => policy.RequireRole(AppRoles.Admin));
 
     Log.Information("Healthcare API started successfully (Environment: {Env})", app.Environment.EnvironmentName);
     if (app.Environment.IsDevelopment())

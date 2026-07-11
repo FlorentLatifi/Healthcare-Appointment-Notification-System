@@ -17,10 +17,10 @@ using Microsoft.AspNetCore.Mvc;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Healthcare.Application.Ports.Events;
-
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.Events;
 using Healthcare.Presentation.API.Authorization;
+using MediatR;
 
 namespace Healthcare.Presentation.API.Controllers;
 
@@ -30,33 +30,30 @@ namespace Healthcare.Presentation.API.Controllers;
 [Produces("application/json")]
 public sealed class AppointmentsController : ControllerBase
 {
-    private readonly ICommandHandler<BookAppointmentCommand, Result<int>> _bookAppointmentHandler;
-    private readonly ICommandHandler<ConfirmAppointmentCommand, Result> _confirmAppointmentHandler;
+    // Migrated to MediatR pipeline (validation / logging / transaction behaviors).
+    private readonly IMediator _mediator;
+
+    // Remaining handlers still on legacy ICommandHandler (migrate in subsequent PRs).
     private readonly ICommandHandler<CancelAppointmentCommand, Result> _cancelAppointmentHandler;
     private readonly ICommandHandler<CompleteAppointmentCommand, Result> _completeAppointmentHandler;
     private readonly ICommandHandler<MarkNoShowAppointmentCommand, Result> _markNoShowAppointmentHandler;
-    private readonly IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>> _getAppointmentHandler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AppointmentsController> _logger;
     private readonly IDomainEventDispatcher _eventDispatcher;
 
     public AppointmentsController(
-        ICommandHandler<BookAppointmentCommand, Result<int>> bookAppointmentHandler,
-        ICommandHandler<ConfirmAppointmentCommand, Result> confirmAppointmentHandler,
+        IMediator mediator,
         ICommandHandler<CancelAppointmentCommand, Result> cancelAppointmentHandler,
         ICommandHandler<CompleteAppointmentCommand, Result> completeAppointmentHandler,
         ICommandHandler<MarkNoShowAppointmentCommand, Result> markNoShowAppointmentHandler,
-        IQueryHandler<GetAppointmentQuery, Result<AppointmentDto>> getAppointmentHandler,
         IUnitOfWork unitOfWork,
         ILogger<AppointmentsController> logger,
         IDomainEventDispatcher eventDispatcher)
     {
-        _bookAppointmentHandler = bookAppointmentHandler;
-        _confirmAppointmentHandler = confirmAppointmentHandler;
+        _mediator = mediator;
         _cancelAppointmentHandler = cancelAppointmentHandler;
         _completeAppointmentHandler = completeAppointmentHandler;
         _markNoShowAppointmentHandler = markNoShowAppointmentHandler;
-        _getAppointmentHandler = getAppointmentHandler;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _eventDispatcher = eventDispatcher;
@@ -94,7 +91,7 @@ public sealed class AppointmentsController : ControllerBase
             }
         };
 
-        var handlerResult = await _bookAppointmentHandler.HandleAsync(command, cancellationToken);
+        var handlerResult = await _mediator.Send(command, cancellationToken);
 
         if (handlerResult.IsFailure)
         {
@@ -130,7 +127,7 @@ public sealed class AppointmentsController : ControllerBase
         _logger.LogInformation("Retrieving appointment {AppointmentId}", id);
 
         var query = new GetAppointmentQuery(id);
-        var result = await _getAppointmentHandler.HandleAsync(query, cancellationToken);
+        var result = await _mediator.Send(query, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -296,7 +293,7 @@ public sealed class AppointmentsController : ControllerBase
             OverrideReason = request?.OverrideReason
         };
 
-        var result = await _confirmAppointmentHandler.HandleAsync(command, cancellationToken);
+        var result = await _mediator.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {

@@ -133,6 +133,33 @@ public class AppointmentTimeTests
 
     #endregion
 
+    #region Persistence Rehydration
+
+    [Fact]
+    public void FromPersistence_WithPastTime_ShouldSucceed()
+    {
+        var pastUtc = DateTime.UtcNow.Date.AddDays(-7).AddHours(10);
+
+        var appointmentTime = AppointmentTime.FromPersistence(pastUtc);
+
+        appointmentTime.Value.Should().Be(DateTime.SpecifyKind(pastUtc, DateTimeKind.Utc));
+        appointmentTime.IsPast().Should().BeTrue();
+    }
+
+    [Fact]
+    public void FromPersistence_DoesNotEnforceAdvanceNotice()
+    {
+        // A time 30 minutes from now would fail Create, but must load from DB.
+        var soon = DateTime.UtcNow.AddMinutes(30);
+        soon = new DateTime(soon.Year, soon.Month, soon.Day, soon.Hour, 0, 0, DateTimeKind.Utc);
+
+        var act = () => AppointmentTime.FromPersistence(soon);
+
+        act.Should().NotThrow();
+    }
+
+    #endregion
+
     #region Helper Methods Tests
 
     [Fact]

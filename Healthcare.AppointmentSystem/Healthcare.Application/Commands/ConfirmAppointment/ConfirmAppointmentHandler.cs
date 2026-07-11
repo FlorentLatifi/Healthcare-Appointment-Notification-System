@@ -1,7 +1,8 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Enums;
+using MediatR;
 
 namespace Healthcare.Application.Commands.ConfirmAppointment;
 
@@ -19,7 +20,9 @@ namespace Healthcare.Application.Commands.ConfirmAppointment;
 /// <c>Appointment.Confirm()</c> is what should reject the request, so the
 /// payment check is skipped in that case to keep error messages accurate.
 /// </remarks>
-public sealed class ConfirmAppointmentHandler : ICommandHandler<ConfirmAppointmentCommand, Result>
+public sealed class ConfirmAppointmentHandler
+    : IRequestHandler<ConfirmAppointmentCommand, Result>,
+      ICommandHandler<ConfirmAppointmentCommand, Result>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDomainEventDispatcher _eventDispatcher;
@@ -31,6 +34,9 @@ public sealed class ConfirmAppointmentHandler : ICommandHandler<ConfirmAppointme
         _unitOfWork = unitOfWork;
         _eventDispatcher = eventDispatcher;
     }
+
+    public Task<Result> Handle(ConfirmAppointmentCommand request, CancellationToken cancellationToken)
+        => HandleAsync(request, cancellationToken);
 
     public async Task<Result> HandleAsync(
         ConfirmAppointmentCommand command,
