@@ -92,9 +92,15 @@ try
     // ── Observability ───────────────────────────────────────
     builder.Services.AddObservability(builder.Configuration);
 
-    // ── Background Services ─────────────────────────────────
+    // ── Background Services (resilient workers) ─────────────
+    builder.Services.AddSingleton<Healthcare.Adapters.Background.IBackgroundWorkerAlert,
+        Healthcare.Adapters.Background.LoggingBackgroundWorkerAlert>();
+    builder.Services.AddSingleton<Healthcare.Adapters.Background.OutboxRelayHealthState>();
+    builder.Services.AddSingleton<Healthcare.Adapters.Background.AppointmentReminderHealthState>();
+
     builder.Services.Configure<ReminderSettings>(
-        builder.Configuration.GetSection("ReminderSettings"));
+        builder.Configuration.GetSection(ReminderSettings.SectionName));
+    builder.Services.AddSingleton<ReminderMetrics>();
     builder.Services.AddHostedService<AppointmentReminderBackgroundService>();
 
     var outboxSettings = new OutboxSettings
@@ -108,6 +114,10 @@ try
         ProcessingLeaseSeconds = builder.Configuration.GetValue<int>("Outbox:ProcessingLeaseSeconds", 120),
         CircuitBreakerFailureThreshold = builder.Configuration.GetValue<int>("Outbox:CircuitBreakerFailureThreshold", 5),
         CircuitBreakerBreakSeconds = builder.Configuration.GetValue<int>("Outbox:CircuitBreakerBreakSeconds", 60),
+        BatchPollyRetryAttempts = builder.Configuration.GetValue<int>("Outbox:BatchPollyRetryAttempts", 2),
+        BatchPollyRetryBaseDelaySeconds = builder.Configuration.GetValue<int>("Outbox:BatchPollyRetryBaseDelaySeconds", 2),
+        ShutdownTimeoutSeconds = builder.Configuration.GetValue<int>("Outbox:ShutdownTimeoutSeconds", 30),
+        UnhealthyIfNoSuccessMinutes = builder.Configuration.GetValue<int>("Outbox:UnhealthyIfNoSuccessMinutes", 15),
     };
     builder.Services.AddSingleton(outboxSettings);
     builder.Services.AddSingleton<Healthcare.Adapters.Events.OutboxMetrics>();

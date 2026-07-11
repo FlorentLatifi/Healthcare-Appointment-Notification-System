@@ -27,14 +27,31 @@ public sealed class OutboxSettings
     /// <summary>How long a Processing claim may stay open before being reclaimed.</summary>
     public int ProcessingLeaseSeconds { get; set; } = 120;
 
-    /// <summary>Consecutive batch-level failures before opening the circuit.</summary>
+    /// <summary>Consecutive batch-level failures before opening the Polly circuit.</summary>
     public int CircuitBreakerFailureThreshold { get; set; } = 5;
 
     /// <summary>How long the circuit stays open (relay pauses claiming work).</summary>
     public int CircuitBreakerBreakSeconds { get; set; } = 60;
 
+    /// <summary>Polly retries for a single batch cycle on transient infra errors (not per-message).</summary>
+    public int BatchPollyRetryAttempts { get; set; } = 2;
+
+    /// <summary>Base delay (seconds) for Polly batch retries.</summary>
+    public int BatchPollyRetryBaseDelaySeconds { get; set; } = 2;
+
+    /// <summary>Max time to wait for in-flight batch during host shutdown.</summary>
+    public int ShutdownTimeoutSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Health check becomes Degraded when no successful batch within this many minutes
+    /// (while enabled and running). 0 disables the staleness check.
+    /// </summary>
+    public int UnhealthyIfNoSuccessMinutes { get; set; } = 15;
+
     public TimeSpan BaseRetryDelay => TimeSpan.FromSeconds(Math.Max(1, BaseRetryDelaySeconds));
     public TimeSpan MaxRetryDelay => TimeSpan.FromSeconds(Math.Max(BaseRetryDelaySeconds, MaxRetryDelaySeconds));
     public TimeSpan ProcessingLease => TimeSpan.FromSeconds(Math.Max(30, ProcessingLeaseSeconds));
     public TimeSpan CircuitBreakDuration => TimeSpan.FromSeconds(Math.Max(10, CircuitBreakerBreakSeconds));
+    public TimeSpan BatchPollyRetryBaseDelay => TimeSpan.FromSeconds(Math.Max(1, BatchPollyRetryBaseDelaySeconds));
+    public TimeSpan ShutdownTimeout => TimeSpan.FromSeconds(Math.Max(5, ShutdownTimeoutSeconds));
 }

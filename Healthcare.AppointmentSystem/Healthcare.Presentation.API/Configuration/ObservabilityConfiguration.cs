@@ -32,8 +32,9 @@ public static class ObservabilityConfiguration
                 metrics
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    // Transactional outbox relay metrics (Meter: Healthcare.Outbox)
-                    .AddMeter(Healthcare.Adapters.Events.OutboxMetrics.MeterName);
+                    // Background worker meters
+                    .AddMeter(Healthcare.Adapters.Events.OutboxMetrics.MeterName)
+                    .AddMeter(Healthcare.Presentation.API.Services.ReminderMetrics.MeterName);
 
                 if (useOtlp)
                     metrics.AddOtlpExporter(options => options.Endpoint = new Uri(otelEndpoint!));

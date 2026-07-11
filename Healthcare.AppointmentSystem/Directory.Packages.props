@@ -37,6 +37,7 @@
     <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
     <!-- OpenTelemetry: 1.11.2 had a Moderate vulnerability (CVE-2026-42191, GHSA-4625-4j76-fww9, disk-retry tmp path).
          Upgraded to 1.16.0 which includes the fix (patched in 1.15.3). -->
+    <PackageVersion Include="Polly.Core" Version="8.5.2" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.16.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />

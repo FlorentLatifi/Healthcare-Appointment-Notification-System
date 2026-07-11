@@ -1,9 +1,10 @@
 using FluentAssertions;
+using Healthcare.Adapters.Background;
+using Healthcare.Adapters.Services;
 using Healthcare.Application.Ports.Notifications;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
-using Healthcare.Adapters.Services;
 using Healthcare.Domain.ValueObjects;
 using Healthcare.Presentation.API.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,9 +38,13 @@ public class AppointmentReminderBackgroundServiceTests
         var scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
         var loggerMock = new Mock<ILogger<AppointmentReminderBackgroundService>>();
         var settings = Options.Create(new ReminderSettings());
+        var metrics = new ReminderMetrics();
+        var health = new AppointmentReminderHealthState();
+        var alerts = new LoggingBackgroundWorkerAlert(
+            LoggerFactory.Create(_ => { }).CreateLogger<LoggingBackgroundWorkerAlert>());
 
         _service = new AppointmentReminderBackgroundService(
-            scopeFactory, loggerMock.Object, settings);
+            scopeFactory, loggerMock.Object, settings, metrics, health, alerts);
     }
 
     [Fact]
@@ -49,8 +54,9 @@ public class AppointmentReminderBackgroundServiceTests
         _appointmentRepoMock.Setup(r => r.GetAppointmentsNeedingRemindersAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { appointment });
 
-        await _service.ProcessBatchAsync(CancellationToken.None);
+        var count = await _service.ProcessBatchAsync(CancellationToken.None);
 
+        count.Should().Be(1);
         _notificationServiceMock.Verify(n => n.SendAppointmentReminderAsync(
             appointment, It.IsAny<CancellationToken>()), Times.Once);
         appointment.RemindedAt.Should().NotBeNull();
@@ -64,8 +70,9 @@ public class AppointmentReminderBackgroundServiceTests
         _appointmentRepoMock.Setup(r => r.GetAppointmentsNeedingRemindersAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { appointment });
 
-        await _service.ProcessBatchAsync(CancellationToken.None);
+        var count = await _service.ProcessBatchAsync(CancellationToken.None);
 
+        count.Should().Be(1);
         _notificationServiceMock.Verify(n => n.SendAppointmentReminderAsync(
             It.IsAny<Appointment>(), It.IsAny<CancellationToken>()), Times.Never);
         appointment.RemindedAt.Should().NotBeNull();
@@ -78,8 +85,9 @@ public class AppointmentReminderBackgroundServiceTests
         _appointmentRepoMock.Setup(r => r.GetAppointmentsNeedingRemindersAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<Appointment>());
 
-        await _service.ProcessBatchAsync(CancellationToken.None);
+        var count = await _service.ProcessBatchAsync(CancellationToken.None);
 
+        count.Should().Be(0);
         _notificationServiceMock.Verify(n => n.SendAppointmentReminderAsync(
             It.IsAny<Appointment>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -98,8 +106,9 @@ public class AppointmentReminderBackgroundServiceTests
             badAppointment, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Send failed"));
 
-        await _service.ProcessBatchAsync(CancellationToken.None);
+        var count = await _service.ProcessBatchAsync(CancellationToken.None);
 
+        count.Should().Be(1);
         _notificationServiceMock.Verify(n => n.SendAppointmentReminderAsync(
             goodAppointment, It.IsAny<CancellationToken>()), Times.Once);
         _notificationServiceMock.Verify(n => n.SendAppointmentReminderAsync(

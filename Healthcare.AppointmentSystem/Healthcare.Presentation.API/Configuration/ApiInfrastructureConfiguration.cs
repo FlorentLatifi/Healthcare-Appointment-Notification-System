@@ -84,7 +84,15 @@ public static class ApiInfrastructureConfiguration
         services.AddHealthChecks()
             .AddCheck<DatabaseHealthCheck>("database", failureStatus: HealthStatus.Unhealthy, tags: new[] { "db", "sql", "critical" })
             .AddCheck<RedisHealthCheck>("redis", failureStatus: HealthStatus.Degraded, tags: new[] { "cache", "redis", "locking" })
-            .AddCheck<MemoryHealthCheck>("memory", failureStatus: HealthStatus.Degraded, tags: new[] { "memory", "performance" });
+            .AddCheck<MemoryHealthCheck>("memory", failureStatus: HealthStatus.Degraded, tags: new[] { "memory", "performance" })
+            .AddCheck<OutboxRelayHealthCheck>(
+                "outbox-relay",
+                failureStatus: HealthStatus.Degraded,
+                tags: new[] { "background", "outbox", "ready" })
+            .AddCheck<AppointmentReminderHealthCheck>(
+                "appointment-reminder",
+                failureStatus: HealthStatus.Degraded,
+                tags: new[] { "background", "reminders", "ready" });
 
         services.AddLocalization();
 

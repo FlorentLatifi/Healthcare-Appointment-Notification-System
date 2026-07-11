@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Healthcare.Adapters.Background;
 using Healthcare.Adapters.Events;
 using Healthcare.Adapters.Persistence.EntityFramework;
 using Healthcare.Adapters.Services;
@@ -44,7 +45,13 @@ public sealed class OutboxPatternTests
         IServiceScopeFactory scopeFactory,
         ILogger<OutboxRelayService> logger,
         OutboxSettings settings) =>
-        new(scopeFactory, logger, settings, CreateMetrics());
+        new(
+            scopeFactory,
+            logger,
+            settings,
+            CreateMetrics(),
+            new OutboxRelayHealthState(),
+            new LoggingBackgroundWorkerAlert(LoggerFactory.Create(_ => { }).CreateLogger<LoggingBackgroundWorkerAlert>()));
 
     [Fact]
     public async Task SaveChangesAsync_WithOutboxEnabled_WritesOutboxRows()
@@ -419,24 +426,17 @@ public sealed class OutboxPatternTests
     }
 
     [Fact]
-    public void OutboxCircuitBreaker_OpensAfterThreshold_ThenHalfOpens()
+    public void WorkerHealthState_TracksSuccessAndFailure()
     {
-        var breaker = new OutboxCircuitBreaker(failureThreshold: 2, breakDuration: TimeSpan.FromMilliseconds(50));
-
-        breaker.TryEnter().Should().BeTrue();
-        breaker.RecordFailure();
-        breaker.IsOpen.Should().BeFalse();
-
-        breaker.RecordFailure();
-        breaker.IsOpen.Should().BeTrue();
-        breaker.TryEnter().Should().BeFalse();
-
-        Thread.Sleep(60);
-        breaker.State.Should().Be(OutboxCircuitBreaker.CircuitState.HalfOpen);
-        breaker.TryEnter().Should().BeTrue();
-
-        breaker.RecordSuccess();
-        breaker.State.Should().Be(OutboxCircuitBreaker.CircuitState.Closed);
-        breaker.IsOpen.Should().BeFalse();
+        var health = new OutboxRelayHealthState();
+        health.MarkStarted();
+        health.MarkAttempt();
+        health.MarkFailure(new InvalidOperationException("boom"));
+        health.Snapshot().ConsecutiveFailures.Should().Be(1);
+        health.MarkSuccess();
+        var snap = health.Snapshot();
+        snap.ConsecutiveFailures.Should().Be(0);
+        snap.LastSuccessUtc.Should().NotBeNull();
+        snap.LastError.Should().BeNull();
     }
 }
