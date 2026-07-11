@@ -1,6 +1,7 @@
 using Healthcare.Adapters.Authentication;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Presentation.API.Responses;
+using Healthcare.Presentation.API.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
@@ -18,6 +19,8 @@ public static class SecurityServicesConfiguration
         services.Configure<ForwardedHeadersOptions>(options =>
         {
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            // Required so only configured proxies can influence RemoteIpAddress (rate-limit / audit IP).
+            options.ForwardLimit = 1;
 
             var trustedProxies = configuration.GetSection("TrustedProxies").Get<string[]>();
             if (trustedProxies is not null)
@@ -25,9 +28,7 @@ public static class SecurityServicesConfiguration
                 foreach (var proxy in trustedProxies)
                 {
                     if (System.Net.IPAddress.TryParse(proxy, out var ip))
-                    {
                         options.KnownProxies.Add(ip);
-                    }
                 }
             }
 
@@ -41,7 +42,8 @@ public static class SecurityServicesConfiguration
                         && System.Net.IPAddress.TryParse(parts[0], out var networkIp)
                         && int.TryParse(parts[1], out var prefixLength))
                     {
-                        options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(networkIp, prefixLength));
+                        options.KnownNetworks.Add(
+                            new Microsoft.AspNetCore.HttpOverrides.IPNetwork(networkIp, prefixLength));
                     }
                 }
             }
@@ -49,6 +51,7 @@ public static class SecurityServicesConfiguration
 
         var jwtSettings = JwtSettings.FromConfiguration(configuration);
         services.AddSingleton(jwtSettings);
+        services.AddScoped<SecurityAuditWriter>();
 
         services.AddAuthentication(options =>
         {
@@ -57,7 +60,6 @@ public static class SecurityServicesConfiguration
         })
         .AddJwtBearer(options =>
         {
-            // MapInboundClaims=true (default): JWT short names (role, nameid) → ClaimTypes.* for [Authorize(Roles=…)].
             options.MapInboundClaims = true;
             options.RequireHttpsMetadata = !environment.IsDevelopment();
             options.SaveToken = false;
@@ -66,7 +68,6 @@ public static class SecurityServicesConfiguration
             {
                 OnAuthenticationFailed = context =>
                 {
-                    // Avoid leaking validation details to clients; middleware maps 401.
                     context.NoResult();
                     return Task.CompletedTask;
                 }
@@ -75,58 +76,68 @@ public static class SecurityServicesConfiguration
 
         services.AddAuthorization();
 
+        if (!environment.IsDevelopment())
+        {
+            services.AddHsts(options =>
+            {
+                options.Preload = true;
+                options.IncludeSubDomains = true;
+                options.MaxAge = TimeSpan.FromDays(365);
+            });
+        }
+
         var globalRateLimit = configuration.GetValue<int>("RateLimiting:GlobalPermitLimit", 100);
         var authRateLimit = configuration.GetValue<int>("RateLimiting:AuthPermitLimit", 5);
         var rateLimitWindowMinutes = configuration.GetValue<int>("RateLimiting:WindowMinutes", 1);
+        var window = TimeSpan.FromMinutes(Math.Max(1, rateLimitWindowMinutes));
 
         services.AddRateLimiter(options =>
         {
-            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
-            {
-                var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-                return RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: ipAddress,
-                    factory: partition => new FixedWindowRateLimiterOptions
+            // Global: authenticated users partitioned by user id (fair behind corporate NAT);
+            // anonymous by client IP (after forwarded-headers).
+            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: ClientIpResolver.GetRateLimitPartitionKey(httpContext),
+                    factory: _ => new FixedWindowRateLimiterOptions
                     {
                         AutoReplenishment = true,
                         PermitLimit = globalRateLimit,
                         QueueLimit = 0,
-                        Window = TimeSpan.FromMinutes(rateLimitWindowMinutes)
-                    });
-            });
+                        Window = window
+                    }));
 
+            // Stricter bucket for login/register/password endpoints (IP-based).
             options.AddPolicy("AuthPolicy", httpContext =>
-            {
-                var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-
-                return RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: ipAddress,
-                    factory: partition => new FixedWindowRateLimiterOptions
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: ClientIpResolver.GetAnonymousAuthPartitionKey(httpContext),
+                    factory: _ => new FixedWindowRateLimiterOptions
                     {
                         AutoReplenishment = true,
                         PermitLimit = authRateLimit,
                         QueueLimit = 0,
-                        Window = TimeSpan.FromMinutes(rateLimitWindowMinutes)
-                    });
-            });
+                        Window = window
+                    }));
 
             options.OnRejected = async (context, cancellationToken) =>
             {
-                context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-                context.HttpContext.Response.ContentType = "application/json";
+                var response = context.HttpContext.Response;
+                response.StatusCode = StatusCodes.Status429TooManyRequests;
+                response.ContentType = "application/json";
+                response.Headers.RetryAfter = Math.Max(1, (int)window.TotalSeconds).ToString();
 
                 var apiResponse = ApiResponse.ErrorResponse(
                     "Too many requests. Please try again later.",
-                    "Rate limit exceeded"
-                );
+                    "Rate limit exceeded");
 
-                var json = System.Text.Json.JsonSerializer.Serialize(apiResponse, new System.Text.Json.JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-                });
+                var json = System.Text.Json.JsonSerializer.Serialize(apiResponse,
+                    new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                    });
 
-                await context.HttpContext.Response.WriteAsync(json, cancellationToken);
+                await response.WriteAsync(json, cancellationToken);
             };
         });
 
@@ -140,9 +151,7 @@ public static class SecurityServicesConfiguration
             foreach (var origin in new[] { "http://localhost:5173", "https://localhost:5173" })
             {
                 if (!devOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
-                {
                     devOrigins.Add(origin);
-                }
             }
 
             allowedOrigins = devOrigins.ToArray();
@@ -157,9 +166,16 @@ public static class SecurityServicesConfiguration
         {
             options.AddPolicy("ConfiguredOrigins", policy =>
             {
+                // Explicit methods/headers — avoid AllowAny* for credentialed PHI APIs.
                 policy.WithOrigins(allowedOrigins)
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
+                    .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                    .WithHeaders(
+                        "Authorization",
+                        "Content-Type",
+                        "Accept",
+                        "X-Correlation-Id",
+                        "X-Requested-With")
+                    .WithExposedHeaders("X-Correlation-Id", "Retry-After")
                     .AllowCredentials();
             });
         });

@@ -7,6 +7,7 @@ using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Responses;
+using Healthcare.Presentation.API.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -27,6 +28,7 @@ public sealed class AuthController : ControllerBase
     private readonly ICommandHandler<ForgotPasswordCommand, Result> _forgotPasswordHandler;
     private readonly ICommandHandler<ResetPasswordCommand, Result> _resetPasswordHandler;
     private readonly IConfiguration _configuration;
+    private readonly SecurityAuditWriter _securityAudit;
 
     public AuthController(
         IAuthenticationService authService,
@@ -35,7 +37,8 @@ public sealed class AuthController : ControllerBase
         ILogger<AuthController> logger,
         ICommandHandler<ForgotPasswordCommand, Result> forgotPasswordHandler,
         ICommandHandler<ResetPasswordCommand, Result> resetPasswordHandler,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        SecurityAuditWriter securityAudit)
     {
         _authService = authService;
         _unitOfWork = unitOfWork;
@@ -44,6 +47,7 @@ public sealed class AuthController : ControllerBase
         _forgotPasswordHandler = forgotPasswordHandler;
         _resetPasswordHandler = resetPasswordHandler;
         _configuration = configuration;
+        _securityAudit = securityAudit;
     }
 
     private static readonly CookieOptions RefreshCookieOptions = new()
@@ -210,10 +214,27 @@ public sealed class AuthController : ControllerBase
             request.Password,
             cancellationToken);
 
+        var clientIp = ClientIpResolver.GetClientIp(HttpContext);
+
         if (result.IsFailure)
         {
             _logger.LogWarning("Login failed for {Username}: {Error}",
                 request.Username, result.Error);
+
+            await _securityAudit.WriteAsync(
+                "LoginFailed",
+                "User",
+                entityId: null,
+                actorUserId: null,
+                details: new
+                {
+                    username = request.Username,
+                    reason = "invalid_credentials_or_inactive",
+                    ip = clientIp,
+                    userAgent = Request.Headers.UserAgent.ToString()
+                },
+                cancellationToken);
+
             return BadRequest(ApiResponse<LoginResponse>.ErrorResponse(
                 result.Error,
                 "Login failed"));
@@ -225,15 +246,31 @@ public sealed class AuthController : ControllerBase
             .ReadJwtToken(result.Value.AccessToken)
             .Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
 
-        if (int.TryParse(userIdClaim, out var userId))
+        int? userId = int.TryParse(userIdClaim, out var parsedUserId) ? parsedUserId : null;
+
+        if (userId.HasValue)
         {
             var session = new UserSession(
-                userId,
+                userId.Value,
                 result.Value.FamilyId,
                 Request.Headers.UserAgent.ToString(),
-                HttpContext.Connection.RemoteIpAddress?.ToString());
+                clientIp);
             await _unitOfWork.UserSessions.AddAsync(session, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _securityAudit.WriteAsync(
+                "LoginSucceeded",
+                "User",
+                entityId: userId,
+                actorUserId: userId,
+                details: new
+                {
+                    username = request.Username,
+                    familyId = result.Value.FamilyId,
+                    ip = clientIp,
+                    userAgent = Request.Headers.UserAgent.ToString()
+                },
+                cancellationToken);
         }
 
         SetRefreshCookie(result.Value.RefreshToken);
@@ -340,6 +377,22 @@ public sealed class AuthController : ControllerBase
         }
 
         ClearRefreshCookie();
+
+        if (int.TryParse(userIdClaim, out var auditUserId))
+        {
+            await _securityAudit.WriteAsync(
+                "LogoutSucceeded",
+                "User",
+                entityId: auditUserId,
+                actorUserId: auditUserId,
+                details: new
+                {
+                    familyId = revokedFamilyId,
+                    ip = ClientIpResolver.GetClientIp(HttpContext)
+                },
+                cancellationToken);
+        }
+
         _logger.LogInformation("User logged out successfully (current session)");
         return Ok(ApiResponse.SuccessResponse(
             "Logout successful. This device session was revoked. Other devices remain signed in."));

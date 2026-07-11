@@ -44,6 +44,18 @@ try
 
     builder.Host.UseSerilog();
 
+    // Limit request body size (DoS / oversized payload protection). 1 MiB is enough for JSON APIs.
+    const long maxRequestBodyBytes = 1_048_576;
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.Limits.MaxRequestBodySize = maxRequestBodyBytes;
+    });
+    builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+    {
+        options.MultipartBodyLengthLimit = maxRequestBodyBytes;
+        options.ValueLengthLimit = 256 * 1024;
+    });
+
     // ── API Infrastructure ──────────────────────────────────
     builder.Services.AddApiInfrastructure();
 
@@ -121,13 +133,14 @@ try
         {
             Log.Warning(
                 "No trusted proxies or networks configured. " +
-                "Rate limiting will use the direct RemoteIpAddress, which collapses to " +
+                "Rate limiting and audit IPs will use the direct RemoteIpAddress, which collapses to " +
                 "one global bucket when the server sits behind a reverse proxy. " +
                 "Set TrustedProxies or TrustedNetworks in production configuration.");
         }
     }
 
     // ── Middleware Pipeline ──────────────────────────────────
+    // Order matters: forwarded headers BEFORE rate limiting / auth so client IP is correct.
     app.UseForwardedHeaders();
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseMiddleware<CorrelationIdMiddleware>();
@@ -143,6 +156,7 @@ try
     }
     else
     {
+        app.UseHsts();
         app.MapGet("/", () => Results.Ok("Healthy"));
     }
 
