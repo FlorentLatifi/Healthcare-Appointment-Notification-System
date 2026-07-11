@@ -32,4 +32,9 @@ public interface IDomainEventDispatcher
     /// <param name="domainEvents">The events to dispatch.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task DispatchAsync(IEnumerable<IDomainEvent> domainEvents, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Strict multi-event dispatch for outbox relay: any handler failure throws so the message is retried.
+    /// </summary>
+    Task DispatchStrictAsync(IEnumerable<IDomainEvent> domainEvents, CancellationToken cancellationToken = default);
 }

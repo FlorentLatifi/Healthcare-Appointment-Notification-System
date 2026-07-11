@@ -31,7 +31,9 @@ public static class ObservabilityConfiguration
             {
                 metrics
                     .AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation();
+                    .AddHttpClientInstrumentation()
+                    // Transactional outbox relay metrics (Meter: Healthcare.Outbox)
+                    .AddMeter(Healthcare.Adapters.Events.OutboxMetrics.MeterName);
 
                 if (useOtlp)
                     metrics.AddOtlpExporter(options => options.Endpoint = new Uri(otelEndpoint!));

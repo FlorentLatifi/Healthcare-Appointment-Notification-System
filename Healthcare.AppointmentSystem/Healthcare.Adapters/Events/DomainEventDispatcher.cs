@@ -44,10 +44,63 @@ public sealed class DomainEventDispatcher : IDomainEventDispatcher
 
     /// <summary>
     /// Dispatches a single domain event to all registered handlers.
+    /// Handler failures are logged and swallowed (in-process resilience).
+    /// For outbox relay use <see cref="DispatchStrictAsync{TEvent}"/>.
     /// </summary>
-    public async Task DispatchAsync<TEvent>(
+    public Task DispatchAsync<TEvent>(
         TEvent domainEvent,
         CancellationToken cancellationToken = default)
+        where TEvent : IDomainEvent
+        => DispatchCoreAsync(domainEvent, throwOnHandlerFailure: false, cancellationToken);
+
+    /// <summary>
+    /// Strict dispatch for outbox: if any handler fails, throws so the message is retried.
+    /// Other handlers still run; exceptions are aggregated.
+    /// </summary>
+    public Task DispatchStrictAsync<TEvent>(
+        TEvent domainEvent,
+        CancellationToken cancellationToken = default)
+        where TEvent : IDomainEvent
+        => DispatchCoreAsync(domainEvent, throwOnHandlerFailure: true, cancellationToken);
+
+    /// <summary>
+    /// Dispatches multiple domain events sequentially (best-effort per event).
+    /// </summary>
+    public async Task DispatchAsync(
+        IEnumerable<IDomainEvent> domainEvents,
+        CancellationToken cancellationToken = default)
+    {
+        var eventsList = domainEvents.ToList();
+
+        if (eventsList.Count == 0)
+        {
+            _logger.LogDebug("No domain events to dispatch");
+            return;
+        }
+
+        _logger.LogInformation("Dispatching {Count} domain event(s)", eventsList.Count);
+
+        foreach (var domainEvent in eventsList)
+            await DispatchDynamicAsync((dynamic)domainEvent, false, cancellationToken);
+
+        _logger.LogInformation("All {Count} domain event(s) dispatched", eventsList.Count);
+    }
+
+    /// <summary>
+    /// Strict sequential dispatch for outbox batches (fails the current message on handler error).
+    /// </summary>
+    public async Task DispatchStrictAsync(
+        IEnumerable<IDomainEvent> domainEvents,
+        CancellationToken cancellationToken = default)
+    {
+        foreach (var domainEvent in domainEvents)
+            await DispatchDynamicAsync((dynamic)domainEvent, true, cancellationToken);
+    }
+
+    private async Task DispatchCoreAsync<TEvent>(
+        TEvent domainEvent,
+        bool throwOnHandlerFailure,
+        CancellationToken cancellationToken)
         where TEvent : IDomainEvent
     {
         if (domainEvent == null)
@@ -60,64 +113,63 @@ public sealed class DomainEventDispatcher : IDomainEventDispatcher
         var handlerType = typeof(IDomainEventHandler<>).MakeGenericType(eventType);
 
         _logger.LogInformation(
-            "Dispatching domain event {EventType} with ID {EventId}",
+            "Dispatching domain event {EventType} with ID {EventId} (strict={Strict})",
             eventType.Name,
-            domainEvent.EventId);
+            domainEvent.EventId,
+            throwOnHandlerFailure);
 
-        // Get all handlers for this event type from DI container
         using var scope = _serviceProvider.CreateScope();
-        var handlers = scope.ServiceProvider.GetServices(handlerType);
+        var handlersList = scope.ServiceProvider.GetServices(handlerType).ToList();
 
-        var handlersList = handlers.ToList();
-
-        if (!handlersList.Any())
+        if (handlersList.Count == 0)
         {
-            _logger.LogWarning(
-                "No handlers registered for event type {EventType}",
-                eventType.Name);
+            _logger.LogWarning("No handlers registered for event type {EventType}", eventType.Name);
             return;
         }
 
-        _logger.LogDebug(
-            "Found {Count} handler(s) for event {EventType}",
-            handlersList.Count,
-            eventType.Name);
+        var failures = new List<Exception>();
 
-        // Invoke each handler
-        var tasks = handlersList.Select(async handler =>
+        foreach (var handler in handlersList)
         {
             try
             {
-                // Use reflection to call HandleAsync method
                 var handleMethod = handlerType.GetMethod(nameof(IDomainEventHandler<TEvent>.HandleAsync));
-                if (handleMethod != null)
-                {
-                    var task = (Task?)handleMethod.Invoke(handler, new object[] { domainEvent, cancellationToken });
-                    if (task != null)
-                    {
-                        await task;
-                    }
-                }
+                if (handleMethod is null)
+                    continue;
+
+                var task = (Task?)handleMethod.Invoke(handler, new object[] { domainEvent, cancellationToken });
+                if (task is not null)
+                    await task;
 
                 _logger.LogDebug(
                     "Handler {HandlerType} completed for event {EventType}",
-                    handler.GetType().Name,
+                    handler!.GetType().Name,
                     eventType.Name);
             }
             catch (Exception ex)
             {
+                var inner = ex is System.Reflection.TargetInvocationException { InnerException: { } tie }
+                    ? tie
+                    : ex;
+
                 _logger.LogError(
-                    ex,
+                    inner,
                     "Handler {HandlerType} failed for event {EventType} with ID {EventId}",
-                    handler.GetType().Name,
+                    handler!.GetType().Name,
                     eventType.Name,
                     domainEvent.EventId);
 
-                // Don't throw - let other handlers continue (resilience)
+                if (throwOnHandlerFailure)
+                    failures.Add(inner);
             }
-        });
+        }
 
-        await Task.WhenAll(tasks);
+        if (failures.Count > 0)
+        {
+            throw new AggregateException(
+                $"One or more handlers failed for {eventType.Name} ({domainEvent.EventId}).",
+                failures);
+        }
 
         _logger.LogInformation(
             "Domain event {EventType} dispatched to {Count} handler(s)",
@@ -125,45 +177,10 @@ public sealed class DomainEventDispatcher : IDomainEventDispatcher
             handlersList.Count);
     }
 
-    /// <summary>
-    /// Dispatches multiple domain events sequentially.
-    /// </summary>
-    public async Task DispatchAsync(
-        IEnumerable<IDomainEvent> domainEvents,
-        CancellationToken cancellationToken = default)
-    {
-        var eventsList = domainEvents.ToList();
-
-        if (!eventsList.Any())
-        {
-            _logger.LogDebug("No domain events to dispatch");
-            return;
-        }
-
-        _logger.LogInformation(
-            "Dispatching {Count} domain event(s)",
-            eventsList.Count);
-
-        // Dispatch events sequentially to maintain order
-        foreach (var domainEvent in eventsList)
-        {
-            // Use dynamic dispatch to preserve generic type
-            await DispatchDynamicAsync((dynamic)domainEvent, cancellationToken);
-        }
-
-        _logger.LogInformation(
-            "All {Count} domain event(s) dispatched successfully",
-            eventsList.Count);
-    }
-
-    /// <summary>
-    /// Helper method for dynamic dispatch (preserves generic type).
-    /// </summary>
     private Task DispatchDynamicAsync<TEvent>(
         TEvent domainEvent,
+        bool throwOnHandlerFailure,
         CancellationToken cancellationToken)
         where TEvent : IDomainEvent
-    {
-        return DispatchAsync(domainEvent, cancellationToken);
-    }
+        => DispatchCoreAsync(domainEvent, throwOnHandlerFailure, cancellationToken);
 }

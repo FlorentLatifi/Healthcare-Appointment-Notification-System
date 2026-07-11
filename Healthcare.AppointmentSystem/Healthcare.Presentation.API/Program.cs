@@ -103,8 +103,14 @@ try
         RelayIntervalSeconds = builder.Configuration.GetValue<int>("Outbox:RelayIntervalSeconds", 10),
         MaxRetryAttempts = builder.Configuration.GetValue<int>("Outbox:MaxRetryAttempts", 5),
         BatchSize = builder.Configuration.GetValue<int>("Outbox:BatchSize", 50),
+        BaseRetryDelaySeconds = builder.Configuration.GetValue<int>("Outbox:BaseRetryDelaySeconds", 5),
+        MaxRetryDelaySeconds = builder.Configuration.GetValue<int>("Outbox:MaxRetryDelaySeconds", 300),
+        ProcessingLeaseSeconds = builder.Configuration.GetValue<int>("Outbox:ProcessingLeaseSeconds", 120),
+        CircuitBreakerFailureThreshold = builder.Configuration.GetValue<int>("Outbox:CircuitBreakerFailureThreshold", 5),
+        CircuitBreakerBreakSeconds = builder.Configuration.GetValue<int>("Outbox:CircuitBreakerBreakSeconds", 60),
     };
     builder.Services.AddSingleton(outboxSettings);
+    builder.Services.AddSingleton<Healthcare.Adapters.Events.OutboxMetrics>();
     builder.Services.AddHostedService<OutboxRelayService>();
 
     // Database migrations + optional secure admin bootstrap + gated demo seed.

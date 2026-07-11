@@ -30,6 +30,9 @@ namespace Healthcare.Adapters.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("DeadLetteredAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Error")
                         .HasMaxLength(2048)
                         .HasColumnType("nvarchar(2048)");
@@ -38,6 +41,12 @@ namespace Healthcare.Adapters.Migrations
                         .IsRequired()
                         .HasMaxLength(1024)
                         .HasColumnType("nvarchar(1024)");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("NextAttemptAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("OccurredOn")
                         .HasColumnType("datetime2");
@@ -49,16 +58,32 @@ namespace Healthcare.Adapters.Migrations
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("ProcessingStartedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("RetryCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("Status")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(0);
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OccurredOn", "RetryCount")
-                        .HasDatabaseName("IX_OutboxMessages_Pending")
-                        .HasFilter("[ProcessedAt] IS NULL");
+                    b.HasIndex("MessageId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_OutboxMessages_MessageId");
+
+                    b.HasIndex("Status", "DeadLetteredAt")
+                        .HasDatabaseName("IX_OutboxMessages_DeadLetter")
+                        .HasFilter("[Status] = 3");
+
+                    b.HasIndex("Status", "NextAttemptAt", "OccurredOn")
+                        .HasDatabaseName("IX_OutboxMessages_Status_NextAttempt")
+                        .HasFilter("[Status] = 0");
 
                     b.ToTable("OutboxMessages", (string)null);
                 });

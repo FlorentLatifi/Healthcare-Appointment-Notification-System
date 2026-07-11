@@ -52,7 +52,12 @@ public class HealthcareDbContext : DbContext
                 {
                     var eventType = domainEvent.GetType().AssemblyQualifiedName!;
                     var payload = JsonSerializer.Serialize(domainEvent, domainEvent.GetType());
-                    outboxRows.Add(new OutboxMessage(eventType, payload, domainEvent.OccurredOn));
+                    // MessageId = domain EventId for idempotent outbox inserts / relay.
+                    outboxRows.Add(new OutboxMessage(
+                        eventType,
+                        payload,
+                        domainEvent.OccurredOn,
+                        domainEvent.EventId));
                 }
 
                 entity.ClearDomainEvents();

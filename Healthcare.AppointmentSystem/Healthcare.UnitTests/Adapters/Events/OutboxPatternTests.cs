@@ -3,6 +3,7 @@ using Healthcare.Adapters.Events;
 using Healthcare.Adapters.Persistence.EntityFramework;
 using Healthcare.Adapters.Services;
 using Healthcare.Application.Ports.Events;
+using Healthcare.Domain.Common;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Events;
 using Healthcare.Domain.ValueObjects;
@@ -37,6 +38,14 @@ public sealed class OutboxPatternTests
         return appointment;
     }
 
+    private static OutboxMetrics CreateMetrics() => new();
+
+    private static OutboxRelayService CreateRelay(
+        IServiceScopeFactory scopeFactory,
+        ILogger<OutboxRelayService> logger,
+        OutboxSettings settings) =>
+        new(scopeFactory, logger, settings, CreateMetrics());
+
     [Fact]
     public async Task SaveChangesAsync_WithOutboxEnabled_WritesOutboxRows()
     {
@@ -49,6 +58,7 @@ public sealed class OutboxPatternTests
 
         var outboxSettings = new OutboxSettings { UseOutboxForDomainEvents = true };
         var appointment = CreateConfirmedAppointment();
+        var expectedEventIds = appointment.DomainEvents.Select(e => e.EventId).ToHashSet();
 
         await using (var context = new HealthcareDbContext(options, outboxSettings))
         {
@@ -64,8 +74,11 @@ public sealed class OutboxPatternTests
 
             var outboxMessage = outboxMessages.First(m => m.EventType.Contains("AppointmentConfirmedEvent"));
             outboxMessage.ProcessedAt.Should().BeNull();
+            outboxMessage.Status.Should().Be(OutboxMessageStatus.Pending);
             outboxMessage.RetryCount.Should().Be(0);
             outboxMessage.Payload.Should().NotBeNullOrEmpty();
+            outboxMessage.MessageId.Should().NotBe(Guid.Empty);
+            outboxMessages.Select(m => m.MessageId).Should().BeEquivalentTo(expectedEventIds);
 
             appointment.DomainEvents.Should().BeEmpty();
         }
@@ -138,54 +151,50 @@ public sealed class OutboxPatternTests
         };
 
         var services = new ServiceCollection();
-        services.AddSingleton<HealthcareDbContext>(sp =>
-        {
-            var ctx = new HealthcareDbContext(options, outboxSettings);
-            ctx.Database.EnsureCreated();
-            return ctx;
-        });
         services.AddSingleton(outboxSettings);
+        services.AddScoped(_ => new HealthcareDbContext(options, outboxSettings));
         services.AddSingleton<IDomainEventDispatcher>(sp =>
             new DomainEventDispatcher(sp, sp.GetRequiredService<ILogger<DomainEventDispatcher>>()));
-        services.AddSingleton<ILogger<DomainEventDispatcher>>(sp =>
-            LoggerFactory.Create(b => { }).CreateLogger<DomainEventDispatcher>());
-        services.AddSingleton<ILogger<OutboxRelayService>>(sp =>
-            LoggerFactory.Create(b => { }).CreateLogger<OutboxRelayService>());
-        services.AddLogging(b => b.AddConsole().SetMinimumLevel(LogLevel.Warning));
+        services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
 
         var provider = services.BuildServiceProvider();
         var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
 
+        // Ensure schema once on the shared connection
+        await using (var bootstrap = new HealthcareDbContext(options, outboxSettings))
+            await bootstrap.Database.EnsureCreatedAsync();
+
         var appointment = CreateConfirmedAppointment();
+        var domainEvent = appointment.DomainEvents.First();
 
         await using (var writeCtx = new HealthcareDbContext(options, outboxSettings))
         {
-            await writeCtx.Database.EnsureCreatedAsync();
-
-            var domainEvent = appointment.DomainEvents.First();
             var outboxMessage = new OutboxMessage(
                 domainEvent.GetType().AssemblyQualifiedName!,
                 JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
-                DateTime.UtcNow);
+                domainEvent.OccurredOn,
+                domainEvent.EventId);
 
             writeCtx.OutboxMessages.Add(outboxMessage);
             await writeCtx.SaveChangesAsync();
         }
 
-        var relayLogger = provider.GetRequiredService<ILogger<OutboxRelayService>>();
-        var relay = new OutboxRelayService(scopeFactory, relayLogger, outboxSettings);
-        await InvokeProcessBatchAsync(relay);
+        var logger = provider.GetRequiredService<ILogger<OutboxRelayService>>();
+        var relay = CreateRelay(scopeFactory, logger, outboxSettings);
+        await relay.ProcessBatchAsync(CancellationToken.None);
 
         await using (var readCtx = new HealthcareDbContext(options, outboxSettings))
         {
             var processed = await readCtx.OutboxMessages.FirstAsync();
+            processed.Status.Should().Be(OutboxMessageStatus.Processed);
             processed.ProcessedAt.Should().NotBeNull();
             processed.Error.Should().BeNull();
+            processed.MessageId.Should().Be(domainEvent.EventId);
         }
     }
 
     [Fact]
-    public async Task OutboxRelayService_ExhaustedRetries_LogsError()
+    public async Task OutboxRelayService_NonRetryableBadJson_DeadLettersImmediately()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
@@ -202,56 +211,60 @@ public sealed class OutboxPatternTests
         };
 
         var loggerMock = new Mock<ILogger<OutboxRelayService>>();
-        loggerMock.Setup(x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("permanently failed")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
-            .Verifiable();
 
         var services = new ServiceCollection();
-        services.AddSingleton<HealthcareDbContext>(sp =>
-        {
-            var ctx = new HealthcareDbContext(options, outboxSettings);
-            ctx.Database.EnsureCreated();
-            return ctx;
-        });
         services.AddSingleton(outboxSettings);
+        services.AddScoped(_ => new HealthcareDbContext(options, outboxSettings));
         services.AddSingleton<IDomainEventDispatcher>(sp =>
             new DomainEventDispatcher(sp, sp.GetRequiredService<ILogger<DomainEventDispatcher>>()));
-        services.AddSingleton<ILogger<DomainEventDispatcher>>(sp =>
-            LoggerFactory.Create(b => { }).CreateLogger<DomainEventDispatcher>());
-        services.AddSingleton<ILogger<OutboxRelayService>>(sp => loggerMock.Object);
+        services.AddSingleton<ILogger<OutboxRelayService>>(loggerMock.Object);
+        services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
 
         var provider = services.BuildServiceProvider();
         var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
 
+        await using (var bootstrap = new HealthcareDbContext(options, outboxSettings))
+            await bootstrap.Database.EnsureCreatedAsync();
+
+        var appointment = CreateConfirmedAppointment();
+        var domainEvent = appointment.DomainEvents.First();
+
         await using (var writeCtx = new HealthcareDbContext(options, outboxSettings))
         {
-            await writeCtx.Database.EnsureCreatedAsync();
-
-            var appointment = CreateConfirmedAppointment();
-            var domainEvent = appointment.DomainEvents.First();
             var outboxMessage = new OutboxMessage(
                 domainEvent.GetType().AssemblyQualifiedName!,
-                "{bad json}", // will fail deserialization
-                DateTime.UtcNow);
-            outboxMessage.RetryCount = outboxSettings.MaxRetryAttempts - 1; // one more failure = exhaustion
+                "{bad json}",
+                DateTime.UtcNow,
+                domainEvent.EventId);
 
             writeCtx.OutboxMessages.Add(outboxMessage);
             await writeCtx.SaveChangesAsync();
         }
 
-        var relayLogger = provider.GetRequiredService<ILogger<OutboxRelayService>>();
-        var relay = new OutboxRelayService(scopeFactory, relayLogger, outboxSettings);
-        await InvokeProcessBatchAsync(relay);
+        var relay = CreateRelay(scopeFactory, loggerMock.Object, outboxSettings);
+        await relay.ProcessBatchAsync(CancellationToken.None);
 
-        loggerMock.Verify();
+        await using (var readCtx = new HealthcareDbContext(options, outboxSettings))
+        {
+            var dead = await readCtx.OutboxMessages.FirstAsync();
+            dead.Status.Should().Be(OutboxMessageStatus.DeadLetter);
+            dead.DeadLetteredAt.Should().NotBeNull();
+            dead.ProcessedAt.Should().BeNull();
+            dead.Error.Should().NotBeNullOrEmpty();
+        }
+
+        loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("dead-lettered", StringComparison.OrdinalIgnoreCase)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
     }
 
     [Fact]
-    public async Task OutboxRelayService_HandlerFailure_IncrementsRetryCount()
+    public async Task OutboxRelayService_UnknownType_DeadLettersAsNonRetryable()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
@@ -268,60 +281,162 @@ public sealed class OutboxPatternTests
         };
 
         var services = new ServiceCollection();
-        services.AddSingleton<HealthcareDbContext>(sp =>
-        {
-            var ctx = new HealthcareDbContext(options, outboxSettings);
-            ctx.Database.EnsureCreated();
-            return ctx;
-        });
         services.AddSingleton(outboxSettings);
+        services.AddScoped(_ => new HealthcareDbContext(options, outboxSettings));
         services.AddSingleton<IDomainEventDispatcher>(sp =>
             new DomainEventDispatcher(sp, sp.GetRequiredService<ILogger<DomainEventDispatcher>>()));
-        services.AddSingleton<ILogger<DomainEventDispatcher>>(sp =>
-            LoggerFactory.Create(b => { }).CreateLogger<DomainEventDispatcher>());
-        services.AddSingleton<ILogger<OutboxRelayService>>(sp =>
-            LoggerFactory.Create(b => { }).CreateLogger<OutboxRelayService>());
-        services.AddLogging(b => b.AddConsole().SetMinimumLevel(LogLevel.Warning));
+        services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
 
         var provider = services.BuildServiceProvider();
         var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
 
+        await using (var bootstrap = new HealthcareDbContext(options, outboxSettings))
+            await bootstrap.Database.EnsureCreatedAsync();
+
         await using (var writeCtx = new HealthcareDbContext(options, outboxSettings))
         {
-            await writeCtx.Database.EnsureCreatedAsync();
-
             var outboxMessage = new OutboxMessage(
                 "NonExistent.Event.Type.ThatDoesNotExist, NonExistentAssembly",
                 "{}",
-                DateTime.UtcNow);
+                DateTime.UtcNow,
+                Guid.NewGuid());
 
             writeCtx.OutboxMessages.Add(outboxMessage);
             await writeCtx.SaveChangesAsync();
         }
 
-        var relayLogger = provider.GetRequiredService<ILogger<OutboxRelayService>>();
-        var relay = new OutboxRelayService(scopeFactory, relayLogger, outboxSettings);
-        await InvokeProcessBatchAsync(relay);
+        var logger = provider.GetRequiredService<ILogger<OutboxRelayService>>();
+        var relay = CreateRelay(scopeFactory, logger, outboxSettings);
+        await relay.ProcessBatchAsync(CancellationToken.None);
 
         await using (var readCtx = new HealthcareDbContext(options, outboxSettings))
         {
             var failed = await readCtx.OutboxMessages.FirstAsync();
+            failed.Status.Should().Be(OutboxMessageStatus.DeadLetter);
             failed.ProcessedAt.Should().BeNull();
-            failed.RetryCount.Should().Be(5);
+            failed.DeadLetteredAt.Should().NotBeNull();
+            failed.RetryCount.Should().Be(outboxSettings.MaxRetryAttempts);
             failed.Error.Should().NotBeNullOrEmpty();
+            failed.Error.Should().Contain("Unknown event type");
         }
     }
 
-    private static async Task InvokeProcessBatchAsync(OutboxRelayService relay)
+    [Fact]
+    public async Task OutboxRelayService_HandlerFailure_SchedulesRetryWithBackoff()
     {
-        var method = typeof(OutboxRelayService).GetMethod("ProcessBatchAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
 
-        if (method != null)
+        var options = new DbContextOptionsBuilder<HealthcareDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        var outboxSettings = new OutboxSettings
         {
-            var task = (Task?)method.Invoke(relay, new object[] { CancellationToken.None });
-            if (task != null)
-                await task;
+            UseOutboxForDomainEvents = true,
+            MaxRetryAttempts = 5,
+            BatchSize = 50,
+            BaseRetryDelaySeconds = 30,
+            MaxRetryDelaySeconds = 300,
+        };
+
+        var dispatcherMock = new Mock<IDomainEventDispatcher>();
+        dispatcherMock
+            .Setup(d => d.DispatchStrictAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("handler blew up"));
+
+        var services = new ServiceCollection();
+        services.AddSingleton(outboxSettings);
+        services.AddScoped(_ => new HealthcareDbContext(options, outboxSettings));
+        services.AddSingleton(dispatcherMock.Object);
+        services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
+
+        var provider = services.BuildServiceProvider();
+        var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
+
+        await using (var bootstrap = new HealthcareDbContext(options, outboxSettings))
+            await bootstrap.Database.EnsureCreatedAsync();
+
+        var appointment = CreateConfirmedAppointment();
+        var domainEvent = appointment.DomainEvents.First();
+        var before = DateTime.UtcNow;
+
+        await using (var writeCtx = new HealthcareDbContext(options, outboxSettings))
+        {
+            writeCtx.OutboxMessages.Add(new OutboxMessage(
+                domainEvent.GetType().AssemblyQualifiedName!,
+                JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
+                domainEvent.OccurredOn,
+                domainEvent.EventId));
+            await writeCtx.SaveChangesAsync();
         }
+
+        var logger = provider.GetRequiredService<ILogger<OutboxRelayService>>();
+        var relay = CreateRelay(scopeFactory, logger, outboxSettings);
+        await relay.ProcessBatchAsync(CancellationToken.None);
+
+        await using (var readCtx = new HealthcareDbContext(options, outboxSettings))
+        {
+            var failed = await readCtx.OutboxMessages.FirstAsync();
+            failed.Status.Should().Be(OutboxMessageStatus.Pending);
+            failed.RetryCount.Should().Be(1);
+            failed.ProcessedAt.Should().BeNull();
+            failed.Error.Should().Contain("handler blew up");
+            // Full jitter schedules NextAttemptAt in [now, now+baseDelay]
+            failed.NextAttemptAt.Should().BeOnOrAfter(before);
+            failed.NextAttemptAt.Should().BeOnOrBefore(before.AddSeconds(outboxSettings.BaseRetryDelaySeconds + 5));
+        }
+    }
+
+    [Fact]
+    public async Task OutboxMessage_MarkFailed_ExhaustsToDeadLetter()
+    {
+        var message = new OutboxMessage(
+            "Some.Event, Assembly",
+            "{}",
+            DateTime.UtcNow,
+            Guid.NewGuid());
+
+        for (var i = 0; i < 4; i++)
+        {
+            message.MarkFailed(
+                new InvalidOperationException($"fail-{i}"),
+                maxRetryAttempts: 5,
+                baseDelay: TimeSpan.FromSeconds(1),
+                maxDelay: TimeSpan.FromMinutes(5));
+            message.Status.Should().Be(OutboxMessageStatus.Pending);
+        }
+
+        message.MarkFailed(
+            new InvalidOperationException("final"),
+            maxRetryAttempts: 5,
+            baseDelay: TimeSpan.FromSeconds(1),
+            maxDelay: TimeSpan.FromMinutes(5));
+
+        message.Status.Should().Be(OutboxMessageStatus.DeadLetter);
+        message.RetryCount.Should().Be(5);
+        message.DeadLetteredAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void OutboxCircuitBreaker_OpensAfterThreshold_ThenHalfOpens()
+    {
+        var breaker = new OutboxCircuitBreaker(failureThreshold: 2, breakDuration: TimeSpan.FromMilliseconds(50));
+
+        breaker.TryEnter().Should().BeTrue();
+        breaker.RecordFailure();
+        breaker.IsOpen.Should().BeFalse();
+
+        breaker.RecordFailure();
+        breaker.IsOpen.Should().BeTrue();
+        breaker.TryEnter().Should().BeFalse();
+
+        Thread.Sleep(60);
+        breaker.State.Should().Be(OutboxCircuitBreaker.CircuitState.HalfOpen);
+        breaker.TryEnter().Should().BeTrue();
+
+        breaker.RecordSuccess();
+        breaker.State.Should().Be(OutboxCircuitBreaker.CircuitState.Closed);
+        breaker.IsOpen.Should().BeFalse();
     }
 }
