@@ -22,7 +22,10 @@ public class ProcessPaymentHandlerTests
         _loggerMock = new Mock<ILogger<ProcessPaymentHandler>>();
 
         _handler = new ProcessPaymentHandler(
-            _paymentGatewayMock.Object, _reconciliationMock.Object, _loggerMock.Object);
+            _paymentGatewayMock.Object,
+            _reconciliationMock.Object,
+            new Healthcare.Application.Observability.BusinessMetrics(),
+            _loggerMock.Object);
     }
 
     [Fact]

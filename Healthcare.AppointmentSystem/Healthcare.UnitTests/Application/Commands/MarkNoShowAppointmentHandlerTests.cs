@@ -44,7 +44,7 @@ public class MarkNoShowAppointmentHandlerTests
         var serviceProvider = CreateServiceProvider();
         _eventDispatcher = new DomainEventDispatcher(serviceProvider, mockLogger.Object);
 
-        _handler = new MarkNoShowAppointmentHandler(_unitOfWork, _eventDispatcher);
+        _handler = new MarkNoShowAppointmentHandler(_unitOfWork, _eventDispatcher, new Healthcare.Application.Observability.BusinessMetrics());
     }
 
     #region Helper Methods

@@ -43,7 +43,7 @@ public class CompleteAppointmentHandlerTests
         var serviceProvider = CreateServiceProvider();
         _eventDispatcher = new DomainEventDispatcher(serviceProvider, mockLogger.Object);
 
-        _handler = new CompleteAppointmentHandler(_unitOfWork, _eventDispatcher);
+        _handler = new CompleteAppointmentHandler(_unitOfWork, _eventDispatcher, new Healthcare.Application.Observability.BusinessMetrics());
     }
 
     #region Helper Methods

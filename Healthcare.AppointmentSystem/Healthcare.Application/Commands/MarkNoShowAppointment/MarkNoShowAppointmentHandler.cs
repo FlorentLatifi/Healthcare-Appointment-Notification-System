@@ -1,4 +1,5 @@
 using Healthcare.Application.Common;
+using Healthcare.Application.Observability;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
 
@@ -8,13 +9,16 @@ public sealed class MarkNoShowAppointmentHandler : ICommandHandler<MarkNoShowApp
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDomainEventDispatcher _eventDispatcher;
+    private readonly IBusinessMetrics _metrics;
 
     public MarkNoShowAppointmentHandler(
         IUnitOfWork unitOfWork,
-        IDomainEventDispatcher eventDispatcher)
+        IDomainEventDispatcher eventDispatcher,
+        IBusinessMetrics metrics)
     {
         _unitOfWork = unitOfWork;
         _eventDispatcher = eventDispatcher;
+        _metrics = metrics;
     }
 
     public async Task<Result> HandleAsync(
@@ -43,6 +47,8 @@ public sealed class MarkNoShowAppointmentHandler : ICommandHandler<MarkNoShowApp
 
         await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
         appointment.ClearDomainEvents();
+
+        _metrics.AppointmentNoShow();
 
         return Result.Success();
     }

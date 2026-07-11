@@ -60,7 +60,7 @@ public class CancelAppointmentHandlerTests
         _eventDispatcher = new DomainEventDispatcher(serviceProvider, mockLogger.Object);
 
         // Create handler
-        _handler = new CancelAppointmentHandler(_unitOfWork, _eventDispatcher);
+        _handler = new CancelAppointmentHandler(_unitOfWork, _eventDispatcher, new Healthcare.Application.Observability.BusinessMetrics());
     }
 
     #region Helper Methods

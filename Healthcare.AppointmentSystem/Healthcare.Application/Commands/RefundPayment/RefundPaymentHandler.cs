@@ -1,4 +1,5 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
+using Healthcare.Application.Observability;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Payments;
 using Healthcare.Application.Ports.Repositories;
@@ -16,15 +17,18 @@ public sealed class RefundPaymentHandler : ICommandHandler<RefundPaymentCommand,
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPaymentGateway _paymentGateway;
     private readonly IDomainEventDispatcher _eventDispatcher;
+    private readonly IBusinessMetrics _metrics;
 
     public RefundPaymentHandler(
         IUnitOfWork unitOfWork,
         IPaymentGateway paymentGateway,
-        IDomainEventDispatcher eventDispatcher)
+        IDomainEventDispatcher eventDispatcher,
+        IBusinessMetrics metrics)
     {
         _unitOfWork = unitOfWork;
         _paymentGateway = paymentGateway;
         _eventDispatcher = eventDispatcher;
+        _metrics = metrics;
     }
 
     public async Task<Result> HandleAsync(
@@ -97,6 +101,7 @@ public sealed class RefundPaymentHandler : ICommandHandler<RefundPaymentCommand,
             appointment.ClearDomainEvents();
         }
 
+        _metrics.PaymentRefunded();
         return Result.Success();
     }
 }

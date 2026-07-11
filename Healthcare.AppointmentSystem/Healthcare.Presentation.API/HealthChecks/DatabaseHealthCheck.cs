@@ -1,11 +1,11 @@
+using System.Diagnostics;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Healthcare.Presentation.API.HealthChecks;
 
 /// <summary>
-/// Database connectivity health check without referencing EF / Adapters types.
-/// Uses the configured connection string only (composition root supplies config).
+/// Database connectivity + latency health check (critical for readiness).
 /// </summary>
 public sealed class DatabaseHealthCheck : IHealthCheck
 {
@@ -23,20 +23,42 @@ public sealed class DatabaseHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
+        var sw = Stopwatch.StartNew();
         try
         {
             await using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
             await using var command = connection.CreateCommand();
             command.CommandText = "SELECT 1";
+            command.CommandTimeout = 3;
             await command.ExecuteScalarAsync(cancellationToken);
+            sw.Stop();
 
-            return HealthCheckResult.Healthy("Database is reachable.");
+            var data = new Dictionary<string, object>
+            {
+                ["latencyMs"] = sw.Elapsed.TotalMilliseconds,
+                ["serverVersion"] = connection.ServerVersion
+            };
+
+            if (sw.ElapsedMilliseconds > 1000)
+            {
+                return HealthCheckResult.Degraded(
+                    $"Database reachable but slow ({sw.ElapsedMilliseconds}ms).",
+                    data: data);
+            }
+
+            return HealthCheckResult.Healthy(
+                $"Database is reachable ({sw.ElapsedMilliseconds}ms).",
+                data);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Database health check failed with exception");
-            return HealthCheckResult.Unhealthy("Database health check failed", ex);
+            sw.Stop();
+            _logger.LogError(ex, "Database health check failed after {ElapsedMs}ms", sw.ElapsedMilliseconds);
+            return HealthCheckResult.Unhealthy(
+                "Database health check failed",
+                ex,
+                new Dictionary<string, object> { ["latencyMs"] = sw.Elapsed.TotalMilliseconds });
         }
     }
 }

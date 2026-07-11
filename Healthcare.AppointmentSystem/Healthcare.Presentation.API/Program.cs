@@ -30,11 +30,7 @@ using Healthcare.Presentation.API.Middleware;
 using Healthcare.Presentation.API.Services;
 using Serilog;
 
-Log.Logger = new LoggerConfiguration()
-    .Enrich.FromLogContext()
-    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {CorrelationId}{NewLine}{Exception}")
-    .WriteTo.File("logs/healthcare-api-.log", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+SerilogConfiguration.ConfigureBootstrapLogger();
 
 try
 {
@@ -42,7 +38,8 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    builder.Host.UseSerilog();
+    builder.Host.UseSerilog((context, services, configuration) =>
+        configuration.ConfigureSerilog(context.Configuration, context.HostingEnvironment));
 
     // Limit request body size (DoS / oversized payload protection). 1 MiB is enough for JSON APIs.
     const long maxRequestBodyBytes = 1_048_576;
@@ -89,8 +86,8 @@ try
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
     builder.Services.AddAdaptersWithEFCorePersistence(connectionString, builder.Configuration);
 
-    // ── Observability ───────────────────────────────────────
-    builder.Services.AddObservability(builder.Configuration);
+    // ── Observability (OpenTelemetry traces/metrics + Serilog logs) ──
+    builder.Services.AddObservability(builder.Configuration, builder.Environment);
 
     // ── Background Services (resilient workers) ─────────────
     builder.Services.AddSingleton<Healthcare.Adapters.Background.IBackgroundWorkerAlert,
@@ -156,10 +153,28 @@ try
     }
 
     // ── Middleware Pipeline ──────────────────────────────────
-    // Order matters: forwarded headers BEFORE rate limiting / auth so client IP is correct.
+    // Order: forwarded headers → exception → correlation (for all logs) → request logging
     app.UseForwardedHeaders();
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseMiddleware<CorrelationIdMiddleware>();
+    app.UseSerilogRequestLogging(options =>
+    {
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        {
+            diagnosticContext.Set("CorrelationId",
+                httpContext.Items.TryGetValue(Healthcare.Application.Observability.CorrelationContext.HttpContextItemKey, out var cid)
+                    ? cid
+                    : null);
+            diagnosticContext.Set("UserId", httpContext.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
+            diagnosticContext.Set("ClientIP", httpContext.Connection.RemoteIpAddress?.ToString());
+        };
+        options.GetLevel = (ctx, elapsed, ex) =>
+            ex is not null || ctx.Response.StatusCode >= 500
+                ? Serilog.Events.LogEventLevel.Error
+                : ctx.Response.StatusCode >= 400
+                    ? Serilog.Events.LogEventLevel.Warning
+                    : Serilog.Events.LogEventLevel.Information;
+    });
 
     if (app.Environment.IsDevelopment())
     {
@@ -173,7 +188,7 @@ try
     else
     {
         app.UseHsts();
-        app.MapGet("/", () => Results.Ok("Healthy"));
+        app.MapGet("/", () => Results.Ok(new { status = "Healthy" }));
     }
 
     app.UseHttpsRedirection();
@@ -192,46 +207,13 @@ try
     app.UseAuthorization();
     app.MapControllers();
 
-    // ── Health Check Endpoints ──────────────────────────────
-    // Public liveness: status only (no detailed dependency dump).
-    app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
-    {
-        Predicate = _ => true,
-        ResponseWriter = async (context, report) =>
-        {
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(
-                System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    status = report.Status.ToString()
-                }));
-        }
-    });
+    // ── Health: /health/live, /health/ready, /health, /health/details ──
+    app.MapHealthcareHealthEndpoints();
 
-    // Detailed diagnostics: Admin only (avoids leaking check data to anonymous clients).
-    app.MapHealthChecks("/health/details", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
-    {
-        ResponseWriter = async (context, report) =>
-        {
-            context.Response.ContentType = "application/json";
-            var result = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                status = report.Status.ToString(),
-                checks = report.Entries.Select(e => new
-                {
-                    name = e.Key,
-                    status = e.Value.Status.ToString(),
-                    description = e.Value.Description,
-                    duration = e.Value.Duration.TotalMilliseconds,
-                    data = e.Value.Data
-                }),
-                totalDuration = report.TotalDuration.TotalMilliseconds
-            }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-            await context.Response.WriteAsync(result);
-        }
-    }).RequireAuthorization(policy => policy.RequireRole(AppRoles.Admin));
-
-    Log.Information("Healthcare API started successfully (Environment: {Env})", app.Environment.EnvironmentName);
+    Log.Information(
+        "Healthcare API started successfully Environment={Env} Service={Service}",
+        app.Environment.EnvironmentName,
+        ObservabilityConfiguration.ServiceName);
     if (app.Environment.IsDevelopment())
         Log.Information("Swagger UI available at: https://localhost:7039");
 

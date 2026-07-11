@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Healthcare.Application.Commands.ForgotPassword;
 using Healthcare.Application.Commands.ResetPassword;
 using Healthcare.Application.Common;
+using Healthcare.Application.Observability;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
@@ -29,6 +30,7 @@ public sealed class AuthController : ControllerBase
     private readonly ICommandHandler<ResetPasswordCommand, Result> _resetPasswordHandler;
     private readonly IConfiguration _configuration;
     private readonly SecurityAuditWriter _securityAudit;
+    private readonly IBusinessMetrics _metrics;
 
     public AuthController(
         IAuthenticationService authService,
@@ -38,7 +40,8 @@ public sealed class AuthController : ControllerBase
         ICommandHandler<ForgotPasswordCommand, Result> forgotPasswordHandler,
         ICommandHandler<ResetPasswordCommand, Result> resetPasswordHandler,
         IConfiguration configuration,
-        SecurityAuditWriter securityAudit)
+        SecurityAuditWriter securityAudit,
+        IBusinessMetrics metrics)
     {
         _authService = authService;
         _unitOfWork = unitOfWork;
@@ -48,6 +51,7 @@ public sealed class AuthController : ControllerBase
         _resetPasswordHandler = resetPasswordHandler;
         _configuration = configuration;
         _securityAudit = securityAudit;
+        _metrics = metrics;
     }
 
     private static readonly CookieOptions RefreshCookieOptions = new()
@@ -218,8 +222,10 @@ public sealed class AuthController : ControllerBase
 
         if (result.IsFailure)
         {
-            _logger.LogWarning("Login failed for {Username}: {Error}",
-                request.Username, result.Error);
+            _metrics.LoginFailed("invalid_credentials_or_inactive");
+            _logger.LogWarning(
+                "Login failed for {Username}: {Error} CorrelationId={CorrelationId}",
+                request.Username, result.Error, CorrelationContext.Current);
 
             await _securityAudit.WriteAsync(
                 "LoginFailed",
@@ -240,7 +246,11 @@ public sealed class AuthController : ControllerBase
                 "Login failed"));
         }
 
-        _logger.LogInformation("User {Username} logged in successfully", request.Username);
+        _metrics.LoginSucceeded();
+        _logger.LogInformation(
+            "User {Username} logged in successfully CorrelationId={CorrelationId}",
+            request.Username,
+            CorrelationContext.Current);
 
         var userIdClaim = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler()
             .ReadJwtToken(result.Value.AccessToken)

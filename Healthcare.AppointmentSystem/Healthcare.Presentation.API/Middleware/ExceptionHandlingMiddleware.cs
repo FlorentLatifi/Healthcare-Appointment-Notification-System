@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using FluentValidation;
 using Healthcare.Application.Common;
+using Healthcare.Application.Observability;
 using Healthcare.Domain.Common;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.EntityFrameworkCore;
@@ -35,17 +36,22 @@ public sealed class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
+            var correlationId = context.Items.TryGetValue(CorrelationContext.HttpContextItemKey, out var cid)
+                ? cid?.ToString()
+                : CorrelationContext.Current;
+
             _logger.LogError(
                 ex,
-                "Unhandled exception occurred. Path: {Path}, Method: {Method}",
+                "Unhandled exception Path={Path} Method={Method} CorrelationId={CorrelationId}",
                 context.Request.Path,
-                context.Request.Method);
+                context.Request.Method,
+                correlationId);
 
-            await HandleExceptionAsync(context, ex);
+            await HandleExceptionAsync(context, ex, correlationId);
         }
     }
 
-    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private async Task HandleExceptionAsync(HttpContext context, Exception exception, string? correlationId)
     {
         context.Response.ContentType = "application/json";
 
@@ -57,7 +63,8 @@ public sealed class ExceptionHandlingMiddleware
             Message = message,
             Code = code,
             Timestamp = DateTime.UtcNow,
-            Path = context.Request.Path
+            Path = context.Request.Path,
+            CorrelationId = correlationId
         };
 
         if (_environment.IsDevelopment())

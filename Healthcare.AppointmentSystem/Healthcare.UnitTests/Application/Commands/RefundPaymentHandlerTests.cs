@@ -47,7 +47,7 @@ public class RefundPaymentHandlerTests
         _eventDispatcher = new DomainEventDispatcher(serviceProvider, mockLogger.Object);
 
         _paymentGatewayMock = new Mock<IPaymentGateway>();
-        _handler = new RefundPaymentHandler(_unitOfWork, _paymentGatewayMock.Object, _eventDispatcher);
+        _handler = new RefundPaymentHandler(_unitOfWork, _paymentGatewayMock.Object, _eventDispatcher, new Healthcare.Application.Observability.BusinessMetrics());
     }
 
     #region Helper Methods

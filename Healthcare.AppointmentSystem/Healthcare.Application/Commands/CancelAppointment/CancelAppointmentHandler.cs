@@ -1,4 +1,5 @@
 ﻿using Healthcare.Application.Common;
+using Healthcare.Application.Observability;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
 
@@ -11,13 +12,16 @@ public sealed class CancelAppointmentHandler : ICommandHandler<CancelAppointment
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDomainEventDispatcher _eventDispatcher;
+    private readonly IBusinessMetrics _metrics;
 
     public CancelAppointmentHandler(
         IUnitOfWork unitOfWork,
-        IDomainEventDispatcher eventDispatcher)
+        IDomainEventDispatcher eventDispatcher,
+        IBusinessMetrics metrics)
     {
         _unitOfWork = unitOfWork;
         _eventDispatcher = eventDispatcher;
+        _metrics = metrics;
     }
 
     public async Task<Result> HandleAsync(
@@ -51,6 +55,7 @@ public sealed class CancelAppointmentHandler : ICommandHandler<CancelAppointment
         await _eventDispatcher.DispatchAsync(appointment.DomainEvents, cancellationToken);
         appointment.ClearDomainEvents();
 
+        _metrics.AppointmentCancelled();
         return Result.Success();
     }
 }

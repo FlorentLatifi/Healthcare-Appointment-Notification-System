@@ -46,4 +46,9 @@ public sealed class ErrorResponse
     /// Gets or sets the request path that caused the error.
     /// </summary>
     public string? Path { get; set; }
+
+    /// <summary>
+    /// Correlation id for joining logs and distributed traces.
+    /// </summary>
+    public string? CorrelationId { get; set; }
 }
