@@ -3,18 +3,25 @@ using Microsoft.Extensions.Configuration;
 namespace Healthcare.Application.Ports.Authentication;
 
 /// <summary>
-/// JWT configuration settings (Application port / options).
-/// Bound at the composition root; used by Presentation and Adapters without
-/// Presentation depending on concrete adapter types.
+/// JWT configuration settings (Application options).
+/// Bound at the composition root; used by Presentation and Adapters.
 /// </summary>
 public sealed class JwtSettings
 {
     public string Secret { get; set; } = string.Empty;
     public string Issuer { get; set; } = string.Empty;
     public string Audience { get; set; } = string.Empty;
-    public int ExpirationInMinutes { get; set; } = 60;
+
+    /// <summary>Access-token lifetime. Prefer 5–15 minutes for PHI-bearing APIs.</summary>
+    public int ExpirationInMinutes { get; set; } = 15;
+
     public int RefreshTokenExpirationInDays { get; set; } = 7;
     public int ResetTokenExpirationInMinutes { get; set; } = 60;
+
+    /// <summary>
+    /// Allowed clock skew for lifetime validation (default 60s). Keep low to limit stolen-token window.
+    /// </summary>
+    public int ClockSkewSeconds { get; set; } = 60;
 
     /// <summary>
     /// Binds JWT settings from configuration. Fails fast if the secret is missing or too short.
@@ -40,9 +47,10 @@ public sealed class JwtSettings
             Secret = secret,
             Issuer = configuration["Jwt:Issuer"] ?? "HealthcareAPI",
             Audience = configuration["Jwt:Audience"] ?? "HealthcareClients",
-            ExpirationInMinutes = int.Parse(configuration["Jwt:ExpirationInMinutes"] ?? "60"),
+            ExpirationInMinutes = int.Parse(configuration["Jwt:ExpirationInMinutes"] ?? "15"),
             RefreshTokenExpirationInDays = int.Parse(configuration["Jwt:RefreshTokenExpirationInDays"] ?? "7"),
-            ResetTokenExpirationInMinutes = int.Parse(configuration["Jwt:ResetTokenExpirationInMinutes"] ?? "60")
+            ResetTokenExpirationInMinutes = int.Parse(configuration["Jwt:ResetTokenExpirationInMinutes"] ?? "60"),
+            ClockSkewSeconds = int.Parse(configuration["Jwt:ClockSkewSeconds"] ?? "60")
         };
     }
 }

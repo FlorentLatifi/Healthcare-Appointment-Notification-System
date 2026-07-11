@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Healthcare.Application.Ports.Authentication;
+using Healthcare.Adapters.Authentication;
 using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Application.Ports.Repositories;
@@ -185,17 +185,45 @@ public sealed class JwtAuthenticationServiceTests
         var revokeResult = await _service.RevokeTokenAsync(refreshToken);
 
         revokeResult.IsSuccess.Should().BeTrue();
+        revokeResult.Value.Should().Be(loginResult.Value.FamilyId);
 
         var refreshAttempt = await _service.RefreshTokenAsync(refreshToken);
         refreshAttempt.IsFailure.Should().BeTrue();
     }
 
     [Fact]
-    public async Task RevokeTokenAsync_InvalidToken_ReturnsSuccess()
+    public async Task RevokeTokenAsync_InvalidToken_ReturnsSuccessWithNullFamily()
     {
         var result = await _service.RevokeTokenAsync("non-existent-token");
 
         result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ValidateTokenAsync_ValidAccessToken_ReturnsUserId()
+    {
+        var user = CreateTestUser();
+        _userRepoMock.Setup(r => r.GetByUsernameAsync("testuser", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _passwordHasherMock.Setup(p => p.VerifyPassword("password", user.PasswordHash))
+            .Returns(true);
+
+        var login = await _service.LoginAsync("testuser", "password");
+        login.IsSuccess.Should().BeTrue();
+        var result = await _service.ValidateTokenAsync(login.Value.AccessToken);
+
+        result.IsSuccess.Should().BeTrue($"validation error: {result.Error}; token={login.Value.AccessToken}");
+        result.Value.Should().Be(user.Id);
+    }
+
+    [Fact]
+    public async Task ValidateTokenAsync_TamperedToken_ReturnsFailureWithoutThrowing()
+    {
+        var result = await _service.ValidateTokenAsync("not.a.jwt");
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Invalid or expired");
     }
 
     [Fact]

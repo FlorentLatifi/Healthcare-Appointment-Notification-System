@@ -310,40 +310,39 @@ public sealed class AuthController : ControllerBase
         _logger.LogInformation("Logout requested");
 
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
         var refreshToken = Request.Cookies["refreshToken"];
+        Guid? revokedFamilyId = null;
+
+        // Revoke current refresh token AND its rotation family (blocks sibling tokens on this device).
+        // Does NOT log out other devices — use DELETE /api/v1/sessions for that.
         if (!string.IsNullOrEmpty(refreshToken))
         {
-            var result = await _authService.RevokeTokenAsync(
-                refreshToken,
-                cancellationToken);
-
+            var result = await _authService.RevokeTokenAsync(refreshToken, cancellationToken);
             if (result.IsFailure)
             {
                 _logger.LogWarning("Logout failed: {Error}", result.Error);
-                return BadRequest(ApiResponse.ErrorResponse(
-                    result.Error,
-                    "Logout failed"));
+                return BadRequest(ApiResponse.ErrorResponse(result.Error, "Logout failed"));
             }
+
+            revokedFamilyId = result.Value;
         }
 
-        if (int.TryParse(userIdClaim, out var userId))
+        if (int.TryParse(userIdClaim, out var userId) && revokedFamilyId.HasValue)
         {
             var sessions = await _unitOfWork.UserSessions.GetActiveByUserIdAsync(userId, cancellationToken);
-            foreach (var session in sessions)
+            var current = sessions.FirstOrDefault(s => s.FamilyId == revokedFamilyId.Value);
+            if (current != null)
             {
-                session.Revoke();
-                await _unitOfWork.UserSessions.UpdateAsync(session, cancellationToken);
-            }
-            if (sessions.Count > 0)
-            {
+                current.Revoke();
+                await _unitOfWork.UserSessions.UpdateAsync(current, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
         }
 
         ClearRefreshCookie();
-        _logger.LogInformation("User logged out successfully");
-        return Ok(ApiResponse.SuccessResponse("Logout successful. Refresh token revoked."));
+        _logger.LogInformation("User logged out successfully (current session)");
+        return Ok(ApiResponse.SuccessResponse(
+            "Logout successful. This device session was revoked. Other devices remain signed in."));
     }
 
     [HttpGet("me")]

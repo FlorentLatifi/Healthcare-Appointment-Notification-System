@@ -1,10 +1,9 @@
+using Healthcare.Adapters.Authentication;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using System.Threading.RateLimiting;
 
 namespace Healthcare.Presentation.API.Configuration;
@@ -58,15 +57,19 @@ public static class SecurityServicesConfiguration
         })
         .AddJwtBearer(options =>
         {
-            options.TokenValidationParameters = new TokenValidationParameters
+            // MapInboundClaims=true (default): JWT short names (role, nameid) → ClaimTypes.* for [Authorize(Roles=…)].
+            options.MapInboundClaims = true;
+            options.RequireHttpsMetadata = !environment.IsDevelopment();
+            options.SaveToken = false;
+            options.TokenValidationParameters = JwtTokenValidation.CreateParameters(jwtSettings);
+            options.Events = new JwtBearerEvents
             {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = jwtSettings.Issuer,
-                ValidAudience = jwtSettings.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret))
+                OnAuthenticationFailed = context =>
+                {
+                    // Avoid leaking validation details to clients; middleware maps 401.
+                    context.NoResult();
+                    return Task.CompletedTask;
+                }
             };
         });
 

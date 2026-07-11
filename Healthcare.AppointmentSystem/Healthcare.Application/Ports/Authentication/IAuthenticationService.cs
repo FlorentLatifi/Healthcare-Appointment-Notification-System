@@ -38,9 +38,10 @@ public interface IAuthenticationService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Revokes a refresh token, logging the user out.
+    /// Revokes a refresh token and its rotation family (single-device logout).
+    /// Returns the revoked family id when known (for UserSession cleanup).
     /// </summary>
-    Task<Result> RevokeTokenAsync(
+    Task<Result<Guid?>> RevokeTokenAsync(
         string refreshToken,
         CancellationToken cancellationToken = default);
 

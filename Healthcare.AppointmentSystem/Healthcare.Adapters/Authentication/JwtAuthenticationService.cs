@@ -222,17 +222,34 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         }
     }
 
-    public async Task<Result> RevokeTokenAsync(
+    public async Task<Result<Guid?>> RevokeTokenAsync(
         string refreshToken,
         CancellationToken cancellationToken = default)
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                return Result<Guid?>.Success(null);
+
             var tokenHash = HashToken(refreshToken);
+
+            // Peek value before delete so we can revoke the entire rotation family.
+            var storedValue = await PeekRefreshTokenAsync(tokenHash);
             await DeleteRefreshTokenAsync(tokenHash);
 
-            _logger.LogInformation("Refresh token revoked");
-            return Result.Success();
+            if (storedValue != null)
+            {
+                var parts = storedValue.Split('|');
+                if (parts.Length == 2 && Guid.TryParse(parts[1], out var familyId))
+                {
+                    await RevokeFamilyInStoreAsync(familyId);
+                    _logger.LogInformation("Refresh token and family {FamilyId} revoked", familyId);
+                    return Result<Guid?>.Success(familyId);
+                }
+            }
+
+            _logger.LogInformation("Refresh token revoked (or was already absent)");
+            return Result<Guid?>.Success(null);
         }
         catch (Exception ex)
         {
@@ -241,40 +258,51 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         }
     }
 
-    public async Task<Result<int>> ValidateTokenAsync(
+    public Task<Result<int>> ValidateTokenAsync(
         string token,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_jwtSettings.Secret);
+            if (string.IsNullOrWhiteSpace(token))
+                return Task.FromResult(Result<int>.Failure("Invalid or expired token."));
 
-            var validationParameters = new TokenValidationParameters
+            // MapInboundClaims=true so short JWT claims (nameid, role) map to ClaimTypes.*.
+            var tokenHandler = new JwtSecurityTokenHandler { MapInboundClaims = true };
+
+            var principal = tokenHandler.ValidateToken(
+                token,
+                JwtTokenValidation.CreateParameters(_jwtSettings),
+                out var validatedToken);
+
+            // Defense in depth: must be a JWT signed with an allowed HMAC-SHA256 form.
+            if (validatedToken is not JwtSecurityToken jwt ||
+                (jwt.Header.Alg is not (
+                    SecurityAlgorithms.HmacSha256 or
+                    SecurityAlgorithms.HmacSha256Signature)))
             {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = _jwtSettings.Issuer,
-                ValidAudience = _jwtSettings.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(key)
-            };
-
-            var principal = tokenHandler.ValidateToken(token, validationParameters, out _);
-            var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier);
-
-            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
-            {
-                return Result<int>.Failure("Invalid token: User ID not found.");
+                return Task.FromResult(Result<int>.Failure("Invalid or expired token."));
             }
 
-            return Result<int>.Success(userId);
+            var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)
+                ?? principal.FindFirst(JwtRegisteredClaimNames.Sub)
+                ?? principal.FindFirst("nameid");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Task.FromResult(Result<int>.Failure("Invalid or expired token."));
+            }
+
+            return Task.FromResult(Result<int>.Success(userId));
+        }
+        catch (SecurityTokenException ex)
+        {
+            _logger.LogWarning(ex, "Access token validation failed");
+            return Task.FromResult(Result<int>.Failure("Invalid or expired token."));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Token validation failed");
-            throw;
+            _logger.LogWarning(ex, "Access token validation failed");
+            return Task.FromResult(Result<int>.Failure("Invalid or expired token."));
         }
     }
 
@@ -416,13 +444,16 @@ public sealed class JwtAuthenticationService : IAuthenticationService
     {
         var key = Encoding.UTF8.GetBytes(_jwtSettings.Secret);
         var signingKey = new SymmetricSecurityKey(key);
+        var now = DateTime.UtcNow;
 
         var claims = new List<Claim>
         {
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.Username),
             new(ClaimTypes.Email, user.Email.Value),
-            new(ClaimTypes.Role, user.Role.ToString())
+            new(ClaimTypes.Role, user.Role.ToString()),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))
         };
 
         if (user.PatientId.HasValue)
@@ -433,15 +464,17 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationInMinutes),
+            NotBefore = now,
+            IssuedAt = now,
+            Expires = now.AddMinutes(_jwtSettings.ExpirationInMinutes),
             Issuer = _jwtSettings.Issuer,
             Audience = _jwtSettings.Audience,
-            SigningCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256Signature)
+            // HS256 only — never RSA/alg:none
+            SigningCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
         };
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
-
         return tokenHandler.WriteToken(token);
     }
 
@@ -466,14 +499,13 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         var ttl = TimeSpan.FromDays(_jwtSettings.RefreshTokenExpirationInDays);
         var value = $"{userId}|{familyId}";
 
+        var storeKey = $"{RefreshTokenKeyPrefix}{tokenHash}";
+
         if (_redisDb != null)
         {
             try
             {
-                await _redisDb.StringSetAsync(
-                    $"{RefreshTokenKeyPrefix}{tokenHash}",
-                    value,
-                    ttl);
+                await _redisDb.StringSetAsync(storeKey, value, ttl);
             }
             catch (RedisConnectionException ex)
             {
@@ -488,11 +520,37 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         }
         else
         {
-            _memoryStore.TryAdd(tokenHash, value);
-            _ = ScheduleMemoryCleanup(tokenHash, ttl);
+            _memoryStore.TryAdd(storeKey, value);
+            _ = ScheduleMemoryCleanup(storeKey, ttl);
         }
 
         return refreshToken;
+    }
+
+    private async Task<string?> PeekRefreshTokenAsync(string tokenHash)
+    {
+        var key = $"{RefreshTokenKeyPrefix}{tokenHash}";
+
+        if (_redisDb != null)
+        {
+            try
+            {
+                var value = await _redisDb.StringGetAsync(key);
+                return value.HasValue ? value.ToString() : null;
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for refresh-token peek");
+                throw;
+            }
+            catch (RedisTimeoutException ex)
+            {
+                _logger.LogError(ex, "Redis unavailable for refresh-token peek");
+                throw;
+            }
+        }
+
+        return _memoryStore.TryGetValue(key, out var mem) ? mem : null;
     }
 
     private async Task<string?> ConsumeRefreshTokenAsync(string tokenHash)
@@ -501,22 +559,24 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         {
             try
             {
+                // Atomic rotate: GET active → SET consumed marker with TTL → DEL active.
+                // EX must use ARGV (TTL seconds), not KEYS — KEYS[3] was a production bug.
                 var script = @"
                     local val = redis.call('GET', KEYS[1])
                     if val then
-                        redis.call('SET', KEYS[2], val, 'EX', KEYS[3])
+                        redis.call('SET', KEYS[2], val, 'EX', tonumber(ARGV[1]))
                         redis.call('DEL', KEYS[1])
                         return val
                     end
                     return nil";
 
-                var ttl = _jwtSettings.RefreshTokenExpirationInDays * 86400;
+                var ttlSeconds = _jwtSettings.RefreshTokenExpirationInDays * 86400;
                 var key = $"{RefreshTokenKeyPrefix}{tokenHash}";
                 var consumedKey = $"{ConsumedTokenKeyPrefix}{tokenHash}";
                 var result = await _redisDb.ScriptEvaluateAsync(
                     script,
                     new RedisKey[] { key, consumedKey },
-                    new RedisValue[] { ttl });
+                    new RedisValue[] { ttlSeconds });
                 return result.IsNull ? null : (string?)result;
             }
             catch (RedisConnectionException ex)
@@ -531,10 +591,12 @@ public sealed class JwtAuthenticationService : IAuthenticationService
             }
         }
 
-        if (_memoryStore.TryRemove(tokenHash, out var value))
+        var memKey = $"{RefreshTokenKeyPrefix}{tokenHash}";
+        if (_memoryStore.TryRemove(memKey, out var value))
         {
-            _memoryStore.TryAdd($"{ConsumedTokenKeyPrefix}{tokenHash}", value);
-            _ = ScheduleMemoryCleanup($"{ConsumedTokenKeyPrefix}{tokenHash}",
+            var consumedKey = $"{ConsumedTokenKeyPrefix}{tokenHash}";
+            _memoryStore.TryAdd(consumedKey, value);
+            _ = ScheduleMemoryCleanup(consumedKey,
                 TimeSpan.FromDays(_jwtSettings.RefreshTokenExpirationInDays));
             return value;
         }
@@ -631,11 +693,12 @@ public sealed class JwtAuthenticationService : IAuthenticationService
 
     private async Task DeleteRefreshTokenAsync(string tokenHash)
     {
+        var key = $"{RefreshTokenKeyPrefix}{tokenHash}";
+
         if (_redisDb != null)
         {
             try
             {
-                var key = $"{RefreshTokenKeyPrefix}{tokenHash}";
                 await _redisDb.KeyDeleteAsync(key);
             }
             catch (RedisConnectionException ex)
@@ -651,7 +714,7 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         }
         else
         {
-            _memoryStore.TryRemove(tokenHash, out _);
+            _memoryStore.TryRemove(key, out _);
         }
     }
 

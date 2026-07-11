@@ -1,3 +1,4 @@
+using Healthcare.Adapters.Authentication;
 using FluentAssertions;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Adapters.Persistence.InMemory;
