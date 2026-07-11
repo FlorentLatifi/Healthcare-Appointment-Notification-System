@@ -4,9 +4,9 @@
 # This single workflow merges the former build-and-test.yml and
 # cd.yml into one file so that the dependency chain is explicit:
 #
-#   unit-tests ──→ integration-tests ──┐
-#                                       ├──→ build-and-push ──→ deploy
-#   frontend ───────────────────────────┘
+#   architecture-tests ──→ unit-tests ──→ integration-tests ──┐
+#                                                              ├──→ build-and-push ──→ deploy
+#   frontend ──────────────────────────────────────────────────┘
 #
 # A red test job blocks image building and deployment.  This is much
 # easier to reason about than coordinating two independent workflows
@@ -26,8 +26,41 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  architecture-tests:
+    runs-on: ubuntu-latest
+    name: Architecture governance (NetArchTest)
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln
+
+    - name: Build (Release)
+      run: dotnet build Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln --no-restore -c Release
+
+    - name: Run Architecture Tests
+      run: >
+        dotnet test Healthcare.AppointmentSystem/Healthcare.ArchitectureTests/Healthcare.ArchitectureTests.csproj
+        --no-build -c Release
+        --logger "trx;LogFileName=architecture-test-results.trx"
+        --logger "console;verbosity=normal"
+
+    - name: Upload architecture test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: architecture-test-results
+        path: '**/architecture-test-results.trx'
+
   unit-tests:
     runs-on: ubuntu-latest
+    needs: architecture-tests
 
     steps:
     - uses: actions/checkout@v4

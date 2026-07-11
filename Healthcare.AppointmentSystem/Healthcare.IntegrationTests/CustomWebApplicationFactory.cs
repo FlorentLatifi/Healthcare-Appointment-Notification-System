@@ -1,4 +1,4 @@
-using Healthcare.Adapters.Authentication;
+using Healthcare.Application.Ports.Authentication;
 using Healthcare.Adapters.Persistence.EntityFramework;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Domain.Entities;

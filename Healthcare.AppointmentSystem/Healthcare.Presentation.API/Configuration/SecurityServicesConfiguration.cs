@@ -1,4 +1,4 @@
-using Healthcare.Adapters.Authentication;
+using Healthcare.Application.Ports.Authentication;
 using Healthcare.Presentation.API.Responses;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;

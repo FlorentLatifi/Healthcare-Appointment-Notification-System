@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using Healthcare.Adapters.Authentication;
 using Healthcare.Application.Commands.ForgotPassword;
 using Healthcare.Application.Commands.ResetPassword;
 using Healthcare.Application.Common;

@@ -1,4 +1,4 @@
-﻿using Healthcare.Application.Common;
+using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;

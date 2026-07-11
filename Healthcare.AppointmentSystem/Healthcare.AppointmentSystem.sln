@@ -20,6 +20,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Healthcare.UnitTests", "Hea
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Healthcare.IntegrationTests", "Healthcare.IntegrationTests\Healthcare.IntegrationTests.csproj", "{E0C6FF1C-2386-4A33-B35F-72FDC51D1643}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Healthcare.ArchitectureTests", "Healthcare.ArchitectureTests\Healthcare.ArchitectureTests.csproj", "{4F4651F6-00D0-45BC-82BA-CEA848981259}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -102,6 +104,18 @@ Global
 		{E0C6FF1C-2386-4A33-B35F-72FDC51D1643}.Release|x64.Build.0 = Release|Any CPU
 		{E0C6FF1C-2386-4A33-B35F-72FDC51D1643}.Release|x86.ActiveCfg = Release|Any CPU
 		{E0C6FF1C-2386-4A33-B35F-72FDC51D1643}.Release|x86.Build.0 = Release|Any CPU
+		{4F4651F6-00D0-45BC-82BA-CEA848981259}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F4651F6-00D0-45BC-82BA-CEA848981259}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F4651F6-00D0-45BC-82BA-CEA848981259}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4F4651F6-00D0-45BC-82BA-CEA848981259}.Debug|x64.Build.0 = Debug|Any CPU
+		{4F4651F6-00D0-45BC-82BA-CEA848981259}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4F4651F6-00D0-45BC-82BA-CEA848981259}.Debug|x86.Build.0 = Debug|Any CPU
+		{4F4651F6-00D0-45BC-82BA-CEA848981259}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F4651F6-00D0-45BC-82BA-CEA848981259}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F4651F6-00D0-45BC-82BA-CEA848981259}.Release|x64.ActiveCfg = Release|Any CPU
+		{4F4651F6-00D0-45BC-82BA-CEA848981259}.Release|x64.Build.0 = Release|Any CPU
+		{4F4651F6-00D0-45BC-82BA-CEA848981259}.Release|x86.ActiveCfg = Release|Any CPU
+		{4F4651F6-00D0-45BC-82BA-CEA848981259}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

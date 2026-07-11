@@ -1,9 +1,11 @@
 using Microsoft.Extensions.Configuration;
 
-namespace Healthcare.Adapters.Authentication;
+namespace Healthcare.Application.Ports.Authentication;
 
 /// <summary>
-/// JWT configuration settings.
+/// JWT configuration settings (Application port / options).
+/// Bound at the composition root; used by Presentation and Adapters without
+/// Presentation depending on concrete adapter types.
 /// </summary>
 public sealed class JwtSettings
 {

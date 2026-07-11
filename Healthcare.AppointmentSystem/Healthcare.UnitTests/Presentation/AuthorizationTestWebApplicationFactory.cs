@@ -1,7 +1,7 @@
-using Healthcare.Adapters.Authentication;
+using Healthcare.Application.Ports.Authentication;
 using Healthcare.Adapters.Caching;
 using Healthcare.Adapters.Locking;
-using Healthcare.Adapters.Payments;
+using Healthcare.Application.Ports.Payments;
 using Healthcare.Adapters.Persistence.InMemory;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Application.Ports.Caching;

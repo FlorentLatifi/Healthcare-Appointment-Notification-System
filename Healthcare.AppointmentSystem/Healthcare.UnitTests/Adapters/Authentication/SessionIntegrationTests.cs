@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Healthcare.Adapters.Authentication;
+using Healthcare.Application.Ports.Authentication;
 using Healthcare.Adapters.Persistence.InMemory;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Application.Ports.Repositories;

@@ -1,22 +1,21 @@
-using Healthcare.Adapters.Persistence.EntityFramework;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Healthcare.Presentation.API.HealthChecks;
 
 /// <summary>
-/// Health check for database connectivity only — no business-data counts.
+/// Database connectivity health check without referencing EF / Adapters types.
+/// Uses the configured connection string only (composition root supplies config).
 /// </summary>
-public class DatabaseHealthCheck : IHealthCheck
+public sealed class DatabaseHealthCheck : IHealthCheck
 {
-    private readonly HealthcareDbContext _context;
+    private readonly string _connectionString;
     private readonly ILogger<DatabaseHealthCheck> _logger;
 
-    public DatabaseHealthCheck(
-        HealthcareDbContext context,
-        ILogger<DatabaseHealthCheck> logger)
+    public DatabaseHealthCheck(IConfiguration configuration, ILogger<DatabaseHealthCheck> logger)
     {
-        _context = context;
+        _connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
         _logger = logger;
     }
 
@@ -26,26 +25,18 @@ public class DatabaseHealthCheck : IHealthCheck
     {
         try
         {
-            var canConnect = await _context.Database.CanConnectAsync(cancellationToken);
-
-            if (!canConnect)
-            {
-                _logger.LogWarning("Database health check failed: Cannot connect");
-                return HealthCheckResult.Unhealthy("Cannot connect to database");
-            }
-
-            // Lightweight round-trip without reading application tables / row counts.
-            await _context.Database.ExecuteSqlRawAsync("SELECT 1", cancellationToken);
+            await using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT 1";
+            await command.ExecuteScalarAsync(cancellationToken);
 
             return HealthCheckResult.Healthy("Database is reachable.");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Database health check failed with exception");
-
-            return HealthCheckResult.Unhealthy(
-                "Database health check failed",
-                ex);
+            return HealthCheckResult.Unhealthy("Database health check failed", ex);
         }
     }
 }

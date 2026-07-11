@@ -1,6 +1,5 @@
 using System.Text;
 using Asp.Versioning;
-using Healthcare.Adapters.Payments;
 using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Payments;
 using Microsoft.AspNetCore.Authorization;

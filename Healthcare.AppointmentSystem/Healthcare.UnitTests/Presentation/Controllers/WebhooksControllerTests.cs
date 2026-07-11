@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using FluentAssertions;
-using Healthcare.Adapters.Payments;
+using Healthcare.Application.Ports.Payments;
 using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Payments;
 using Healthcare.Presentation.API.Controllers;
