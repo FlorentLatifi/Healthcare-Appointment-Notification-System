@@ -36,6 +36,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    env_file:
+      - path: ${CONFIG_ENV_FILE:-./config/staging.env}
+        required: false
+      - path: ${SECRETS_ENV_FILE:-./.env.secrets}
+        required: true
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Staging}
       ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=HealthcareDb_Staging;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=true;MultipleActiveResultSets=true"
@@ -44,11 +49,11 @@ services:
       Jwt__Audience: "HealthcareClients"
       Redis__ConnectionString: "redis:6379,abortConnect=false,connectTimeout=5000,syncTimeout=5000"
       Redis__InstanceName: "HealthcareApp:Staging:"
-      Stripe__SecretKey: ${STRIPE_SECRET_KEY}
-      Stripe__PublishableKey: ${STRIPE_PUBLISHABLE_KEY}
+      Stripe__SecretKey: ${STRIPE_SECRET_KEY:-}
+      Stripe__PublishableKey: ${STRIPE_PUBLISHABLE_KEY:-}
+      Stripe__WebhookSecret: ${STRIPE_WEBHOOK_SECRET:-}
       TrustedNetworks__0: 172.16.0.0/12
       AllowedOrigins__0: ${FRONTEND_URL:-http://localhost}
-      # Staging may seed demo data if explicitly enabled via env file
       Seeding__SeedDemoData: ${SEED_DEMO_DATA:-true}
       Seeding__AllowDemoDataOutsideDevelopment: ${ALLOW_DEMO_OUTSIDE_DEV:-true}
       Seeding__BootstrapAdmin__Enabled: ${BOOTSTRAP_ADMIN_ENABLED:-false}

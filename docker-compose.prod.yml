@@ -1,16 +1,24 @@
-# Production stack — secrets via .env.deploy (never commit).
-# Images must be fully qualified + immutable tags (SHA or semver).
+# ═══════════════════════════════════════════════════════════════════
+# Production stack (default for CI/CD)
+# ═══════════════════════════════════════════════════════════════════
+# Secrets:  .env.secrets   (mode 600, never commit)
+# Config:   config/production.env (non-secret, in git)
+# Images:   API_IMAGE / FRONTEND_IMAGE (immutable tags)
 #
-#   API_IMAGE=ghcr.io/org/repo/api:<tag>
-#   FRONTEND_IMAGE=ghcr.io/org/repo/frontend:<tag>
+#   docker compose --env-file .env.secrets --env-file config/production.env \
+#     -f docker-compose.prod.yml up -d
+#
+# Optional file-based Docker secrets:
+#   docker-compose.prod.with-file-secrets.yml
+# Full strategy: docs/secrets-management.md
+# ═══════════════════════════════════════════════════════════════════
 
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-    # No host ports — SQL is only reachable on the compose network.
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required in .env.secrets}
     expose:
       - "1433"
     volumes:
@@ -21,6 +29,8 @@ services:
       retries: 20
       start_period: 30s
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
   redis:
     image: redis:7-alpine
@@ -31,6 +41,8 @@ services:
       interval: 5s
       retries: 5
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
   api:
     image: ${API_IMAGE:?API_IMAGE is required}
@@ -40,17 +52,23 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    env_file:
+      - path: ${CONFIG_ENV_FILE:-./config/production.env}
+        required: false
+      - path: ${SECRETS_ENV_FILE:-./.env.secrets}
+        required: true
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=HealthcareDb;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=true;MultipleActiveResultSets=true"
-      Jwt__Secret: ${JWT_SECRET:?JWT_SECRET is required}
-      Jwt__Issuer: "HealthcareAPI"
-      Jwt__Audience: "HealthcareClients"
-      Redis__ConnectionString: "redis:6379,abortConnect=false,connectTimeout=5000,syncTimeout=5000"
-      Redis__InstanceName: "HealthcareApp:Prod:"
-      Stripe__SecretKey: ${STRIPE_SECRET_KEY}
-      Stripe__PublishableKey: ${STRIPE_PUBLISHABLE_KEY}
-      TrustedNetworks__0: 172.16.0.0/12
+      Jwt__Secret: ${JWT_SECRET:?JWT_SECRET is required in .env.secrets}
+      Jwt__Issuer: ${Jwt__Issuer:-HealthcareAPI}
+      Jwt__Audience: ${Jwt__Audience:-HealthcareClients}
+      Redis__ConnectionString: ${Redis__ConnectionString:-redis:6379,abortConnect=false,connectTimeout=5000,syncTimeout=5000}
+      Redis__InstanceName: ${Redis__InstanceName:-HealthcareApp:Prod:}
+      Stripe__SecretKey: ${STRIPE_SECRET_KEY:-}
+      Stripe__PublishableKey: ${STRIPE_PUBLISHABLE_KEY:-}
+      Stripe__WebhookSecret: ${STRIPE_WEBHOOK_SECRET:-}
+      TrustedNetworks__0: ${TrustedNetworks__0:-172.16.0.0/12}
       AllowedOrigins__0: ${FRONTEND_URL:-http://localhost}
       Seeding__SeedDemoData: "false"
       Seeding__AllowDemoDataOutsideDevelopment: "false"
@@ -69,6 +87,10 @@ services:
       retries: 12
       start_period: 40s
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
 
   frontend:
     image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}
@@ -79,6 +101,8 @@ services:
     ports:
       - "80:80"
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   sqlserver_data:

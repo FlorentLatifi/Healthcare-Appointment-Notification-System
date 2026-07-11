@@ -18,4 +18,7 @@ EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Docker
 COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "Healthcare.Presentation.API.dll"]
+# Optional Docker secrets → env (see docker-entrypoint.sh)
+COPY Healthcare.Presentation.API/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

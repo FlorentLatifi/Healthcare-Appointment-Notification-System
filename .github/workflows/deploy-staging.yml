@@ -91,12 +91,13 @@ jobs:
           fi
           chmod 644 ~/.ssh/known_hosts
 
-      - name: Materialize remote env file (secrets not on process argv)
+      - name: Materialize remote secrets file
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           FRONTEND_URL: ${{ vars.STAGING_FRONTEND_URL || 'http://localhost:8088' }}
           BOOTSTRAP_ADMIN_ENABLED: ${{ secrets.BOOTSTRAP_ADMIN_ENABLED || 'false' }}
           BOOTSTRAP_ADMIN_USERNAME: ${{ secrets.BOOTSTRAP_ADMIN_USERNAME || 'admin' }}
@@ -110,17 +111,18 @@ jobs:
             echo "JWT_SECRET=${JWT_SECRET}"
             echo "STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}"
             echo "STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}"
+            echo "STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}"
             echo "FRONTEND_URL=${FRONTEND_URL}"
             echo "BOOTSTRAP_ADMIN_ENABLED=${BOOTSTRAP_ADMIN_ENABLED}"
             echo "BOOTSTRAP_ADMIN_USERNAME=${BOOTSTRAP_ADMIN_USERNAME}"
             echo "BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL:-}"
             echo "BOOTSTRAP_ADMIN_PASSWORD=${BOOTSTRAP_ADMIN_PASSWORD:-}"
-            echo "ASPNETCORE_ENVIRONMENT=Staging"
             echo "SEED_DEMO_DATA=true"
             echo "ALLOW_DEMO_OUTSIDE_DEV=true"
-          } > /tmp/deploy.env
+          } > /tmp/env.secrets
+          bash scripts/validate-secrets-env.sh /tmp/env.secrets staging
 
-      - name: Upload compose, script, and env to host
+      - name: Upload compose, config, scripts, secrets to host
         env:
           SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
           SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
@@ -129,12 +131,15 @@ jobs:
           set -euo pipefail
           SSH=(ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes)
           SCP=(scp -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes)
-          "${SSH[@]}" "${SSH_USER}@${SSH_HOST}" "mkdir -p '${DEPLOY_PATH}/scripts'"
+          "${SSH[@]}" "${SSH_USER}@${SSH_HOST}" "mkdir -p '${DEPLOY_PATH}/scripts' '${DEPLOY_PATH}/config'"
           "${SCP[@]}" docker-compose.staging.yml "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/docker-compose.staging.yml"
-          "${SCP[@]}" scripts/remote-deploy.sh "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/scripts/remote-deploy.sh"
-          "${SCP[@]}" /tmp/deploy.env "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/.env.deploy"
-          "${SSH[@]}" "${SSH_USER}@${SSH_HOST}" "chmod 600 '${DEPLOY_PATH}/.env.deploy' && chmod 700 '${DEPLOY_PATH}/scripts/remote-deploy.sh'"
-          shred -u /tmp/deploy.env 2>/dev/null || rm -f /tmp/deploy.env
+          "${SCP[@]}" config/staging.env "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/config/staging.env"
+          "${SCP[@]}" scripts/remote-deploy.sh scripts/validate-secrets-env.sh \
+            "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/scripts/"
+          "${SCP[@]}" /tmp/env.secrets "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/.env.secrets"
+          "${SSH[@]}" "${SSH_USER}@${SSH_HOST}" \
+            "chmod 600 '${DEPLOY_PATH}/.env.secrets' && chmod 700 '${DEPLOY_PATH}/scripts/'*.sh"
+          shred -u /tmp/env.secrets 2>/dev/null || rm -f /tmp/env.secrets
 
       - name: Login to GHCR on remote and deploy
         env:
@@ -151,7 +156,6 @@ jobs:
           FRONTEND_IMAGE="${IMAGE_FRONTEND}:${IMAGE_TAG}"
           echo "Deploying API=$API_IMAGE FRONTEND=$FRONTEND_IMAGE"
 
-          # Pass token via remote stdin to avoid shell history retention where possible
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes \
             "${SSH_USER}@${SSH_HOST}" \
             "set -euo pipefail
@@ -159,7 +163,8 @@ jobs:
              echo '${GHCR_TOKEN}' | docker login ghcr.io -u '${GHCR_USER}' --password-stdin
              export API_IMAGE='${API_IMAGE}' FRONTEND_IMAGE='${FRONTEND_IMAGE}'
              export COMPOSE_FILE=docker-compose.staging.yml
-             export ENV_FILE=.env.deploy
+             export SECRETS_ENV_FILE=.env.secrets
+             export CONFIG_ENV_FILE=config/staging.env
              export HEALTH_URL='${HEALTH_URL}'
              export HEALTH_RETRIES=36
              export HEALTH_INTERVAL_SEC=5

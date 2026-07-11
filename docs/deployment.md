@@ -68,13 +68,15 @@ Create two environments under **Settings → Environments**:
 
 ## Secret handling practices
 
-1. **No secrets on SSH remote command lines for app config** — values are written to a local env file on the runner, `scp`’d to `.env.deploy` with mode `600`, then sourced by `scripts/remote-deploy.sh`.
-2. **SSH private keys** written to disk with `0600` and shredded after the job.
-3. **Known hosts pinned** in production (`DEPLOY_SSH_KNOWN_HOSTS`); staging warns if missing.
-4. **GHCR pull** uses `docker login --password-stdin` on the host; prefer a read-only PAT (`GHCR_PULL_TOKEN`) for long-lived hosts.
-5. **Immutable image tags** (12-char git SHA) — never deploy `:latest` for production rollbacks.
-6. **Stripe:** staging = test keys; production = live keys; never mix.
-7. **JWT / DB passwords** must differ between staging and production.
+Full strategy and vendor comparison: **[secrets-management.md](./secrets-management.md)**.
+
+1. **Layer A — GitHub Environments** store secrets (staging vs production isolation + approval).
+2. **Layer B — host `.env.secrets`** (mode `600`) is materialised at deploy time; non-secrets live in `config/production.env`.
+3. **No secrets on SSH remote command lines** — runner writes a file, `scp` to `.env.secrets`, then `remote-deploy.sh` runs compose with `--env-file`.
+4. **SSH keys** mode `0600`, shredded after the job; production requires **pinned** `DEPLOY_SSH_KNOWN_HOSTS`.
+5. **Validate before up:** `scripts/validate-secrets-env.sh`.
+6. **Immutable image tags**; Stripe test vs live never mixed; JWT/DB secrets differ per environment.
+7. **Optional:** Docker secret files via `docker-compose.prod.with-file-secrets.yml` + API `docker-entrypoint.sh`.
 
 ## Deploy strategy (health + rollback)
 
