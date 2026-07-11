@@ -10,6 +10,10 @@ RUN dotnet publish "Healthcare.Presentation.API/Healthcare.Presentation.API.cspr
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
+# curl used by compose healthchecks and ops probes
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Docker

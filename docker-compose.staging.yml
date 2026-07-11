@@ -1,8 +1,5 @@
-# Production stack — secrets via .env.deploy (never commit).
-# Images must be fully qualified + immutable tags (SHA or semver).
-#
-#   API_IMAGE=ghcr.io/org/repo/api:<tag>
-#   FRONTEND_IMAGE=ghcr.io/org/repo/frontend:<tag>
+# Staging stack — isolated from production (ports, Redis prefix, optional demo seed).
+# Secrets via .env.deploy. Images: API_IMAGE / FRONTEND_IMAGE (immutable tags).
 
 services:
   sqlserver:
@@ -10,11 +7,10 @@ services:
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-    # No host ports — SQL is only reachable on the compose network.
     expose:
       - "1433"
     volumes:
-      - sqlserver_data:/var/opt/mssql
+      - sqlserver_data_staging:/var/opt/mssql
     healthcheck:
       test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
       interval: 10s
@@ -41,27 +37,29 @@ services:
       redis:
         condition: service_healthy
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=HealthcareDb;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=true;MultipleActiveResultSets=true"
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Staging}
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=HealthcareDb_Staging;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=true;MultipleActiveResultSets=true"
       Jwt__Secret: ${JWT_SECRET:?JWT_SECRET is required}
       Jwt__Issuer: "HealthcareAPI"
       Jwt__Audience: "HealthcareClients"
       Redis__ConnectionString: "redis:6379,abortConnect=false,connectTimeout=5000,syncTimeout=5000"
-      Redis__InstanceName: "HealthcareApp:Prod:"
+      Redis__InstanceName: "HealthcareApp:Staging:"
       Stripe__SecretKey: ${STRIPE_SECRET_KEY}
       Stripe__PublishableKey: ${STRIPE_PUBLISHABLE_KEY}
       TrustedNetworks__0: 172.16.0.0/12
       AllowedOrigins__0: ${FRONTEND_URL:-http://localhost}
-      Seeding__SeedDemoData: "false"
-      Seeding__AllowDemoDataOutsideDevelopment: "false"
+      # Staging may seed demo data if explicitly enabled via env file
+      Seeding__SeedDemoData: ${SEED_DEMO_DATA:-true}
+      Seeding__AllowDemoDataOutsideDevelopment: ${ALLOW_DEMO_OUTSIDE_DEV:-true}
       Seeding__BootstrapAdmin__Enabled: ${BOOTSTRAP_ADMIN_ENABLED:-false}
       Seeding__BootstrapAdmin__Username: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
       Seeding__BootstrapAdmin__Email: ${BOOTSTRAP_ADMIN_EMAIL:-}
       Seeding__BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     ports:
-      - "8080:8080"
+      # Distinct from production 8080 so both can run on one host if needed
+      - "8081:8080"
     volumes:
-      - api_logs:/app/logs
+      - api_logs_staging:/app/logs
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health || exit 1"]
       interval: 10s
@@ -77,9 +75,9 @@ services:
       api:
         condition: service_healthy
     ports:
-      - "80:80"
+      - "8088:80"
     restart: unless-stopped
 
 volumes:
-  sqlserver_data:
-  api_logs:
+  sqlserver_data_staging:
+  api_logs_staging:

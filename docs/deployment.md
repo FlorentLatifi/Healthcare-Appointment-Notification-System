@@ -1,156 +1,152 @@
 # Deployment Guide
 
-## Hosting Assumption
+## Pipeline overview
 
-The CD pipeline assumes a **single VM with Docker Compose** as the hosting target.
-This matches the project's existing `docker-compose.yml` development pattern and
-avoids introducing a container orchestrator (Kubernetes, Nomad, etc.) without a
-documented operational need.
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `CI` | PR + push to `main` | Architecture, unit, integration, frontend tests |
+| `Build and Publish` | Green CI on `main`, tags `v*`, manual | Build images, **Trivy** scan, **SBOM**, push GHCR |
+| `Deploy Staging` | After main build (auto) or manual | Deploy immutable tags to staging |
+| `Deploy Production` | After `v*` tag build, or manual confirm | Deploy with environment approval + rollback |
 
-If the infrastructure changes to a clustered environment (Azure Container Apps,
-AWS ECS, GCP Cloud Run, or Kubernetes), the deployment step in `.github/workflows/ci.yml`
-must be adapted. The image-building phase (`build-and-push`) is provider-agnostic
-and should remain unchanged.
+```
+PR / main ──► CI ──► (main only) Build+Trivy+SBOM+Push ──► Staging deploy
+tag v*    ──► Build+Trivy+SBOM+Push ──► Production deploy (approval)
+```
 
-## Required Secrets (GitHub Actions)
+## GitHub Environments (required)
 
-Set these in the repository's **Settings → Secrets and variables → Actions**:
+Create two environments under **Settings → Environments**:
 
-| Secret | Description |
-|--------|-------------|
-| `DEPLOY_SSH_HOST` | Hostname or IP of the target VM |
-| `DEPLOY_SSH_USER` | SSH user (e.g., `deploy`) |
-| `DEPLOY_SSH_KEY` | SSH private key (ed25519 recommended) |
-| `DB_PASSWORD` | SQL Server SA password |
-| `JWT_SECRET` | JWT signing key (min 32 characters) |
-| `STRIPE_SECRET_KEY` | Stripe secret key (starts with `sk_live_` in production) |
-| `STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (starts with `pk_live_`) |
+### `staging`
 
-Optional:
+- **Deployment branches:** `main` (optional restriction)
+- **Secrets** (environment-scoped):
 
-| Secret | Description |
-|--------|-------------|
-| `DEPLOY_PATH` | Directory on the target VM (default: `/opt/healthcare`) |
-| `OTEL_ENDPOINT` | OpenTelemetry OTLP gRPC endpoint |
-| `BOOTSTRAP_ADMIN_ENABLED` | Set `true` **once** on first deploy to create the initial Admin |
-| `BOOTSTRAP_ADMIN_USERNAME` | Admin username (default `admin`) |
-| `BOOTSTRAP_ADMIN_EMAIL` | Admin email (required when bootstrap enabled) |
-| `BOOTSTRAP_ADMIN_PASSWORD` | Strong password (min 12 chars, upper/lower/digit/special). Required in Production |
+| Secret | Required | Description |
+|--------|----------|-------------|
+| `DEPLOY_SSH_HOST` | yes | Staging host |
+| `DEPLOY_SSH_USER` | yes | SSH user |
+| `DEPLOY_SSH_KEY` | yes | Private key (ed25519) |
+| `DEPLOY_SSH_KNOWN_HOSTS` | recommended | Output of `ssh-keyscan -H host` |
+| `DEPLOY_PATH` | no | Default `/opt/healthcare-staging` |
+| `DB_PASSWORD` | yes | SQL SA password (staging DB only) |
+| `JWT_SECRET` | yes | ≥ 32 chars; **different from production** |
+| `STRIPE_SECRET_KEY` | no | Prefer `sk_test_…` |
+| `STRIPE_PUBLISHABLE_KEY` | no | Prefer `pk_test_…` |
+| `GHCR_PULL_TOKEN` | no | PAT with `read:packages` if host cannot use GITHUB_TOKEN |
+| `GHCR_PULL_USER` | no | User for GHCR pull |
+| `BOOTSTRAP_ADMIN_*` | no | One-time admin bootstrap |
 
-### First-admin bootstrap (production)
+**Variables:**
 
-Do **not** ship default credentials. On a fresh production database:
+| Variable | Description |
+|----------|-------------|
+| `STAGING_PUBLIC_URL` | Shown on GitHub Environments UI |
+| `STAGING_FRONTEND_URL` | CORS / AllowedOrigins |
+| `STAGING_HEALTH_URL` | Default `http://127.0.0.1:8081/health` |
 
-1. Set secrets: `BOOTSTRAP_ADMIN_ENABLED=true`, `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD` (strong, unique).
-2. Deploy / start the API once — it creates the Admin only if no Admin role user exists.
-3. Log in, change the password if your process requires it, then set `BOOTSTRAP_ADMIN_ENABLED=false` (or unset) for subsequent deploys.
-4. Never set `Seeding__SeedDemoData=true` in Production; the app blocks demo seed there regardless.
+### `production`
 
-Demo doctor data is for Development / local Docker only.
+- **Required reviewers:** enable (1+ reviewers)
+- **Wait timer:** optional
+- **Deployment branches:** tags `v*` only (recommended)
+- **Secrets:** same names as staging but **different values**
+- **`DEPLOY_SSH_KNOWN_HOSTS`:** **required** (workflow fails without pin)
+- **`DEPLOY_PATH`:** default `/opt/healthcare`
 
-## Production network surface
+**Variables:**
 
-`docker-compose.prod.yml` does **not** publish SQL Server or Redis host ports.
-They are reachable only on the Docker network by the API container. Prefer
-SSH tunnels or a bastion for operational access instead of binding `1433`/`6379`
-publicly.
+| Variable | Description |
+|----------|-------------|
+| `PRODUCTION_PUBLIC_URL` | Public site URL |
+| `PRODUCTION_FRONTEND_URL` | CORS origin (**required**) |
+| `PRODUCTION_HEALTH_URL` | Default `http://127.0.0.1:8080/health` |
+| `PRODUCTION_PUBLIC_HEALTH_URL` | Optional external smoke URL |
 
-Public endpoints:
+> **Never** put production secrets in repository-level Actions secrets if staging can read them. Prefer environment secrets only.
 
-| Path | Auth | Purpose |
-|------|------|---------|
-| `/health` | Anonymous | Liveness (`{ "status": "Healthy" }` only) |
-| `/health/details` | **Admin** JWT | Dependency breakdown for operators |
-| `8080` (API), `80` (frontend) | App rules | Application traffic |
+## Secret handling practices
 
-## Seeding security summary
+1. **No secrets on SSH remote command lines for app config** — values are written to a local env file on the runner, `scp`’d to `.env.deploy` with mode `600`, then sourced by `scripts/remote-deploy.sh`.
+2. **SSH private keys** written to disk with `0600` and shredded after the job.
+3. **Known hosts pinned** in production (`DEPLOY_SSH_KNOWN_HOSTS`); staging warns if missing.
+4. **GHCR pull** uses `docker login --password-stdin` on the host; prefer a read-only PAT (`GHCR_PULL_TOKEN`) for long-lived hosts.
+5. **Immutable image tags** (12-char git SHA) — never deploy `:latest` for production rollbacks.
+6. **Stripe:** staging = test keys; production = live keys; never mix.
+7. **JWT / DB passwords** must differ between staging and production.
 
-| Concern | Production behavior |
-|---------|---------------------|
-| Demo doctors / sample data | Always blocked |
-| Hardcoded admin password | Removed; `Admin123!` rejected if supplied |
-| First admin | Optional one-time bootstrap via `BOOTSTRAP_ADMIN_*` secrets |
-| Migrations | Applied by `DatabaseSeeder` on every startup |
+## Deploy strategy (health + rollback)
 
-## Target VM Setup (one-time)
+`scripts/remote-deploy.sh`:
+
+1. Reads previous images from `.deploy-state` (if any)
+2. `docker compose pull` for `API_IMAGE` / `FRONTEND_IMAGE`
+3. `docker compose up -d`
+4. Polls `HEALTH_URL` until Healthy (configurable retries)
+5. **On failure:** redeploys previous images from `.deploy-state` and exits non-zero
+6. **On success:** updates `.deploy-state` (image refs only — no secrets)
+
+Compose files:
+
+| File | Ports | Notes |
+|------|-------|-------|
+| `docker-compose.staging.yml` | API `8081`, FE `8088` | Separate DB volume, Redis prefix `Staging:` |
+| `docker-compose.prod.yml` | API `8080`, FE `80` | No public SQL/Redis ports |
+
+## Trivy + SBOM
+
+On every image build:
+
+- **Trivy** scans OS + library vulns, secrets, misconfig  
+  - Fails the pipeline on **CRITICAL/HIGH** (unfixed ignored)
+  - SARIF uploaded to GitHub Code Scanning (when enabled)
+- **SPDX JSON SBOM** generated for API and frontend → Actions artifacts (90 days)
+- Buildx **provenance** (`mode=max`) + **SBOM attestations** pushed with images
+
+## Manual operations
 
 ```bash
-# 1. Install Docker + Docker Compose
+# Staging redeploy of a known good SHA
+gh workflow run "Deploy Staging" -f image_tag=abc123def456
+
+# Production manual (still requires environment approval)
+gh workflow run "Deploy Production" \
+  -f image_tag=abc123def456 \
+  -f confirm=deploy-production
+```
+
+## Target VM setup (one-time)
+
+```bash
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker "$USER"
 
-# 2. Clone the repository
-sudo mkdir -p /opt/healthcare
-sudo git clone https://github.com/FlorentLatifi/Healthcare-Appointment-Notification-System.git /opt/healthcare
+# Staging
+sudo mkdir -p /opt/healthcare-staging/scripts
+sudo chown -R deploy:deploy /opt/healthcare-staging
 
-# 3. Create .env with secrets (used only for local troubleshooting;
-#    the CD pipeline injects them via environment variables)
-cp /opt/healthcare/.env.example /opt/healthcare/.env
-# Edit .env with real secrets
+# Production
+sudo mkdir -p /opt/healthcare/scripts
+sudo chown -R deploy:deploy /opt/healthcare
+
+# Pin host key for GitHub secret DEPLOY_SSH_KNOWN_HOSTS
+ssh-keyscan -H your.staging.host
+ssh-keyscan -H your.production.host
 ```
 
-## Trusted Proxies / Networks
+## First-admin bootstrap (production)
 
-The API uses ASP.NET Core's `ForwardedHeadersMiddleware` to extract the real
-client IP from the `X-Forwarded-For` header set by nginx. Without this, every
-request appears to come from the nginx container's internal IP, and rate-limiting
-buckets all users together.
+1. Set environment secrets: `BOOTSTRAP_ADMIN_ENABLED=true`, email, strong password  
+2. Deploy once  
+3. Set `BOOTSTRAP_ADMIN_ENABLED=false` for subsequent deploys  
+4. Never enable demo seeding in production  
 
-`docker-compose.prod.yml` sets `TrustedNetworks__0: 172.16.0.0/12` on the `api`
-service, which covers the standard Docker bridge / Compose network IP range
-(`172.16.0.0` – `172.31.255.255`).
+## Public endpoints
 
-If you deploy behind a different reverse proxy or on a non-Docker network,
-override `TrustedNetworks` or `TrustedProxies` in the environment:
-
-| Variable | Example | Description |
-|----------|---------|-------------|
-| `TrustedNetworks__0` | `172.16.0.0/12` | CIDR block whose forwarded headers are trusted |
-| `TrustedProxies__0` | `10.0.1.5` | Specific proxy IP (use instead of a CIDR when the proxy has a fixed address) |
-
-You can specify multiple entries with `__0`, `__1`, etc.
-
-If neither is set in Production, the API logs a startup warning and rate-limiting
-will not distinguish real client IPs behind the proxy.
-
-## How the CI/CD Pipeline Works
-
-The pipeline is defined in a **single** workflow file (`.github/workflows/ci.yml`).
-This was a deliberate choice: keeping build, test, image, and deploy jobs in one
-file makes the dependency chain explicit and easy to reason about.
-
-```
-unit-tests ──→ integration-tests ──┐
-                                    ├──→ build-and-push ──→ deploy
-frontend ───────────────────────────┘
-```
-
-1. **Trigger:** Push to `main` (or tag `v*`), or pull request against `main`.
-2. **Tests run first** — on every trigger (push, PR, tag):
-   - **unit-tests:** .NET format check, build, unit tests (excluding `Category=Integration`), vulnerability audit.
-   - **integration-tests:** runs after unit-tests succeed; uses Testcontainers for Docker-dependent tests.
-   - **frontend:** Node.js lint, test, and build.
-3. **Gating:** If any test job fails, `build-and-push` is **never started** (its `needs:` block prevents it). A red CI run on `main` blocks deployment entirely.
-4. **Build & Push** (`push` to `main` or `v*` tag only — skipped on PRs):
-   - API Docker image → `ghcr.io/<owner>/<repo>/api:<tag>`
-   - Frontend Docker image → `ghcr.io/<owner>/<repo>/frontend:<tag>`
-   - Tags: `latest`, `<git-sha>`, `<semver>` (on `v*` tags)
-5. **Deploy** (`push` to `main` only):
-   - SSHes into the target VM using `DEPLOY_SSH_KEY`.
-   - Runs `docker compose -f docker-compose.prod.yml pull` to fetch updated images.
-   - Runs `docker compose -f docker-compose.prod.yml up -d --remove-orphans` to restart services.
-   - Prunes unused Docker images.
-
-## Manual Rollback
-
-```bash
-ssh deploy@$HOST
-cd /opt/healthcare
-# Pin a previous SHA
-export API_TAG=<previous-sha>
-export FRONTEND_TAG=<previous-sha>
-# Override the :latest tag with a specific SHA
-DB_PASSWORD='...' JWT_SECRET='...' \
-  API_TAG=$API_TAG FRONTEND_TAG=$FRONTEND_TAG \
-  docker compose -f docker-compose.prod.yml up -d
-```
+| Path | Auth | Purpose |
+|------|------|---------|
+| `/health` | Anonymous | Liveness |
+| `/health/details` | Admin JWT | Dependency breakdown |
+| `8080` / `80` (prod) | App rules | Traffic |
+| `8081` / `8088` (staging) | App rules | Staging traffic |

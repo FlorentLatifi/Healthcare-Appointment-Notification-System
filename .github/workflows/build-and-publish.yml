@@ -1,0 +1,316 @@
+# ────────────────────────────────────────────────────────────────────
+# Build, scan (Trivy), SBOM, publish to GHCR, then deploy
+# ────────────────────────────────────────────────────────────────────
+# - After green CI on main → build → staging deploy
+# - On version tags (v*) → build → production deploy (with env approval)
+# - Manual workflow_dispatch supported
+# ────────────────────────────────────────────────────────────────────
+
+name: Build and Publish
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build (branch, tag, or SHA). Empty = current SHA."
+        required: false
+        default: ""
+      deploy_staging:
+        description: "Deploy to staging after publish"
+        type: boolean
+        default: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_API: ghcr.io/${{ github.repository }}/api
+  IMAGE_FRONTEND: ghcr.io/${{ github.repository }}/frontend
+
+concurrency:
+  group: build-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  actions: read
+  id-token: write
+
+jobs:
+  guard:
+    name: Gate (CI green / tag / manual)
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.decide.outputs.should_build }}
+      git_ref: ${{ steps.decide.outputs.git_ref }}
+      is_main: ${{ steps.decide.outputs.is_main }}
+      is_tag: ${{ steps.decide.outputs.is_tag }}
+    steps:
+      - id: decide
+        run: |
+          set -euo pipefail
+          EVENT="${{ github.event_name }}"
+          echo "is_main=false" >> "$GITHUB_OUTPUT"
+          echo "is_tag=false" >> "$GITHUB_OUTPUT"
+
+          if [[ "$EVENT" == "workflow_run" ]]; then
+            CONCLUSION="${{ github.event.workflow_run.conclusion }}"
+            HEAD_BRANCH="${{ github.event.workflow_run.head_branch }}"
+            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+            if [[ "$CONCLUSION" != "success" || "$HEAD_BRANCH" != "main" ]]; then
+              echo "should_build=false" >> "$GITHUB_OUTPUT"
+              echo "git_ref=" >> "$GITHUB_OUTPUT"
+              echo "Skip: conclusion=$CONCLUSION branch=$HEAD_BRANCH"
+              exit 0
+            fi
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "git_ref=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+            echo "is_main=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT" == "push" ]]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "git_ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "is_tag=true" >> "$GITHUB_OUTPUT"
+          else
+            REF="${{ inputs.ref }}"
+            if [[ -z "$REF" ]]; then REF="${{ github.sha }}"; fi
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "git_ref=$REF" >> "$GITHUB_OUTPUT"
+            echo "is_main=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-scan-push:
+    name: Build, Trivy, SBOM, push
+    needs: guard
+    if: needs.guard.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.tags.outputs.sha_tag }}
+      api_image: ${{ steps.tags.outputs.api_image }}
+      frontend_image: ${{ steps.tags.outputs.frontend_image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.guard.outputs.git_ref }}
+
+      - name: Set image tags
+        id: tags
+        run: |
+          set -euo pipefail
+          SHA_SHORT=$(git rev-parse --short=12 HEAD)
+          echo "sha_tag=$SHA_SHORT" >> "$GITHUB_OUTPUT"
+          echo "full_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "api_image=${IMAGE_API}:${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=${IMAGE_FRONTEND}:${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+          echo "Building SHA $SHA_SHORT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── API ────────────────────────────────────────────────────
+      - name: Extract metadata (API)
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_API }}
+          tags: |
+            type=raw,value=${{ steps.tags.outputs.sha_tag }}
+            type=sha,format=long,prefix=sha-
+            type=raw,value=latest,enable=${{ needs.guard.outputs.is_main == 'true' }}
+            type=raw,value=staging,enable=${{ needs.guard.outputs.is_main == 'true' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build API (local load for scan)
+        uses: docker/build-push-action@v6
+        with:
+          context: Healthcare.AppointmentSystem
+          file: Healthcare.AppointmentSystem/Healthcare.Presentation.API/Dockerfile
+          load: true
+          tags: healthcare-api:scan
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Trivy vulnerability scan (API)
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: healthcare-api:scan
+          format: sarif
+          output: trivy-api.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          scanners: vuln,secret,misconfig
+
+      - name: Upload Trivy SARIF (API)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: trivy-api.sarif
+          category: trivy-api
+
+      - name: Generate SBOM SPDX (API)
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: healthcare-api:scan
+          format: spdx-json
+          output: sbom-api.spdx.json
+          exit-code: "0"
+          scanners: vuln
+
+      - name: Push API image (provenance + SBOM attestation)
+        id: build-api
+        uses: docker/build-push-action@v6
+        with:
+          context: Healthcare.AppointmentSystem
+          file: Healthcare.AppointmentSystem/Healthcare.Presentation.API/Dockerfile
+          push: true
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+          provenance: mode=max
+          sbom: true
+
+      # ── Frontend ───────────────────────────────────────────────
+      - name: Extract metadata (Frontend)
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_FRONTEND }}
+          tags: |
+            type=raw,value=${{ steps.tags.outputs.sha_tag }}
+            type=sha,format=long,prefix=sha-
+            type=raw,value=latest,enable=${{ needs.guard.outputs.is_main == 'true' }}
+            type=raw,value=staging,enable=${{ needs.guard.outputs.is_main == 'true' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build Frontend (local load for scan)
+        uses: docker/build-push-action@v6
+        with:
+          context: healthcare-frontend
+          build-args: |
+            VITE_API_BASE_URL=/api/v1
+          load: true
+          tags: healthcare-frontend:scan
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Trivy vulnerability scan (Frontend)
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: healthcare-frontend:scan
+          format: sarif
+          output: trivy-frontend.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          scanners: vuln,secret,misconfig
+
+      - name: Upload Trivy SARIF (Frontend)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: trivy-frontend.sarif
+          category: trivy-frontend
+
+      - name: Generate SBOM SPDX (Frontend)
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: healthcare-frontend:scan
+          format: spdx-json
+          output: sbom-frontend.spdx.json
+          exit-code: "0"
+          scanners: vuln
+
+      - name: Push Frontend image (provenance + SBOM attestation)
+        id: build-frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: healthcare-frontend
+          build-args: |
+            VITE_API_BASE_URL=/api/v1
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+          provenance: mode=max
+          sbom: true
+
+      - name: Upload SBOM + scan artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: supply-chain-${{ steps.tags.outputs.sha_tag }}
+          path: |
+            sbom-api.spdx.json
+            sbom-frontend.spdx.json
+            trivy-api.sarif
+            trivy-frontend.sarif
+          retention-days: 90
+
+      - name: Write image manifest
+        run: |
+          cat > image-manifest.json <<EOF
+          {
+            "git_sha": "${{ steps.tags.outputs.full_sha }}",
+            "tag": "${{ steps.tags.outputs.sha_tag }}",
+            "api_image": "${{ steps.tags.outputs.api_image }}",
+            "frontend_image": "${{ steps.tags.outputs.frontend_image }}",
+            "api_digest": "${{ steps.build-api.outputs.digest }}",
+            "frontend_digest": "${{ steps.build-frontend.outputs.digest }}",
+            "built_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          cat image-manifest.json
+
+      - name: Upload image manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-manifest-${{ steps.tags.outputs.sha_tag }}
+          path: image-manifest.json
+          retention-days: 90
+
+  deploy-staging:
+    name: Deploy staging
+    needs: [guard, build-scan-push]
+    if: >
+      always() &&
+      needs.build-scan-push.result == 'success' &&
+      needs.guard.outputs.is_main == 'true' &&
+      (github.event_name != 'workflow_dispatch' || inputs.deploy_staging)
+    uses: ./.github/workflows/deploy-staging.yml
+    with:
+      image_tag: ${{ needs.build-scan-push.outputs.image_tag }}
+    secrets: inherit
+
+  deploy-production:
+    name: Deploy production
+    needs: [guard, build-scan-push]
+    if: >
+      always() &&
+      needs.build-scan-push.result == 'success' &&
+      needs.guard.outputs.is_tag == 'true'
+    uses: ./.github/workflows/deploy-production.yml
+    with:
+      image_tag: ${{ needs.build-scan-push.outputs.image_tag }}
+    secrets: inherit

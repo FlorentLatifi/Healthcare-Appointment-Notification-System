@@ -1,0 +1,214 @@
+# ────────────────────────────────────────────────────────────────────
+# Deploy to PRODUCTION (reusable + manual + tag)
+# ────────────────────────────────────────────────────────────────────
+# Prefer: Build and Publish calls this after a successful tag build.
+# Manual: workflow_dispatch with confirmation string.
+#
+# Requires GitHub Environment "production" with required reviewers.
+# Secrets must be environment-scoped (never shared with staging).
+# ────────────────────────────────────────────────────────────────────
+
+name: Deploy Production
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        description: "Immutable image tag already published to GHCR"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Immutable image tag (short SHA or semver published to GHCR)"
+        required: true
+        type: string
+      confirm:
+        description: "Type deploy-production to confirm"
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  IMAGE_API: ghcr.io/${{ github.repository }}/api
+  IMAGE_FRONTEND: ghcr.io/${{ github.repository }}/frontend
+
+jobs:
+  validate:
+    name: Validate production deploy request
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.resolve.outputs.image_tag }}
+    steps:
+      - id: resolve
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ inputs.confirm }}" != "deploy-production" ]]; then
+              echo "::error::Confirmation string must be exactly: deploy-production"
+              exit 1
+            fi
+          fi
+          TAG="${{ inputs.image_tag }}"
+          if [[ -z "$TAG" ]]; then
+            echo "::error::image_tag is required"
+            exit 1
+          fi
+          echo "image_tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Production deploy tag=$TAG"
+
+  deploy:
+    name: Deploy to production
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_PUBLIC_URL }}
+    steps:
+      - name: Checkout deploy assets
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          missing=0
+          for v in SSH_HOST SSH_USER SSH_KEY DB_PASSWORD JWT_SECRET; do
+            if [[ -z "${!v}" ]]; then
+              echo "::error::Missing required secret: $v (Environment: production)"
+              missing=1
+            fi
+          done
+          if [[ ${#JWT_SECRET} -lt 32 ]]; then
+            echo "::error::JWT_SECRET must be at least 32 characters in production"
+            missing=1
+          fi
+          exit $missing
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [[ -z "${SSH_KNOWN_HOSTS:-}" ]]; then
+            echo "::error::DEPLOY_SSH_KNOWN_HOSTS is required for production (pin host keys)"
+            exit 1
+          fi
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Materialize remote env file
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          FRONTEND_URL: ${{ vars.PRODUCTION_FRONTEND_URL }}
+          BOOTSTRAP_ADMIN_ENABLED: ${{ secrets.BOOTSTRAP_ADMIN_ENABLED || 'false' }}
+          BOOTSTRAP_ADMIN_USERNAME: ${{ secrets.BOOTSTRAP_ADMIN_USERNAME || 'admin' }}
+          BOOTSTRAP_ADMIN_EMAIL: ${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}
+          BOOTSTRAP_ADMIN_PASSWORD: ${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${FRONTEND_URL:-}" ]]; then
+            echo "::error::Set repository/environment variable PRODUCTION_FRONTEND_URL"
+            exit 1
+          fi
+          umask 077
+          {
+            echo "DB_PASSWORD=${DB_PASSWORD}"
+            echo "JWT_SECRET=${JWT_SECRET}"
+            echo "STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}"
+            echo "STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}"
+            echo "FRONTEND_URL=${FRONTEND_URL}"
+            echo "BOOTSTRAP_ADMIN_ENABLED=${BOOTSTRAP_ADMIN_ENABLED}"
+            echo "BOOTSTRAP_ADMIN_USERNAME=${BOOTSTRAP_ADMIN_USERNAME}"
+            echo "BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL:-}"
+            echo "BOOTSTRAP_ADMIN_PASSWORD=${BOOTSTRAP_ADMIN_PASSWORD:-}"
+          } > /tmp/deploy.env
+
+      - name: Upload compose, script, and env to host
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/healthcare' }}
+        run: |
+          set -euo pipefail
+          SSH=(ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes)
+          SCP=(scp -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes)
+          "${SSH[@]}" "${SSH_USER}@${SSH_HOST}" "mkdir -p '${DEPLOY_PATH}/scripts'"
+          "${SCP[@]}" docker-compose.prod.yml "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/docker-compose.prod.yml"
+          "${SCP[@]}" scripts/remote-deploy.sh "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/scripts/remote-deploy.sh"
+          "${SCP[@]}" /tmp/deploy.env "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/.env.deploy"
+          "${SSH[@]}" "${SSH_USER}@${SSH_HOST}" "chmod 600 '${DEPLOY_PATH}/.env.deploy' && chmod 700 '${DEPLOY_PATH}/scripts/remote-deploy.sh'"
+          shred -u /tmp/deploy.env 2>/dev/null || rm -f /tmp/deploy.env
+
+      - name: Login to GHCR on remote and deploy
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/healthcare' }}
+          IMAGE_TAG: ${{ needs.validate.outputs.image_tag }}
+          GHCR_TOKEN: ${{ secrets.GHCR_PULL_TOKEN || secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ secrets.GHCR_PULL_USER || github.repository_owner }}
+          HEALTH_URL: ${{ vars.PRODUCTION_HEALTH_URL || 'http://127.0.0.1:8080/health' }}
+        run: |
+          set -euo pipefail
+          API_IMAGE="${IMAGE_API}:${IMAGE_TAG}"
+          FRONTEND_IMAGE="${IMAGE_FRONTEND}:${IMAGE_TAG}"
+          echo "Production deploy API=$API_IMAGE FRONTEND=$FRONTEND_IMAGE"
+
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes \
+            "${SSH_USER}@${SSH_HOST}" \
+            "set -euo pipefail
+             cd '${DEPLOY_PATH}'
+             echo '${GHCR_TOKEN}' | docker login ghcr.io -u '${GHCR_USER}' --password-stdin
+             export API_IMAGE='${API_IMAGE}' FRONTEND_IMAGE='${FRONTEND_IMAGE}'
+             export COMPOSE_FILE=docker-compose.prod.yml
+             export ENV_FILE=.env.deploy
+             export HEALTH_URL='${HEALTH_URL}'
+             export HEALTH_RETRIES=40
+             export HEALTH_INTERVAL_SEC=5
+             bash ./scripts/remote-deploy.sh
+             docker logout ghcr.io || true
+            "
+
+      - name: Post-deploy smoke (external URL optional)
+        env:
+          PUBLIC_HEALTH: ${{ vars.PRODUCTION_PUBLIC_HEALTH_URL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${PUBLIC_HEALTH:-}" ]]; then
+            echo "PRODUCTION_PUBLIC_HEALTH_URL not set — skipping external smoke"
+            exit 0
+          fi
+          for i in $(seq 1 20); do
+            if curl -fsS --max-time 10 "$PUBLIC_HEALTH" | grep -Eqi 'Healthy'; then
+              echo "Public health OK"
+              exit 0
+            fi
+            sleep 6
+          done
+          echo "::error::Public health check failed at $PUBLIC_HEALTH"
+          exit 1
+
+      - name: Cleanup local SSH key
+        if: always()
+        run: shred -u ~/.ssh/deploy_key 2>/dev/null || rm -f ~/.ssh/deploy_key
