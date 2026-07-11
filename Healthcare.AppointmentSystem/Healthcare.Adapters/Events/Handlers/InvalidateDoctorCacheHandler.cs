@@ -7,14 +7,17 @@ namespace Healthcare.Adapters.Events.Handlers;
 
 public sealed class InvalidateDoctorCacheHandler : IDomainEventHandler<DoctorCacheInvalidationNeededEvent>
 {
-    private readonly IDoctorCacheService _cacheService;
+    private readonly IDoctorCacheService _doctorCache;
+    private readonly IAvailabilityCacheService _availabilityCache;
     private readonly ILogger<InvalidateDoctorCacheHandler> _logger;
 
     public InvalidateDoctorCacheHandler(
-        IDoctorCacheService cacheService,
+        IDoctorCacheService doctorCache,
+        IAvailabilityCacheService availabilityCache,
         ILogger<InvalidateDoctorCacheHandler> logger)
     {
-        _cacheService = cacheService;
+        _doctorCache = doctorCache;
+        _availabilityCache = availabilityCache;
         _logger = logger;
     }
 
@@ -23,9 +26,12 @@ public sealed class InvalidateDoctorCacheHandler : IDomainEventHandler<DoctorCac
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
-            "Invalidating doctor cache due to event {EventId}",
-            domainEvent.EventId);
+            "Invalidating doctor cache (DoctorId={DoctorId}, EventId={EventId})",
+            domainEvent.DoctorId, domainEvent.EventId);
 
-        await _cacheService.InvalidateAllAsync(cancellationToken);
+        await _doctorCache.InvalidateDoctorAsync(domainEvent.DoctorId, cancellationToken);
+
+        if (domainEvent.DoctorId is int id)
+            await _availabilityCache.InvalidateDoctorAsync(id, cancellationToken);
     }
 }

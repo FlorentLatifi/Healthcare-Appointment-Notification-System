@@ -41,7 +41,7 @@ public sealed class DeactivateDoctorHandler : ICommandHandler<DeactivateDoctorCo
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _eventDispatcher.DispatchAsync(
-            new DoctorCacheInvalidationNeededEvent(), cancellationToken);
+            new DoctorCacheInvalidationNeededEvent(doctor.Id), cancellationToken);
 
         return Result.Success();
     }

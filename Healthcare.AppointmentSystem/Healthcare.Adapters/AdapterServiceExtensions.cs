@@ -102,11 +102,49 @@ public static class AdapterServiceExtensions
             return ConnectionMultiplexer.Connect(configOptions);
         });
 
-        // Register distributed lock service
-        services.AddScoped<IDistributedLockService, RedisDistributedLockService>();
+        // Singleton: lock service is thread-safe and only depends on the multiplexer.
+        services.AddSingleton<IDistributedLockService, RedisDistributedLockService>();
 
         return services;
     }
+
+    /// <summary>
+    /// Registers cache-aside services (generic cache + doctor catalog + availability).
+    /// </summary>
+    public static IServiceCollection AddHealthcareCaching(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        bool useRedis)
+    {
+        services.AddSingleton(BindCacheSettings(configuration));
+
+        if (useRedis)
+            services.AddSingleton<ICacheService, RedisCacheService>();
+        else
+            services.AddSingleton<ICacheService, InMemoryCacheService>();
+
+        services.AddSingleton<IDoctorCacheService, DoctorCacheService>();
+        services.AddSingleton<IAvailabilityCacheService, AvailabilityCacheService>();
+
+        return services;
+    }
+
+    private static CacheSettings BindCacheSettings(IConfiguration configuration)
+    {
+        var section = configuration.GetSection(CacheSettings.SectionName);
+        return new CacheSettings
+        {
+            Enabled = !bool.TryParse(section["Enabled"], out var enabled) || enabled,
+            DefaultTtlSeconds = int.TryParse(section["DefaultTtlSeconds"], out var d) ? d : 300,
+            DoctorCatalogTtlSeconds = int.TryParse(section["DoctorCatalogTtlSeconds"], out var c) ? c : 300,
+            DoctorScheduleTtlSeconds = int.TryParse(section["DoctorScheduleTtlSeconds"], out var s) ? s : 1800,
+            AvailabilityTtlSeconds = int.TryParse(section["AvailabilityTtlSeconds"], out var a) ? a : 60,
+            StampedeLockSeconds = int.TryParse(section["StampedeLockSeconds"], out var sl) ? sl : 10,
+            StampedeWaitAttempts = int.TryParse(section["StampedeWaitAttempts"], out var sw) ? sw : 5,
+            StampedeWaitBaseDelayMs = int.TryParse(section["StampedeWaitBaseDelayMs"], out var sd) ? sd : 40,
+        };
+    }
+
     /// <summary>
     /// Registers ALL adapters with in-memory persistence and console notifications.
     /// </summary>
@@ -171,8 +209,24 @@ public static class AdapterServiceExtensions
             return ConnectionMultiplexer.Connect(configOptions);
         });
 
-        // Doctor Cache (in-memory for dev/test)
-        services.AddSingleton<IDoctorCacheService, InMemoryDoctorCacheService>();
+        services.AddSingleton(provider =>
+        {
+            var config = provider.GetRequiredService<IConfiguration>();
+            return new RedisSettings
+            {
+                ConnectionString = config.GetSection("Redis")["ConnectionString"] ?? "localhost:6379",
+                InstanceName = config.GetSection("Redis")["InstanceName"] ?? "HealthcareApp:",
+                DefaultLockExpirationSeconds = 30
+            };
+        });
+        services.AddSingleton(provider =>
+        {
+            var config = provider.GetRequiredService<IConfiguration>();
+            return BindCacheSettings(config);
+        });
+        services.AddSingleton<ICacheService, InMemoryCacheService>();
+        services.AddSingleton<IDoctorCacheService, DoctorCacheService>();
+        services.AddSingleton<IAvailabilityCacheService, AvailabilityCacheService>();
 
         return services;
     }
@@ -297,11 +351,13 @@ public static class AdapterServiceExtensions
         services.AddSingleton<ITimeProvider>(timeProvider);
 
         services.AddSingleton<IDistributedLockService, InMemoryLockService>();
+        services.AddSingleton(new CacheSettings());
+        services.AddSingleton<ICacheService, InMemoryCacheService>();
+        services.AddSingleton<IDoctorCacheService, DoctorCacheService>();
+        services.AddSingleton<IAvailabilityCacheService, AvailabilityCacheService>();
 
         return services;
     }
-
-    // ADD THIS METHOD to AdapterServiceExtensions.cs
 
     /// <summary>
     /// Registers Stripe payment gateway.
@@ -435,11 +491,9 @@ public static class AdapterServiceExtensions
         // Time Provider
         services.AddSingleton<ITimeProvider, SystemTimeProvider>();
 
-        // Redis Distributed Locking
+        // Redis Distributed Locking + cache-aside (catalog, schedule, availability)
         services.AddRedisDistributedLocking(configuration);
-
-        // Doctor Cache (Redis via IConnectionMultiplexer)
-        services.AddSingleton<IDoctorCacheService, RedisDoctorCacheService>();
+        services.AddHealthcareCaching(configuration, useRedis: true);
 
         return services;
     }
@@ -481,9 +535,19 @@ public static class AdapterServiceExtensions
         services.AddScoped<IDomainEventHandler<PaymentRefundedEvent>,
             LogPaymentRefundedHandler>();
 
-        // Doctor Cache Invalidation Handlers
+        // Doctor / availability cache invalidation
         services.AddScoped<IDomainEventHandler<DoctorCacheInvalidationNeededEvent>,
             InvalidateDoctorCacheHandler>();
+        services.AddScoped<IDomainEventHandler<AppointmentCreatedEvent>,
+            InvalidateAvailabilityCacheOnCreatedHandler>();
+        services.AddScoped<IDomainEventHandler<AppointmentCancelledEvent>,
+            InvalidateAvailabilityCacheOnCancelledHandler>();
+        services.AddScoped<IDomainEventHandler<AppointmentConfirmedEvent>,
+            InvalidateAvailabilityCacheOnConfirmedHandler>();
+        services.AddScoped<IDomainEventHandler<AppointmentNoShowEvent>,
+            InvalidateAvailabilityCacheOnNoShowHandler>();
+        services.AddScoped<IDomainEventHandler<AppointmentCompletedEvent>,
+            InvalidateAvailabilityCacheOnCompletedHandler>();
 
         // Read-Access Audit Handlers
         services.AddScoped<IDomainEventHandler<PatientRecordAccessedEvent>,

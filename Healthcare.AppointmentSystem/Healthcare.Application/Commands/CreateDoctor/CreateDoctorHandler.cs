@@ -106,7 +106,7 @@ public sealed class CreateDoctorHandler : ICommandHandler<CreateDoctorCommand, R
         }
 
         await _eventDispatcher.DispatchAsync(
-            new DoctorCacheInvalidationNeededEvent(), cancellationToken);
+            new DoctorCacheInvalidationNeededEvent(doctor.Id), cancellationToken);
 
         return Result<int>.Success(doctor.Id);
     }

@@ -1,4 +1,5 @@
 using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Caching;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Locking;
 using Healthcare.Application.Ports.Repositories;
@@ -70,9 +71,8 @@ public sealed class BookAppointmentHandler
                 $"Invalid appointment time: {ex.Message}");
         }
 
-        var lockKey =
-            $"appointment:doctor:{doctor.Id}:" +
-            $"time:{scheduledTime.Value:yyyyMMddHHmm}";
+        // Logical lock key — Redis adapter prefixes with InstanceName.
+        var lockKey = CacheKeys.AppointmentBookingLock(doctor.Id, scheduledTime.Value);
 
         await using var lockHandle = await _lockService.AcquireLockAsync(
             lockKey,

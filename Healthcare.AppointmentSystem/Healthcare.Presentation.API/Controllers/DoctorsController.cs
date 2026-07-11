@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using Healthcare.Application.Commands.CreateDoctor;
 using Healthcare.Application.Commands.DeactivateDoctor;
 using Healthcare.Application.Common;
@@ -6,6 +6,7 @@ using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Caching;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
+using Healthcare.Domain.Enums;
 using Healthcare.Presentation.API.Requests;
 using Healthcare.Presentation.API.Resources;
 using Healthcare.Presentation.API.Authorization;
@@ -26,7 +27,8 @@ public sealed class DoctorsController : ControllerBase
     private readonly ICommandHandler<CreateDoctorCommand, Result<int>> _createDoctorHandler;
     private readonly ICommandHandler<DeactivateDoctorCommand, Result> _deactivateDoctorHandler;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IDoctorCacheService _cache;
+    private readonly IDoctorCacheService _doctorCache;
+    private readonly IAvailabilityCacheService _availabilityCache;
     private readonly IStringLocalizer<Messages> _localizer;
     private readonly ILogger<DoctorsController> _logger;
 
@@ -34,14 +36,16 @@ public sealed class DoctorsController : ControllerBase
         ICommandHandler<CreateDoctorCommand, Result<int>> createDoctorHandler,
         ICommandHandler<DeactivateDoctorCommand, Result> deactivateDoctorHandler,
         IUnitOfWork unitOfWork,
-        IDoctorCacheService cache,
+        IDoctorCacheService doctorCache,
+        IAvailabilityCacheService availabilityCache,
         IStringLocalizer<Messages> localizer,
         ILogger<DoctorsController> logger)
     {
         _createDoctorHandler = createDoctorHandler;
         _deactivateDoctorHandler = deactivateDoctorHandler;
         _unitOfWork = unitOfWork;
-        _cache = cache;
+        _doctorCache = doctorCache;
+        _availabilityCache = availabilityCache;
         _localizer = localizer;
         _logger = logger;
     }
@@ -87,7 +91,10 @@ public sealed class DoctorsController : ControllerBase
             ApiResponse<int>.SuccessResponse(result.Value, "Doctor created successfully"));
     }
 
-    [HttpGet("{id}")]
+    /// <summary>
+    /// Cache-aside: doctor by id (catalog TTL). Misses load from DB with stampede protection.
+    /// </summary>
+    [HttpGet("{id:int}")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<DoctorDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -95,9 +102,16 @@ public sealed class DoctorsController : ControllerBase
     {
         _logger.LogInformation("Retrieving doctor {DoctorId}", id);
 
-        var doctor = await _unitOfWork.Doctors.GetByIdAsync(id, cancellationToken);
+        var dto = await _doctorCache.GetDoctorByIdAsync(
+            id,
+            async ct =>
+            {
+                var doctor = await _unitOfWork.Doctors.GetByIdAsync(id, ct);
+                return doctor is null ? null : MapToDto(doctor);
+            },
+            cancellationToken);
 
-        if (doctor == null)
+        if (dto is null)
         {
             _logger.LogWarning("Doctor {DoctorId} not found", id);
             return NotFound(ApiResponse<DoctorDto>.ErrorResponse(
@@ -105,11 +119,98 @@ public sealed class DoctorsController : ControllerBase
                 _localizer["DoctorNotFound"]));
         }
 
-        var dto = MapToDto(doctor);
         return Ok(ApiResponse<DoctorDto>.SuccessResponse(dto));
     }
 
-    [HttpDelete("{id}")]
+    /// <summary>
+    /// Weekly schedule (working hours) — longer TTL; invalidated with doctor catalog events.
+    /// </summary>
+    [HttpGet("{id:int}/schedule")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<DoctorScheduleDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetDoctorSchedule(int id, CancellationToken cancellationToken)
+    {
+        var schedule = await _doctorCache.GetScheduleAsync(
+            id,
+            async ct =>
+            {
+                var doctor = await _unitOfWork.Doctors.GetByIdAsync(id, ct);
+                return doctor is null ? null : MapToScheduleDto(doctor);
+            },
+            cancellationToken);
+
+        if (schedule is null)
+        {
+            return NotFound(ApiResponse<DoctorScheduleDto>.ErrorResponse(
+                _localizer["DoctorNotFoundWithId", id],
+                _localizer["DoctorNotFound"]));
+        }
+
+        return Ok(ApiResponse<DoctorScheduleDto>.SuccessResponse(schedule));
+    }
+
+    /// <summary>
+    /// Day-level booked slots (short TTL). Not authoritative for booking — writes always re-check DB under lock.
+    /// </summary>
+    [HttpGet("{id:int}/availability")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<DoctorDayAvailabilityDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetDoctorAvailability(
+        int id,
+        [FromQuery] DateOnly? date,
+        CancellationToken cancellationToken)
+    {
+        var day = date ?? DateOnly.FromDateTime(DateTime.UtcNow.Date);
+
+        var doctorExists = await _doctorCache.GetDoctorByIdAsync(
+            id,
+            async ct =>
+            {
+                var doctor = await _unitOfWork.Doctors.GetByIdAsync(id, ct);
+                return doctor is null ? null : MapToDto(doctor);
+            },
+            cancellationToken);
+
+        if (doctorExists is null)
+        {
+            return NotFound(ApiResponse<DoctorDayAvailabilityDto>.ErrorResponse(
+                _localizer["DoctorNotFoundWithId", id],
+                _localizer["DoctorNotFound"]));
+        }
+
+        var availability = await _availabilityCache.GetDayAsync(
+            id,
+            day,
+            async ct =>
+            {
+                var appointments = await _unitOfWork.Appointments.GetByDoctorAndDateAsync(
+                    id, day.ToDateTime(TimeOnly.MinValue), ct);
+
+                return new DoctorDayAvailabilityDto
+                {
+                    DoctorId = id,
+                    Date = day,
+                    CachedAtUtc = DateTime.UtcNow,
+                    BookedSlots = appointments
+                        .Where(a => a.Status is not AppointmentStatus.Cancelled and not AppointmentStatus.NoShow)
+                        .Select(a => new BookedSlotDto
+                        {
+                            AppointmentId = a.Id,
+                            StartUtc = a.ScheduledTime.Value,
+                            Status = a.Status.ToString()
+                        })
+                        .OrderBy(s => s.StartUtc)
+                        .ToList()
+                };
+            },
+            cancellationToken);
+
+        return Ok(ApiResponse<DoctorDayAvailabilityDto>.SuccessResponse(availability!));
+    }
+
+    [HttpDelete("{id:int}")]
     [Authorize(Roles = AppRoles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
@@ -134,16 +235,7 @@ public sealed class DoctorsController : ControllerBase
     }
 
     /// <summary>
-    /// Retrieves a paginated list of all doctors using DB-level pagination.
-    ///
-    /// CACHING STRATEGY: Unlike the previous approach (which cached the entire list
-    /// in IDoctorCacheService and paged in-memory), this endpoint delegates pagination
-    /// to the repository layer for DB-level Skip/Take. This matches the pattern used by
-    /// Appointments, Patients, and Payments controllers.
-    ///
-    /// IDoctorCacheService is retained for potential future use (e.g., individual page
-    /// caching or hot-list caching), and the InvalidateDoctorCacheHandler still clears
-    /// it on domain events to keep the option viable.
+    /// Cache-aside paginated list. Keys versioned by generation so invalidation is O(1).
     /// </summary>
     [HttpGet]
     [AllowAnonymous]
@@ -153,28 +245,25 @@ public sealed class DoctorsController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Retrieving doctors - Page: {Page}, Size: {Size}", pageNumber, pageSize);
+        NormalizePaging(ref pageNumber, ref pageSize);
 
-        if (pageNumber < 1) pageNumber = 1;
-        if (pageSize < 1) pageSize = 20;
-        if (pageSize > 100) pageSize = 100;
-
-        var pagedResult = await _unitOfWork.Doctors.GetPagedAsync(pageNumber, pageSize, cancellationToken);
-        var dtos = pagedResult.Items.Select(MapToDto).ToList();
-        var pagedDtos = new PagedResult<DoctorDto>(dtos, pagedResult.PageNumber, pagedResult.PageSize, pagedResult.TotalCount);
+        var pagedDtos = await _doctorCache.GetDoctorPageAsync(
+            CacheKeys.DoctorListFilterAll,
+            pageNumber,
+            pageSize,
+            async ct =>
+            {
+                var paged = await _unitOfWork.Doctors.GetPagedAsync(pageNumber, pageSize, ct);
+                var items = paged.Items.Select(MapToDto).ToList();
+                return new PagedResult<DoctorDto>(items, paged.PageNumber, paged.PageSize, paged.TotalCount);
+            },
+            cancellationToken);
 
         return Ok(ApiResponse<PagedResult<DoctorDto>>.SuccessResponse(
             pagedDtos,
             $"Retrieved page {pagedDtos.PageNumber} of {pagedDtos.TotalPages} ({pagedDtos.Items.Count()} items)"));
     }
 
-    /// <summary>
-    /// Retrieves a paginated list of active doctors using DB-level pagination.
-    ///
-    /// CACHING STRATEGY: Same as GetAllDoctors — DB-level pagination via the
-    /// repository layer, bypassing IDoctorCacheService for consistency with the
-    /// other listing endpoints.
-    /// </summary>
     [HttpGet("active")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
@@ -183,28 +272,25 @@ public sealed class DoctorsController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Retrieving active doctors - Page: {Page}, Size: {Size}", pageNumber, pageSize);
+        NormalizePaging(ref pageNumber, ref pageSize);
 
-        if (pageNumber < 1) pageNumber = 1;
-        if (pageSize < 1) pageSize = 20;
-        if (pageSize > 100) pageSize = 100;
-
-        var pagedResult = await _unitOfWork.Doctors.GetPagedActiveAsync(pageNumber, pageSize, cancellationToken);
-        var dtos = pagedResult.Items.Select(MapToDto).ToList();
-        var pagedDtos = new PagedResult<DoctorDto>(dtos, pagedResult.PageNumber, pagedResult.PageSize, pagedResult.TotalCount);
+        var pagedDtos = await _doctorCache.GetDoctorPageAsync(
+            CacheKeys.DoctorListFilterActive,
+            pageNumber,
+            pageSize,
+            async ct =>
+            {
+                var paged = await _unitOfWork.Doctors.GetPagedActiveAsync(pageNumber, pageSize, ct);
+                var items = paged.Items.Select(MapToDto).ToList();
+                return new PagedResult<DoctorDto>(items, paged.PageNumber, paged.PageSize, paged.TotalCount);
+            },
+            cancellationToken);
 
         return Ok(ApiResponse<PagedResult<DoctorDto>>.SuccessResponse(
             pagedDtos,
             $"Retrieved page {pagedDtos.PageNumber} of {pagedDtos.TotalPages} ({pagedDtos.Items.Count()} active doctor(s))"));
     }
 
-    /// <summary>
-    /// Retrieves a paginated list of doctors accepting patients using DB-level pagination.
-    ///
-    /// CACHING STRATEGY: Same as GetAllDoctors — DB-level pagination via the
-    /// repository layer, bypassing IDoctorCacheService for consistency with the
-    /// other listing endpoints.
-    /// </summary>
     [HttpGet("accepting-patients")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<DoctorDto>>), StatusCodes.Status200OK)]
@@ -213,39 +299,64 @@ public sealed class DoctorsController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Retrieving doctors accepting patients - Page: {Page}, Size: {Size}", pageNumber, pageSize);
+        NormalizePaging(ref pageNumber, ref pageSize);
 
-        if (pageNumber < 1) pageNumber = 1;
-        if (pageSize < 1) pageSize = 20;
-        if (pageSize > 100) pageSize = 100;
-
-        var pagedResult = await _unitOfWork.Doctors.GetPagedAcceptingPatientsAsync(pageNumber, pageSize, cancellationToken);
-        var dtos = pagedResult.Items.Select(MapToDto).ToList();
-        var pagedDtos = new PagedResult<DoctorDto>(dtos, pagedResult.PageNumber, pagedResult.PageSize, pagedResult.TotalCount);
+        var pagedDtos = await _doctorCache.GetDoctorPageAsync(
+            CacheKeys.DoctorListFilterAccepting,
+            pageNumber,
+            pageSize,
+            async ct =>
+            {
+                var paged = await _unitOfWork.Doctors.GetPagedAcceptingPatientsAsync(pageNumber, pageSize, ct);
+                var items = paged.Items.Select(MapToDto).ToList();
+                return new PagedResult<DoctorDto>(items, paged.PageNumber, paged.PageSize, paged.TotalCount);
+            },
+            cancellationToken);
 
         return Ok(ApiResponse<PagedResult<DoctorDto>>.SuccessResponse(
             pagedDtos,
             $"Retrieved page {pagedDtos.PageNumber} of {pagedDtos.TotalPages} ({pagedDtos.Items.Count()} doctor(s) accepting patients)"));
     }
 
-    private static DoctorDto MapToDto(Doctor doctor)
+    private static void NormalizePaging(ref int pageNumber, ref int pageSize)
     {
-        return new DoctorDto
-        {
-            Id = doctor.Id,
-            FirstName = doctor.FirstName,
-            LastName = doctor.LastName,
-            FullName = doctor.FullName,
-            Email = doctor.Email.Value,
-            PhoneNumber = doctor.PhoneNumber.Value,
-            LicenseNumber = doctor.LicenseNumber,
-            Specialties = doctor.Specialties.Select(s => s.ToString()).ToList(),
-            ConsultationFeeAmount = doctor.ConsultationFee.Amount,
-            ConsultationFeeCurrency = doctor.ConsultationFee.Currency,
-            IsAcceptingPatients = doctor.IsAcceptingPatients,
-            IsActive = doctor.IsActive,
-            YearsOfExperience = doctor.YearsOfExperience,
-            CreatedAt = doctor.CreatedAt
-        };
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
     }
+
+    private static DoctorDto MapToDto(Doctor doctor) => new()
+    {
+        Id = doctor.Id,
+        FirstName = doctor.FirstName,
+        LastName = doctor.LastName,
+        FullName = doctor.FullName,
+        Email = doctor.Email.Value,
+        PhoneNumber = doctor.PhoneNumber.Value,
+        LicenseNumber = doctor.LicenseNumber,
+        Specialties = doctor.Specialties.Select(s => s.ToString()).ToList(),
+        ConsultationFeeAmount = doctor.ConsultationFee.Amount,
+        ConsultationFeeCurrency = doctor.ConsultationFee.Currency,
+        IsAcceptingPatients = doctor.IsAcceptingPatients,
+        IsActive = doctor.IsActive,
+        YearsOfExperience = doctor.YearsOfExperience,
+        CreatedAt = doctor.CreatedAt
+    };
+
+    private static DoctorScheduleDto MapToScheduleDto(Doctor doctor) => new()
+    {
+        DoctorId = doctor.Id,
+        IsActive = doctor.IsActive,
+        IsAcceptingPatients = doctor.IsAcceptingPatients,
+        WeeklySchedule = doctor.WeeklySchedule
+            .OrderBy(h => h.DayOfWeek)
+            .Select(h => new WorkingHoursDto
+            {
+                DayOfWeek = h.DayOfWeek,
+                IsWorkingDay = h.IsWorkingDay,
+                StartTime = h.StartTime?.ToString("HH:mm"),
+                EndTime = h.EndTime?.ToString("HH:mm")
+            })
+            .ToList()
+    };
 }

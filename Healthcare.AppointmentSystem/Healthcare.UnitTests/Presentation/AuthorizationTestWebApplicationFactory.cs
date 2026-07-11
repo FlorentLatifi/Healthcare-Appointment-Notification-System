@@ -91,6 +91,9 @@ public sealed class AuthorizationTestWebApplicationFactory : WebApplicationFacto
             services.RemoveAll<IConnectionMultiplexer>();
             services.RemoveAll<IDistributedLockService>();
             services.RemoveAll<IDoctorCacheService>();
+            services.RemoveAll<ICacheService>();
+            services.RemoveAll<IAvailabilityCacheService>();
+            services.RemoveAll<CacheSettings>();
             services.RemoveAll<IAppointmentCodeGenerator>();
 
             services.RemoveAll<StripeSettings>();
@@ -107,7 +110,10 @@ public sealed class AuthorizationTestWebApplicationFactory : WebApplicationFacto
             services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
 
             services.AddSingleton<IDistributedLockService, InMemoryLockService>();
-            services.AddSingleton<IDoctorCacheService, InMemoryDoctorCacheService>();
+            services.AddSingleton(new CacheSettings());
+            services.AddSingleton<ICacheService, InMemoryCacheService>();
+            services.AddSingleton<IDoctorCacheService, DoctorCacheService>();
+            services.AddSingleton<IAvailabilityCacheService, AvailabilityCacheService>();
             services.AddSingleton<IAppointmentCodeGenerator, AppointmentCodeGenerator>();
 
             services.AddScoped<IPaymentGateway>(_ => Mock.Of<IPaymentGateway>());
