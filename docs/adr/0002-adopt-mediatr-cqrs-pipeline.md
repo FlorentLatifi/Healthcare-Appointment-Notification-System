@@ -1,4 +1,4 @@
-# ADR 0002: Adopt MediatR for CQRS pipeline behaviors
+# ADR 0002: Custom CQRS with MediatR (not instead of domain boundaries)
 
 ## Status
 
@@ -10,19 +10,31 @@ Accepted (incremental migration)
 
 ## Context
 
-The Application layer uses a lightweight custom CQRS surface:
+The Application layer started with a lightweight **custom CQRS** surface:
 
 - `ICommand` / `ICommandHandler<TCommand, TResponse>`
 - `IQuery` / `IQueryHandler<TQuery, TResponse>`
 - Manual `services.AddScoped<ICommandHandler<…>, …>()` lines in `Program.cs`
 - Controllers inject many typed handlers
-- Cross-cutting concerns (validation, logging, performance, transactions) are either missing or duplicated
+- Cross-cutting concerns (validation, logging, performance, transactions, metrics) were missing or duplicated
 
-FluentValidation already exists at the **API request** layer. Application-level command validation and uniform observability are not centralized.
+FluentValidation already existed at the **API request** layer. Application-level command validation and uniform observability were not centralized.
+
+### Why keep “CQRS” as a concept?
+
+Separating **commands** (writes) from **queries** (reads) remains valuable: different validation, transactions, and caching. That does **not** require owning a custom mediator forever.
+
+### Why not “only MediatR, no custom types”?
+
+A pure MediatR-only style (`IRequest` everywhere, no `ICommand` markers) is fine long-term. During migration we keep custom markers so dual-registration and gradual controller cutover do not become a big-bang rewrite.
+
+### Why not “only custom, no MediatR”?
+
+We would re-implement pipeline behaviors, assembly scanning, and controller ergonomics. That cost exceeds the benefit for this team and codebase size.
 
 ## Decision
 
-**Adopt MediatR** for the Application use-case pipeline, while **keeping** the custom `ICommand` / `IQuery` marker interfaces during migration for dual-registration compatibility.
+**Use custom CQRS *with* MediatR**: MediatR owns the **application use-case pipeline**; custom `ICommand`/`IQuery` remain during incremental migration. Domain events stay on **`IDomainEventDispatcher` + outbox** (ADR 0003), not MediatR notifications.
 
 ### Why MediatR (vs only improving the custom stack)
 
