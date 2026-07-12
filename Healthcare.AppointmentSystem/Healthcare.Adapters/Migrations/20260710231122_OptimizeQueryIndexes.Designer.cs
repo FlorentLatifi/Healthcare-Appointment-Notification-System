@@ -155,7 +155,7 @@ namespace Healthcare.Adapters.Migrations
                     b.HasIndex("DoctorId", "ScheduledTime")
                         .IsUnique()
                         .HasDatabaseName("IX_Appointments_Doctor_Time_Active")
-                        .HasFilter("[IsDeleted] = 0 AND ([Status] = 1 OR [Status] = 2)");
+                        .HasFilter("[IsDeleted] = 0 AND [Status] <= 2");
 
                     b.HasIndex("PatientId", "ScheduledTime")
                         .HasDatabaseName("IX_Appointments_Patient_Time");

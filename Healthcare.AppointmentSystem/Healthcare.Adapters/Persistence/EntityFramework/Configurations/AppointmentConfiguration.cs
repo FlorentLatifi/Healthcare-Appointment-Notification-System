@@ -129,10 +129,10 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
 
         // Double-booking guard: one active (Pending/Confirmed) slot per doctor+time.
         // Cancelled/Completed/NoShow rows are excluded so the slot can be rebooked.
+        // SQL Server filtered indexes forbid OR/IN; Status Pending=1 Confirmed=2 => [Status] <= 2.
         builder.HasIndex(a => new { a.DoctorId, a.ScheduledTime }, "IX_Appointments_Doctor_Time_Active")
             .IsUnique()
-            .HasFilter(
-                $"[IsDeleted] = 0 AND ([Status] = {StatusPending} OR [Status] = {StatusConfirmed})");
+            .HasFilter($"[IsDeleted] = 0 AND [Status] <= {StatusConfirmed}");
 
         // Supporting index for doctor lists filtered by status (dashboards)
         builder.HasIndex(a => new { a.DoctorId, a.Status, a.ScheduledTime }, "IX_Appointments_Doctor_Status_Time");

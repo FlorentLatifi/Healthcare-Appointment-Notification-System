@@ -127,7 +127,7 @@ namespace Healthcare.Adapters.Migrations
                 table: "Appointments",
                 columns: new[] { "DoctorId", "ScheduledTime" },
                 unique: true,
-                filter: "[IsDeleted] = 0 AND ([Status] = 1 OR [Status] = 2)");
+                filter: "[IsDeleted] = 0 AND [Status] <= 2");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Appointments_Patient_Time",

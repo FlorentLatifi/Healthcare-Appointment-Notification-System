@@ -1,5 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
+# Central TFM + package versions must be present before restore (projects omit them).
+COPY ["Directory.Build.props", "./"]
+COPY ["Directory.Packages.props", "./"]
 COPY ["Healthcare.Presentation.API/Healthcare.Presentation.API.csproj", "Healthcare.Presentation.API/"]
 COPY ["Healthcare.Adapters/Healthcare.Adapters.csproj", "Healthcare.Adapters/"]
 COPY ["Healthcare.Application/Healthcare.Application.csproj", "Healthcare.Application/"]
