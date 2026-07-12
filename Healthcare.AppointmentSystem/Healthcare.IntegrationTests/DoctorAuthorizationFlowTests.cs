@@ -75,8 +75,10 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
     [Fact]
     public async Task CreateDoctor_WithAdminRole_Returns201()
     {
+        // Public /auth/register only allows Patient|Doctor (RegisterRequestValidator).
+        // Admins are seeded (testadmin) or promoted — same pattern as AuthorizationFlowTests.
         var suffix = Guid.NewGuid().ToString("N")[..6];
-        var token = await RegisterAndLoginAsync($"doc_create_admin_{suffix}", $"doc.create.admin.{suffix}@test.com", "SecurePass123!", "Admin");
+        var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
         var payload = new
         {
@@ -115,8 +117,7 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
     [Fact]
     public async Task DeleteDoctor_WithAdminRole_Returns404ForNonExistent()
     {
-        var suffix = Guid.NewGuid().ToString("N")[..6];
-        var token = await RegisterAndLoginAsync($"doc_delete_admin_{suffix}", $"doc.delete.admin.{suffix}@test.com", "SecurePass123!", "Admin");
+        var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
         var response = await Client.DeleteAsync("/api/v1/doctors/99999");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);

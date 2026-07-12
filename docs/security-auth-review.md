@@ -90,6 +90,16 @@ Passwords: Argon2id (OWASP interactive) + BCrypt verify/upgrade on login
 9. **TLS everywhere** in production; `RequireHttpsMetadata` when not Development.  
 10. **MFA** for Admin/Doctor — recommended next step (not implemented).
 
+### Public registration vs Admin accounts (test vs prod)
+
+| Surface | Allowed roles | Notes |
+|---------|---------------|--------|
+| `POST /api/v1/auth/register` | **Patient**, **Doctor** only | Enforced by `RegisterRequestValidator` — cannot self-register as Admin |
+| Production bootstrap | Optional one-time Admin | `Seeding:BootstrapAdmin` / env secrets; disable after first deploy |
+| Integration tests | Pre-seeded `testadmin` | `CustomWebApplicationFactory` seeds admin; use `LoginAsPreSeededAdminAsync()` — do **not** `RegisterAndLoginAsync(..., "Admin")` |
+
+This is intentional prod policy, not a test-only quirk. Admin creation is promote/bootstrap, not public register.
+
 ---
 
 ## Config keys
