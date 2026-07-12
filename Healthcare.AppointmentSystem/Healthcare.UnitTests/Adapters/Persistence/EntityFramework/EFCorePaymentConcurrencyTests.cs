@@ -89,36 +89,11 @@ public sealed class EFCorePaymentConcurrencyTests
         return payment.Id;
     }
 
-    private static async Task<SharedDatabase> CreateSharedDatabaseAsync()
-    {
-        var connectionString = $"Data Source=file:{Guid.NewGuid():N}?mode=memory&cache=shared";
-        var keepAlive = new SqliteConnection(connectionString);
-        await keepAlive.OpenAsync();
-        return new SharedDatabase(keepAlive, connectionString);
-    }
+    private static async Task<EfCoreSqliteFixture> CreateSharedDatabaseAsync() =>
+        await EfCoreSqliteFixture.CreateAsync();
 
-    private static DbContextOptions<HealthcareDbContext> CreateOptions(string connectionString)
-    {
-        return new DbContextOptionsBuilder<HealthcareDbContext>()
+    private static DbContextOptions<HealthcareDbContext> CreateOptions(string connectionString) =>
+        new DbContextOptionsBuilder<HealthcareDbContext>()
             .UseSqlite(connectionString)
             .Options;
-    }
-
-    private sealed class SharedDatabase : IAsyncDisposable
-    {
-        private readonly SqliteConnection _keepAlive;
-
-        public SharedDatabase(SqliteConnection keepAlive, string connectionString)
-        {
-            _keepAlive = keepAlive;
-            ConnectionString = connectionString;
-        }
-
-        public string ConnectionString { get; }
-
-        public async ValueTask DisposeAsync()
-        {
-            await _keepAlive.DisposeAsync();
-        }
-    }
 }

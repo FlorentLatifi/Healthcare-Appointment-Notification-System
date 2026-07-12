@@ -1,14 +1,9 @@
 using FluentAssertions;
-using Healthcare.Adapters.Persistence.EntityFramework;
-using Healthcare.Adapters.Persistence.EntityFramework.Repositories;
 using Healthcare.Application.Commands.CreateDoctor;
 using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Ports.Events;
-using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
-using Healthcare.Domain.ValueObjects;
 using Healthcare.UnitTests.Helpers;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 
@@ -18,28 +13,27 @@ namespace Healthcare.UnitTests.Application.Commands;
 /// Regression: User.PatientId / User.DoctorId must equal the SQL identity of the new profile
 /// after CreatePatient / CreateDoctor. Linking before SaveChanges leaves Id=0 and breaks JWT claims.
 /// </summary>
+/// <remarks>
+/// Uses <see cref="EfCoreSqliteFixture"/> — see <c>Helpers/README.md</c>.
+/// Moq coverage remains in <see cref="CreatePatientHandlerTests"/> / <see cref="CreateDoctorHandlerTests"/>.
+/// </remarks>
 [Trait("Category", "Integration")]
 public sealed class CreateProfileLinkIdentityRegressionTests
 {
     [Fact]
     public async Task CreatePatient_PersistsUserPatientIdEqualToRealPatientIdentity()
     {
-        await using var db = await CreateSharedDatabaseAsync();
-        await using var ctx = CreateContext(db.ConnectionString);
+        await using var db = await EfCoreSqliteFixture.CreateAsync();
+        await using var ctx = db.CreateContext();
         await ctx.Database.EnsureCreatedAsync();
 
-        var user = User.Create(
-            "link_patient_user",
-            Email.Create("link.patient.user@test.com"),
-            "hash",
-            UserRole.Patient);
-        ctx.Users.Add(user);
-        await ctx.SaveChangesAsync();
-        var userId = user.Id;
-        userId.Should().BeGreaterThan(0);
+        var userId = await EfCoreIdentityAssertions.SeedUserAsync(
+            ctx,
+            username: "link_patient_user",
+            email: "link.patient.user@test.com",
+            role: UserRole.Patient);
 
-        var unitOfWork = CreateUnitOfWork(ctx);
-        var handler = new CreatePatientHandler(unitOfWork);
+        var handler = new CreatePatientHandler(db.CreateUnitOfWork(ctx));
 
         var result = await handler.HandleAsync(new CreatePatientCommand
         {
@@ -60,37 +54,25 @@ public sealed class CreateProfileLinkIdentityRegressionTests
         result.IsSuccess.Should().BeTrue(result.Error);
         result.Value.Should().BeGreaterThan(0);
 
-        // Re-read from a clean context so we assert what was actually persisted.
-        await using var verify = CreateContext(db.ConnectionString);
-        var persistedUser = await verify.Users.AsNoTracking().SingleAsync(u => u.Id == userId);
-        var persistedPatient = await verify.Patients.AsNoTracking().SingleAsync(p => p.Id == result.Value);
-
-        persistedUser.PatientId.Should().NotBeNull();
-        persistedUser.PatientId.Should().NotBe(0, "identity must be assigned before LinkToPatient");
-        persistedUser.PatientId.Should().Be(persistedPatient.Id);
-        persistedUser.PatientId.Should().Be(result.Value);
+        await EfCoreIdentityAssertions.AssertUserPatientLinkAsync(db, userId, result.Value);
     }
 
     [Fact]
     public async Task CreateDoctor_PersistsUserDoctorIdEqualToRealDoctorIdentity()
     {
-        await using var db = await CreateSharedDatabaseAsync();
-        await using var ctx = CreateContext(db.ConnectionString);
+        await using var db = await EfCoreSqliteFixture.CreateAsync();
+        await using var ctx = db.CreateContext();
         await ctx.Database.EnsureCreatedAsync();
 
-        var user = User.Create(
-            "link_doctor_user",
-            Email.Create("link.doctor.user@test.com"),
-            "hash",
-            UserRole.Doctor);
-        ctx.Users.Add(user);
-        await ctx.SaveChangesAsync();
-        var userId = user.Id;
-        userId.Should().BeGreaterThan(0);
+        var userId = await EfCoreIdentityAssertions.SeedUserAsync(
+            ctx,
+            username: "link_doctor_user",
+            email: "link.doctor.user@test.com",
+            role: UserRole.Doctor);
 
-        var unitOfWork = CreateUnitOfWork(ctx);
-        var dispatcher = new Mock<IDomainEventDispatcher>();
-        var handler = new CreateDoctorHandler(unitOfWork, dispatcher.Object);
+        var handler = new CreateDoctorHandler(
+            db.CreateUnitOfWork(ctx),
+            Mock.Of<IDomainEventDispatcher>());
 
         var result = await handler.HandleAsync(new CreateDoctorCommand
         {
@@ -109,55 +91,47 @@ public sealed class CreateProfileLinkIdentityRegressionTests
         result.IsSuccess.Should().BeTrue(result.Error);
         result.Value.Should().BeGreaterThan(0);
 
-        await using var verify = CreateContext(db.ConnectionString);
-        var persistedUser = await verify.Users.AsNoTracking().SingleAsync(u => u.Id == userId);
-        var persistedDoctor = await verify.Doctors.AsNoTracking().SingleAsync(d => d.Id == result.Value);
-
-        persistedUser.DoctorId.Should().NotBeNull();
-        persistedUser.DoctorId.Should().NotBe(0, "identity must be assigned before LinkToDoctor");
-        persistedUser.DoctorId.Should().Be(persistedDoctor.Id);
-        persistedUser.DoctorId.Should().Be(result.Value);
+        await EfCoreIdentityAssertions.AssertUserDoctorLinkAsync(db, userId, result.Value);
     }
 
-    private static EFCoreUnitOfWork CreateUnitOfWork(HealthcareDbContext ctx) =>
-        new(
-            ctx,
-            new EFCoreAppointmentRepository(ctx),
-            new EFCorePatientRepository(ctx),
-            new EFCoreDoctorRepository(ctx),
-            new EFCoreUserRepository(ctx),
-            new EFCorePaymentRepository(ctx),
-            new EFCoreAuditLogRepository(ctx),
-            new EFCoreUserSessionRepository(ctx));
-
-    private static SqliteCompatibleDbContext CreateContext(string connectionString) =>
-        new(new DbContextOptionsBuilder<HealthcareDbContext>()
-            .UseSqlite(connectionString)
-            .Options);
-
-    private static async Task<SharedDatabase> CreateSharedDatabaseAsync()
+    /// <summary>
+    /// Documents the failure mode: if identity is not flushed before link, PatientId would be 0.
+    /// This test exercises the happy path after the fix; Moq alone would not detect a regression.
+    /// </summary>
+    [Fact]
+    public async Task CreatePatient_ReturnedIdMatchesDatabaseGeneratedPatientId()
     {
-        var connectionString = $"Data Source=file:{Guid.NewGuid():N}?mode=memory&cache=shared";
-        var keepAlive = new SqliteConnection(connectionString);
-        await keepAlive.OpenAsync();
-        return new SharedDatabase(keepAlive, connectionString);
-    }
+        await using var db = await EfCoreSqliteFixture.CreateAsync();
+        await using var ctx = db.CreateContext();
+        await ctx.Database.EnsureCreatedAsync();
 
-    private sealed class SharedDatabase : IAsyncDisposable
-    {
-        private readonly SqliteConnection _keepAlive;
+        var userId = await EfCoreIdentityAssertions.SeedUserAsync(
+            ctx, "id_match_user", "id.match@test.com", UserRole.Patient);
 
-        public SharedDatabase(SqliteConnection keepAlive, string connectionString)
-        {
-            _keepAlive = keepAlive;
-            ConnectionString = connectionString;
-        }
+        var result = await new CreatePatientHandler(db.CreateUnitOfWork(ctx)).HandleAsync(
+            new CreatePatientCommand
+            {
+                FirstName = "Id",
+                LastName = "Match",
+                Email = "id.match.profile@test.com",
+                PhoneNumber = "+355673333333",
+                DateOfBirth = new DateTime(1988, 3, 3),
+                Gender = "Male",
+                Street = "2 Id St",
+                City = "Pristina",
+                State = "Pristina",
+                PostalCode = "10000",
+                Country = "Kosovo",
+                RequestingUserId = userId,
+            });
 
-        public string ConnectionString { get; }
+        result.IsSuccess.Should().BeTrue(result.Error);
 
-        public async ValueTask DisposeAsync()
-        {
-            await _keepAlive.DisposeAsync();
-        }
+        await using var verify = db.CreateContext();
+        var patient = await verify.Patients.AsNoTracking()
+            .SingleAsync(p => p.Id == result.Value);
+
+        patient.Id.Should().Be(result.Value);
+        patient.Id.Should().NotBe(0);
     }
 }
