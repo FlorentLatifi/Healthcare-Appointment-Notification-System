@@ -3,8 +3,11 @@ WORKDIR /build
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-ARG VITE_API_BASE_URL=/api/v1
+# Browser-facing URLs (must be reachable from the user's machine, not docker-internal names).
+ARG VITE_API_BASE_URL=http://localhost:5171/api/v1
+ARG VITE_STRIPE_PUBLISHABLE_KEY=
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY
 RUN npm run build
 
 FROM nginx:1-alpine

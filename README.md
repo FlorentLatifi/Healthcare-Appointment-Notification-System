@@ -62,10 +62,18 @@ A `docker-compose.yml` at the repo root spins up the full stack (API + SQL Serve
 3. Access the services:
 
    - Frontend: http://localhost:5173
-   - API: http://localhost:5171
-   - Swagger UI: http://localhost:5171/index.html
+   - API health: http://localhost:5171/  → `{"status":"Healthy"}`
+   - Swagger UI: **only when running the API outside Docker with `ASPNETCORE_ENVIRONMENT=Development`** (Docker env is `Docker`, not Development)
    - SQL Server: `localhost:1433` (user: `sa`, password: from `.env`)
    - Redis: `localhost:6379`
+
+4. First admin login (local Docker):
+
+   ```sh
+   docker compose logs api | findstr /I "BOOTSTRAP ADMIN"
+   ```
+
+   Username is usually `admin`. If `BOOTSTRAP_ADMIN_PASSWORD` was empty, copy the generated password from the log (one-time).
 
 #### Database init, admin bootstrap, and demo data
 
