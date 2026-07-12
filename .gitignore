@@ -1,0 +1,67 @@
+# ── Secrets & environment (never commit filled values) ─────────────
+.env
+.env.*
+!.env.example
+!**/.env.example
+**/.env
+**/.env.local
+**/.env.*.local
+!.env.example
+!**/.env.example
+
+# Host / deploy secrets (local or server copies)
+.env.secrets
+**/.env.secrets
+*.secrets
+secrets/*
+!secrets/.gitignore
+!secrets/.gitkeep
+!secrets/README.md
+
+# Stripe / API key dumps, accidental secret dumps
+*.pem
+*.p12
+*.pfx
+*.key
+id_rsa
+id_rsa.*
+*.secret.json
+
+# ── .NET ───────────────────────────────────────────────────────────
+**/bin/
+**/obj/
+**/.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+project.assets.json
+project.nuget.cache
+*.nupkg
+
+# ── Frontend ───────────────────────────────────────────────────────
+healthcare-frontend/node_modules/
+healthcare-frontend/dist/
+healthcare-frontend/dist-ssr/
+healthcare-frontend/*.local
+
+# ── Logs & OS ──────────────────────────────────────────────────────
+logs/
+**/logs/
+*.log
+.DS_Store
+Thumbs.db
+*.tmp
+*Backup*
+*.Backup*
+
+# ── IDE ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+!.vscode/extensions.json
+
+# ── Test / coverage ────────────────────────────────────────────────
+TestResults/
+coverage/
+*.trx
+*.coverage
