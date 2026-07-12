@@ -66,7 +66,7 @@ export default function Navbar() {
         </Button>
 
         <button
-          className="sm:hidden inline-flex items-center justify-center p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface cursor-pointer bg-transparent border-none focus-visible:outline-2 focus-visible:outline-primary"
+          className="sm:hidden inline-flex items-center justify-center min-w-10 min-h-10 p-2 rounded-md text-text-muted hover:text-text hover:bg-surface cursor-pointer bg-transparent border-none focus-visible:outline-2 focus-visible:outline-primary"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle navigation menu"
         >

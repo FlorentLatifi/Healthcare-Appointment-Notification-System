@@ -37,10 +37,10 @@ export default function DoctorsListPage() {
       )
     : doctors;
 
-  if (loading) return <div className="max-w-4xl mx-auto px-4 py-12"><Spinner /></div>;
+  if (loading) return <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12"><Spinner /></div>;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
       <PageHeader title="Available Doctors" />
 
       <div className="mb-4">
@@ -73,9 +73,9 @@ export default function DoctorsListPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((doc) => (
             <Card key={doc.id}>
-              <h3 className="text-base font-semibold text-text mb-1">Dr. {doc.fullName}</h3>
-              <p className="text-xs text-text-muted mb-2">{doc.specialties.join(', ')}</p>
-              <div className="flex items-center gap-3 text-xs text-text-secondary mb-3">
+              <h3 className="text-base font-semibold text-text mb-1 break-words">Dr. {doc.fullName}</h3>
+              <p className="text-xs text-text-muted mb-2 break-words">{doc.specialties.join(', ')}</p>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-text-secondary mb-3">
                 <span className="inline-flex items-center gap-1">
                   <DollarSign size={12} />
                   {doc.consultationFeeCurrency} {doc.consultationFeeAmount}

@@ -29,7 +29,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-12">
+    <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-12">
       <PageHeader
         title="Dashboard"
         subtitle={<>Welcome, <span className="font-medium text-text">{user?.username}</span></>}
@@ -47,10 +47,10 @@ export default function DashboardPage() {
                 }
                 navigate(a.path);
               }}>
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
                     <h4 className="text-sm font-medium text-text">{a.title}</h4>
-                    <p className="text-xs text-text-muted mt-0.5">{a.desc}</p>
+                    <p className="text-xs text-text-muted mt-0.5 break-words">{a.desc}</p>
                   </div>
                   <ArrowRight size={16} className="text-text-muted shrink-0" />
                 </div>
@@ -61,7 +61,7 @@ export default function DashboardPage() {
       )}
 
       <div className="mt-8 pt-6 border-t border-border-light">
-        <Button variant="ghost" leftIcon={<LogOut size={14} />} onClick={() => { logout(); navigate('/login', { replace: true }); }}>
+        <Button variant="ghost" className="w-full sm:w-auto" leftIcon={<LogOut size={14} />} onClick={() => { logout(); navigate('/login', { replace: true }); }}>
           Logout
         </Button>
       </div>

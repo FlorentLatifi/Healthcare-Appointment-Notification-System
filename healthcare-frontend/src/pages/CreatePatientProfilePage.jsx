@@ -42,28 +42,28 @@ export default function CreatePatientProfilePage() {
   };
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-12">
+    <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-12">
       <PageHeader title="Create Patient Profile" subtitle="Fill in your details to start booking appointments." />
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-6 border border-border-light">
-        <div className="grid grid-cols-2 gap-3">
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
           <Input label="First Name" value={form.firstName} onChange={set('firstName')} required />
           <Input label="Last Name" value={form.lastName} onChange={set('lastName')} required />
         </div>
         <Input label="Email" type="email" value={form.email} onChange={set('email')} required />
         <Input label="Phone Number" value={form.phoneNumber} onChange={set('phoneNumber')} required />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
           <Input label="Date of Birth" type="date" value={form.dateOfBirth} onChange={set('dateOfBirth')} required />
           <Select label="Gender" value={form.gender} onChange={set('gender')}>
             {GENDERS.map((g) => <option key={g}>{g}</option>)}
           </Select>
         </div>
         <Input label="Street" value={form.street} onChange={set('street')} />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
           <Input label="City" value={form.city} onChange={set('city')} />
           <Input label="State" value={form.state} onChange={set('state')} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
           <Input label="Postal Code" value={form.postalCode} onChange={set('postalCode')} />
           <Input label="Country" value={form.country} onChange={set('country')} />
         </div>

@@ -92,11 +92,11 @@ export default function MyAppointmentsPage() {
     }
   };
 
-  if (loading) return <div className="max-w-3xl mx-auto px-4 py-12"><Spinner /></div>;
+  if (loading) return <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12"><Spinner /></div>;
 
   if (fetchError) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-12">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         <PageHeader title="My Appointments" />
         <EmptyState message="Failed to load appointments." actionLabel="Retry" onAction={fetchAppointments} />
       </div>
@@ -104,7 +104,7 @@ export default function MyAppointmentsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
       <PageHeader title="My Appointments" />
 
       {appointments.length === 0 ? (
@@ -118,48 +118,49 @@ export default function MyAppointmentsPage() {
         <div className="space-y-3">
           {appointments.map((appt) => (
             <Card key={appt.id}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-text">{appt.referenceCode}</span>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <span className="text-sm font-semibold text-text break-all">{appt.referenceCode}</span>
                   <Badge status={appt.status} />
                 </div>
-                <span className="text-xs text-text-muted">{appt.scheduledDate}</span>
+                <span className="text-xs text-text-muted shrink-0">{appt.scheduledDate}</span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-text-muted mb-1">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mb-1">
                 <span className="inline-flex items-center gap-1">
-                  <Calendar size={12} />
+                  <Calendar size={12} className="shrink-0" />
                   Dr. {appt.doctor?.fullName}
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <Clock size={12} />
+                  <Clock size={12} className="shrink-0" />
                   {appt.scheduledTimeFormatted}
                 </span>
               </div>
-              <p className="text-sm text-text mt-1">{appt.reason}</p>
+              <p className="text-sm text-text mt-1 break-words">{appt.reason}</p>
               {appt.cancellationReason && (
-                <p className="text-xs text-status-cancelled-text mt-2 inline-flex items-center gap-1">
-                  <AlertCircle size={12} />
+                <p className="text-xs text-status-cancelled-text mt-2 inline-flex items-start gap-1 break-words">
+                  <AlertCircle size={12} className="shrink-0 mt-0.5" />
                   Cancellation reason: {appt.cancellationReason}
                 </p>
               )}
               {appt.status === APPOINTMENT_STATUS.PENDING && (
                 <div className="mt-3 pt-3 border-t border-border-light space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col xs:flex-row sm:flex-row sm:items-center sm:justify-between gap-2">
                     <span className="text-xs text-text-muted inline-flex items-center gap-1">
-                      <CreditCard size={12} />
+                      <CreditCard size={12} className="shrink-0" />
                       {paymentStatuses[appt.id] === 'Succeeded' ? 'Paid' : 'Payment required'}
                     </span>
                     <Button
                       variant="primary"
                       size="sm"
+                      className="w-full sm:w-auto"
                       leftIcon={<CreditCard size={14} />}
                       onClick={() => navigate(`/pay/${appt.id}`)}
                     >
                       Pay Now
                     </Button>
                   </div>
-                  <div className="flex justify-end">
-                    <Button variant="ghost" size="sm" onClick={() => openCancelModal(appt)}>Cancel</Button>
+                  <div className="flex justify-stretch sm:justify-end">
+                    <Button variant="ghost" size="sm" className="w-full sm:w-auto" onClick={() => openCancelModal(appt)}>Cancel</Button>
                   </div>
                 </div>
               )}
@@ -174,8 +175,8 @@ export default function MyAppointmentsPage() {
         title="Cancel Appointment"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setCancelling(null)}>Keep</Button>
-            <Button variant="danger" onClick={confirmCancel}>Confirm Cancel</Button>
+            <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setCancelling(null)}>Keep</Button>
+            <Button variant="danger" className="w-full sm:w-auto" onClick={confirmCancel}>Confirm Cancel</Button>
           </>
         }
       >

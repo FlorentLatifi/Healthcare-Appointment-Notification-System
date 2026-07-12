@@ -25,13 +25,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg px-4">
+    <div className="min-h-screen flex items-center justify-center bg-bg px-4 sm:px-6 py-8 sm:py-12">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold text-text tracking-tight">Login</h1>
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-xl sm:text-2xl font-semibold text-text tracking-tight">Login</h1>
           <p className="text-sm text-text-muted mt-1">Sign in to your account</p>
         </div>
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-6 border border-border-light">
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light">
           <Input label="Username" name="username" value={form.username} onChange={handleChange} required autoComplete="username" />
           <Input label="Password" name="password" type="password" value={form.password} onChange={handleChange} required autoComplete="current-password" />
           <Button type="submit" disabled={loading} className="w-full mt-2" size="lg">

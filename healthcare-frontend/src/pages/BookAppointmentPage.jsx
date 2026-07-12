@@ -93,11 +93,11 @@ export default function BookAppointmentPage() {
   };
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-12">
+    <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-12">
       <Button
         variant="ghost"
         size="sm"
-        className="mb-6 -ml-2"
+        className="mb-4 sm:mb-6 -ml-1 sm:-ml-2"
         onClick={() => navigate('/doctors')}
       >
         <ArrowLeft size={14} />
@@ -109,13 +109,13 @@ export default function BookAppointmentPage() {
       {doctorLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : doctor ? (
-        <Card className="mb-6">
+        <Card className="mb-4 sm:mb-6">
           <p className="text-sm font-medium text-text">Dr. {doctor.fullName}</p>
-          <p className="text-xs text-text-muted mt-0.5">{doctor.specialties?.join(', ')}</p>
+          <p className="text-xs text-text-muted mt-0.5 break-words">{doctor.specialties?.join(', ')}</p>
         </Card>
       ) : null}
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-6 border border-border-light">
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light">
         <Input
           label="Date & Time"
           type="datetime-local"
@@ -124,6 +124,7 @@ export default function BookAppointmentPage() {
           step="1800"
           onChange={(e) => setDatetime(e.target.value)}
           error={errors.datetime}
+          className="min-w-0"
         />
 
         <Textarea

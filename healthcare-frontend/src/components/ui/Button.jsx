@@ -9,9 +9,9 @@ const variants = {
 };
 
 const sizes = {
-  sm: 'px-3 py-1.5 text-xs gap-1.5',
-  md: 'px-4 py-2 text-sm gap-2',
-  lg: 'px-6 py-2.5 text-base gap-2',
+  sm: 'min-h-9 px-3 py-1.5 text-xs gap-1.5',
+  md: 'min-h-10 px-4 py-2 text-sm gap-2',
+  lg: 'min-h-11 px-6 py-2.5 text-base gap-2',
 };
 
 const spinnerSizes = { sm: 14, md: 16, lg: 18 };

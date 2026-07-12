@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 
 /**
  * Modal — overlay dialog with title, body, footer, focus trap, and Escape-to-close.
+ * Mobile: full-width sheet-style padding, stacked footer actions, large close target.
  * @param {{ open: boolean, onClose: () => void, title?: string, footer?: ReactNode }} props
  */
 export default function Modal({ open, onClose, title, footer, children }) {
@@ -64,28 +65,28 @@ export default function Modal({ open, onClose, title, footer, children }) {
       role="dialog"
       aria-modal="true"
       aria-label={title || 'Dialog'}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm animate-[modalOverlayIn_200ms_ease-out]"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/30 backdrop-blur-sm animate-[modalOverlayIn_200ms_ease-out]"
       onClick={(e) => { if (e.target === overlayRef.current) onClose?.(); }}
     >
       <div
         ref={contentRef}
-        className="bg-white rounded-xl shadow-modal w-full max-w-lg max-h-[90vh] overflow-y-auto animate-[modalContentIn_200ms_ease-out]"
+        className="bg-white rounded-t-2xl sm:rounded-xl shadow-modal w-full sm:max-w-lg max-h-[92vh] sm:max-h-[90vh] overflow-y-auto animate-[modalContentIn_200ms_ease-out]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 pt-6 pb-0">
-          <h3 className="text-lg font-semibold text-text m-0">{title}</h3>
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 pt-4 sm:pt-6 pb-0 sticky top-0 bg-white z-10">
+          <h3 className="text-base sm:text-lg font-semibold text-text m-0 pr-2 break-words">{title}</h3>
           <button
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="p-1 rounded-md text-text-muted hover:bg-surface hover:text-text transition-colors duration-150 cursor-pointer"
+            className="inline-flex items-center justify-center min-w-10 min-h-10 p-2 rounded-md text-text-muted hover:bg-surface hover:text-text transition-colors duration-150 cursor-pointer shrink-0"
           >
             <X size={18} />
           </button>
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div className="px-4 sm:px-6 py-4 sm:py-5">{children}</div>
         {footer && (
-          <div className="px-6 pb-6 pt-0 flex items-center justify-end gap-2">
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2">
             {footer}
           </div>
         )}

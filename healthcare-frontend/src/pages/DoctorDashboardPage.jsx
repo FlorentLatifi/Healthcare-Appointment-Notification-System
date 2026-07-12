@@ -118,10 +118,10 @@ export default function DoctorDashboardPage() {
 
   if (!doctorId) {
     return (
-      <div className="max-w-md mx-auto px-4 py-16 text-center">
-        <h2 className="text-xl font-semibold text-text tracking-tight mb-2">Doctor Lookup</h2>
+      <div className="max-w-md mx-auto px-4 sm:px-6 py-10 sm:py-16 text-center">
+        <h2 className="text-lg sm:text-xl font-semibold text-text tracking-tight mb-2">Doctor Lookup</h2>
         <p className="text-sm text-text-muted mb-6">Search for your doctor profile by email.</p>
-        <div className="bg-white rounded-xl shadow-card p-6 border border-border-light">
+        <div className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light">
           <Input
             placeholder="Your email address..."
             value={searchEmail}
@@ -136,7 +136,7 @@ export default function DoctorDashboardPage() {
               onClick={() => selectDoctor(doc)}
             >
               <p className="text-sm font-medium text-text">Dr. {doc.fullName}</p>
-              <p className="text-xs text-text-muted mt-0.5">{doc.email} — {doc.specialties.join(', ')}</p>
+              <p className="text-xs text-text-muted mt-0.5 break-words">{doc.email} — {doc.specialties.join(', ')}</p>
             </Card>
           ))}
         </div>
@@ -144,20 +144,21 @@ export default function DoctorDashboardPage() {
     );
   }
 
-  if (loading) return <div className="max-w-4xl mx-auto px-4 py-12"><Spinner /></div>;
+  if (loading) return <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12"><Spinner /></div>;
 
   const currentList = filtered[activeTab] || allAppts;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
       <PageHeader title="Doctor Dashboard" />
 
-      <div className="flex flex-wrap gap-1 mb-6">
+      <div className="flex flex-wrap gap-1.5 mb-4 sm:mb-6 -mx-1 px-1 overflow-x-auto pb-1">
         {TABS.map((t) => (
           <Button
             key={t}
             variant={activeTab === t ? 'primary' : 'secondary'}
             size="sm"
+            className="shrink-0"
             onClick={() => setActiveTab(t)}
           >
             {t}
@@ -172,32 +173,31 @@ export default function DoctorDashboardPage() {
         <div className="space-y-3">
           {currentList.map((appt) => (
             <Card key={appt.id}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-text">{appt.referenceCode}</span>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <span className="text-sm font-semibold text-text break-all">{appt.referenceCode}</span>
                   <Badge status={appt.status} />
                 </div>
-                <span className="text-xs text-text-muted">{appt.scheduledDate}</span>
+                <span className="text-xs text-text-muted shrink-0">{appt.scheduledDate}</span>
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-text-muted mb-1">
-                <span className="inline-flex items-center gap-1"><User size={12} />{appt.patient?.fullName}</span>
-                <span className="inline-flex items-center gap-1"><Calendar size={12} />{appt.scheduledTimeFormatted}</span>
-                <span className="inline-flex items-center gap-1"><FileText size={12} />{appt.reason}</span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mb-1">
+                <span className="inline-flex items-center gap-1"><User size={12} className="shrink-0" />{appt.patient?.fullName}</span>
+                <span className="inline-flex items-center gap-1"><Calendar size={12} className="shrink-0" />{appt.scheduledTimeFormatted}</span>
               </div>
-              <p className="text-sm text-text mt-1">{appt.reason}</p>
-              {appt.doctorNotes && <p className="text-xs text-status-completed-text mt-2 inline-flex items-center gap-1"><FileText size={12} />Notes: {appt.doctorNotes}</p>}
-              {appt.cancellationReason && <p className="text-xs text-status-cancelled-text mt-2 inline-flex items-center gap-1"><XCircle size={12} />Cancel reason: {appt.cancellationReason}</p>}
+              <p className="text-sm text-text mt-1 break-words">{appt.reason}</p>
+              {appt.doctorNotes && <p className="text-xs text-status-completed-text mt-2 inline-flex items-start gap-1 break-words"><FileText size={12} className="shrink-0 mt-0.5" />Notes: {appt.doctorNotes}</p>}
+              {appt.cancellationReason && <p className="text-xs text-status-cancelled-text mt-2 inline-flex items-start gap-1 break-words"><XCircle size={12} className="shrink-0 mt-0.5" />Cancel reason: {appt.cancellationReason}</p>}
 
-              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border-light">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2 mt-3 pt-3 border-t border-border-light">
                 {appt.status === APPOINTMENT_STATUS.PENDING && (
                   <>
-                    <Button variant="primary" size="sm" leftIcon={<CheckCircle size={14} />} onClick={() => openConfirm(appt)}>Confirm</Button>
-                    <Button variant="secondary" size="sm" onClick={() => openComplete(appt)}>Complete</Button>
-                    <Button variant="ghost" size="sm" onClick={() => doNoShow(appt)}>No-Show</Button>
+                    <Button variant="primary" size="sm" className="w-full sm:w-auto" leftIcon={<CheckCircle size={14} />} onClick={() => openConfirm(appt)}>Confirm</Button>
+                    <Button variant="secondary" size="sm" className="w-full sm:w-auto" onClick={() => openComplete(appt)}>Complete</Button>
+                    <Button variant="ghost" size="sm" className="w-full sm:w-auto" onClick={() => doNoShow(appt)}>No-Show</Button>
                   </>
                 )}
                 {appt.status === 'Confirmed' && (
-                  <Button variant="primary" size="sm" onClick={() => openComplete(appt)}>Complete</Button>
+                  <Button variant="primary" size="sm" className="w-full sm:w-auto" onClick={() => openComplete(appt)}>Complete</Button>
                 )}
               </div>
             </Card>
@@ -211,18 +211,18 @@ export default function DoctorDashboardPage() {
         title="Confirm Appointment"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModal(null)}>Cancel</Button>
-            <Button loading={submitting} onClick={() => doConfirm(modal.appt)}>Confirm</Button>
+            <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setModal(null)}>Cancel</Button>
+            <Button loading={submitting} className="w-full sm:w-auto" onClick={() => doConfirm(modal.appt)}>Confirm</Button>
           </>
         }
       >
-        <p className="text-sm text-text-muted mb-4">{modal?.appt.referenceCode} — {modal?.appt.patient?.fullName}</p>
-        <label className="flex items-center gap-2 text-sm text-text mb-4">
+        <p className="text-sm text-text-muted mb-4 break-words">{modal?.appt.referenceCode} — {modal?.appt.patient?.fullName}</p>
+        <label className="flex items-start sm:items-center gap-2 text-sm text-text mb-4">
           <input
             type="checkbox"
             checked={overridePayment}
             onChange={(e) => setOverridePayment(e.target.checked)}
-            className="rounded border-border text-primary focus:ring-primary"
+            className="rounded border-border text-primary focus:ring-primary mt-0.5 sm:mt-0 min-w-4 min-h-4"
           />
           Override payment requirement
         </label>
@@ -237,8 +237,8 @@ export default function DoctorDashboardPage() {
         title="Complete Appointment"
         footer={
           <>
-            <Button variant="secondary" onClick={() => { setModal(null); setNotes(''); }}>Cancel</Button>
-            <Button loading={submitting} onClick={() => doComplete(modal.appt)}>Complete</Button>
+            <Button variant="secondary" className="w-full sm:w-auto" onClick={() => { setModal(null); setNotes(''); }}>Cancel</Button>
+            <Button loading={submitting} className="w-full sm:w-auto" onClick={() => doComplete(modal.appt)}>Complete</Button>
           </>
         }
       >

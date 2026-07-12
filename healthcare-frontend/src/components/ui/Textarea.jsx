@@ -10,7 +10,7 @@ export default function Textarea({ label, error, helperText, className = '', id,
       )}
       <textarea
         id={inputId}
-        className={`w-full px-3 py-2 rounded-md border bg-white text-text text-sm placeholder:text-text-light transition-all duration-150 ease-in-out focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none resize-y min-h-[80px] ${
+        className={`w-full px-3 py-2.5 rounded-md border bg-white text-text text-sm placeholder:text-text-light transition-all duration-150 ease-in-out focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none resize-y min-h-[88px] ${
           error ? 'border-status-cancelled-text' : 'border-border'
         } ${className}`}
         aria-invalid={error ? 'true' : undefined}
