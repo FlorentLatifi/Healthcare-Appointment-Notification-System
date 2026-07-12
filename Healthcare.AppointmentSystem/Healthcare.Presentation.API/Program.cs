@@ -137,20 +137,18 @@ try
 
     var app = builder.Build();
 
-    if (!app.Environment.IsDevelopment())
+    // Rate limiting / audit IPs + Stripe webhook signing: fail closed in Production.
+    if (!ProductionStartupGuards.EnsureTrustedProxyConfigOrThrow(app.Environment, builder.Configuration)
+        && !app.Environment.IsDevelopment())
     {
-        var proxies = builder.Configuration.GetSection("TrustedProxies").Get<string[]>();
-        var networks = builder.Configuration.GetSection("TrustedNetworks").Get<string[]>();
-        if ((proxies is null || proxies.Length == 0) &&
-            (networks is null || networks.Length == 0))
-        {
-            Log.Warning(
-                "No trusted proxies or networks configured. " +
-                "Rate limiting and audit IPs will use the direct RemoteIpAddress, which collapses to " +
-                "one global bucket when the server sits behind a reverse proxy. " +
-                "Set TrustedProxies or TrustedNetworks in production configuration.");
-        }
+        Log.Warning(
+            "No trusted proxies or networks configured. " +
+            "Rate limiting and audit IPs will use the direct RemoteIpAddress, which collapses to " +
+            "one global bucket when the server sits behind a reverse proxy. " +
+            "Set TrustedProxies or TrustedNetworks in production configuration.");
     }
+
+    ProductionStartupGuards.EnsureStripeWebhookSecretOrThrow(app.Environment, builder.Configuration);
 
     // ── Middleware Pipeline ──────────────────────────────────
     // Order: forwarded headers → exception → correlation (for all logs) → request logging
@@ -222,6 +220,9 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
+    // Re-throw so Production fail-fast config errors (JWT, CORS, trusted proxies, etc.)
+    // surface a non-zero exit code and are visible to WebApplicationFactory / orchestrators.
+    throw;
 }
 finally
 {

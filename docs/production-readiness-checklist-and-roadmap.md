@@ -27,9 +27,9 @@ Use this document as the **single progress tracker**. Check boxes as work ships;
 | C3 | Password hashing (Argon2id) | ✅ | `Argon2IdPasswordHasher` + BCrypt upgrade path (ADR 0004) |
 | C4 | Access control on appointments/patients (ownership + roles) | ✅ | Controllers + integration/authz tests |
 | C5 | Double-booking prevention (lock + domain + unique index) | ✅ | Handler lock, `IsAvailable`, concurrency unit + integration tests |
-| C6 | Stripe webhook signature verification (fail closed) | 🟡 | Signature path exists; enforce **webhook secret required in Production** at startup |
+| C6 | Stripe webhook signature verification (fail closed) | ✅ | Signature path + **Production fails fast** if `Stripe:WebhookSecret` missing (`Program.cs`) |
 | C7 | HTTPS / HSTS / security headers / CORS lockdown | ✅ | Middleware + security config (OWASP review) |
-| C8 | Rate limiting (proxy-aware) | 🟡 | Implemented; **require trusted proxy config in Production** still optional |
+| C8 | Rate limiting (proxy-aware) | ✅ | Implemented; **Production fails fast** without `TrustedProxies` / `TrustedNetworks` (`Program.cs`) |
 | C9 | Database migrations on deploy/start | ✅ | `DatabaseSeeder` applies migrations |
 | C10 | No demo data / default admin in Production | ✅ | Gated seeding + bootstrap secrets |
 | C11 | Outbox durable events (or explicit in-proc only for non-prod) | ✅ | Outbox + relay + DLQ (ADR 0003) |
@@ -139,7 +139,7 @@ flowchart TD
 | R0.3 | Add GH Environments `staging` / `production` with **separate** secrets; production **required reviewers** | Critical | Low | Prevents accidental prod deploys & secret bleed | — | ⬜ |
 | R0.4 | Pin `DEPLOY_SSH_KNOWN_HOSTS`; smoke **staging** deploy of last green image | Critical | Medium | Proves CD path | R0.3 | ⬜ |
 | R0.5 | Define backup: nightly SQL full + weekly restore drill; document RPO/RTO | Critical | Medium | Data loss readiness | — | ⬜ |
-| R0.6 | Startup fail-closed: Production requires `Stripe:WebhookSecret` if webhooks enabled; optional `RateLimiting:RequireTrustedProxyConfig` | High | Low | Closes residual OWASP gaps | — | ⬜ |
+| R0.6 | Startup fail-closed: Production requires `Stripe:WebhookSecret` + **TrustedProxies/TrustedNetworks** | High | Low | Closes residual OWASP gaps | — | ✅ |
 
 **Exit criteria:** CI fully green; staging deploy from GH succeeds; restore drill documented once.
 
