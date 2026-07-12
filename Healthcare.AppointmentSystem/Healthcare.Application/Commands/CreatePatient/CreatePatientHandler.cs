@@ -81,11 +81,14 @@ public sealed class CreatePatientHandler : ICommandHandler<CreatePatientCommand,
             return Result<int>.Failure($"Failed to create patient: {ex.Message}");
         }
 
-        // 5. Persist patient and link user atomically
+        // 5. Persist patient and link user atomically.
+        // Patient.Id is a SQL identity: INSERT must flush before reading Id for LinkToPatient.
+        // Linking before SaveChanges would persist User.PatientId = 0 (no navigation/FK cascade).
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             await _unitOfWork.Patients.AddAsync(patient, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken); // materialize Patient.Id
 
             requestingUser.LinkToPatient(patient.Id);
             await _unitOfWork.Users.UpdateAsync(requestingUser, cancellationToken);

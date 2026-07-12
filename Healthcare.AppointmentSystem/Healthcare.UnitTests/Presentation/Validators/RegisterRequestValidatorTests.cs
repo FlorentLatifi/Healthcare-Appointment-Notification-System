@@ -13,7 +13,8 @@ public class RegisterRequestValidatorTests
     [Fact]
     public void Password_WhenWithinLimit_ShouldPass()
     {
-        var result = _validator.Validate(new RegisterRequest { Password = "ValidP@ss1" });
+        // Must meet 12+ chars + upper/lower/digit/special (RegisterRequestValidator).
+        var result = _validator.Validate(new RegisterRequest { Password = "ValidP@ssword1" });
         result.Errors.Should().NotContain(e => e.PropertyName == nameof(RegisterRequest.Password));
     }
 

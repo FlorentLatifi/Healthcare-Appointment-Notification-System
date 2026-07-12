@@ -24,7 +24,7 @@ using StackExchange.Redis;
 
 namespace Healthcare.UnitTests.Presentation;
 
-public sealed class AuthorizationTestWebApplicationFactory : WebApplicationFactory<Program>
+public class AuthorizationTestWebApplicationFactory : WebApplicationFactory<Program>
 {
     public AuthorizationTestWebApplicationFactory()
     {
@@ -38,7 +38,9 @@ public sealed class AuthorizationTestWebApplicationFactory : WebApplicationFacto
         SetEnv("Stripe__SecretKey", "sk_test_mock_auth_tests");
         SetEnv("Stripe__PublishableKey", "pk_test_mock_auth_tests");
         SetEnv("RateLimiting__GlobalPermitLimit", "10000");
-        SetEnv("RateLimiting__AuthPermitLimit", "10000");
+        // Default high for authz suite; RateLimitingTestWebApplicationFactory overwrites to 5.
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RateLimiting__AuthPermitLimit")))
+            Environment.SetEnvironmentVariable("RateLimiting__AuthPermitLimit", "10000");
         SetEnv("RateLimiting__WindowMinutes", "1");
         SetEnv("ConnectionStrings__DefaultConnection", "Server=.;Database=AuthTest_Unused;Trusted_Connection=true;");
         SetEnv("Redis__ConnectionString", "localhost:6379");
@@ -160,22 +162,8 @@ public sealed class AuthorizationTestWebApplicationFactory : WebApplicationFacto
     protected override void Dispose(bool disposing)
     {
         _adminSeedCounter = 0;
-        if (disposing)
-        {
-            // Clean up environment variables to avoid cross-test pollution
-            foreach (var key in new[]
-            {
-                "Jwt__Secret", "Jwt__Issuer", "Jwt__Audience", "Jwt__ExpirationInMinutes",
-                "Stripe__SecretKey", "Stripe__PublishableKey",
-                "RateLimiting__GlobalPermitLimit", "RateLimiting__AuthPermitLimit", "RateLimiting__WindowMinutes",
-                "ConnectionStrings__DefaultConnection", "Redis__ConnectionString",
-                "AllowedOrigins__0",
-                "Authentication__BreachedPasswordCheckEnabled",
-            })
-            {
-                Environment.SetEnvironmentVariable(key, null);
-            }
-        }
+        // Do not clear process env vars here: other WebApplicationFactory tests in the same
+        // process (rate limiting, etc.) still need Jwt__* / Stripe__* from SetEnv above.
         base.Dispose(disposing);
     }
 }

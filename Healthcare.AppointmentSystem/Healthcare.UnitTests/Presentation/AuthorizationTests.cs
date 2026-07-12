@@ -209,11 +209,50 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
         return _adminToken;
     }
 
+    private static int _bookingSlotCounter;
+
     private static DateTime NextWeekdayAt10Am()
     {
         var d = DateTime.UtcNow.AddDays(3);
         while (d.DayOfWeek == DayOfWeek.Saturday || d.DayOfWeek == DayOfWeek.Sunday) d = d.AddDays(1);
-        return d.Date.AddHours(10);
+        return DateTime.SpecifyKind(d.Date.AddHours(10), DateTimeKind.Utc);
+    }
+
+    /// <summary>
+    /// Unique Mon–Fri 10:00 UTC slots (counts weekdays, not calendar days) so tests
+    /// that share a doctor never land on the same day after weekend skipping.
+    /// </summary>
+    private static DateTime NextUniqueWeekdayAt10Am(int minWeekdaysOut = 10)
+    {
+        var weekdaySteps = minWeekdaysOut + Interlocked.Increment(ref _bookingSlotCounter);
+        var d = DateTime.UtcNow.Date;
+        while (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            d = d.AddDays(1);
+
+        for (var i = 0; i < weekdaySteps; i++)
+        {
+            d = d.AddDays(1);
+            while (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                d = d.AddDays(1);
+        }
+
+        return DateTime.SpecifyKind(d.AddHours(10), DateTimeKind.Utc);
+    }
+
+    /// <summary>
+    /// Domain forbids no-show before scheduled time; auth tests force a past slot after confirm.
+    /// </summary>
+    private async Task ForceAppointmentScheduledInPastAsync(int appointmentId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var appointments = scope.ServiceProvider.GetRequiredService<IAppointmentRepository>();
+        var appointment = await appointments.GetByIdAsync(appointmentId);
+        appointment.Should().NotBeNull();
+
+        var past = AppointmentTime.FromPersistence(DateTime.UtcNow.AddHours(-2));
+        typeof(Appointment).GetProperty(nameof(Appointment.ScheduledTime))!
+            .SetValue(appointment, past);
+        await appointments.UpdateAsync(appointment!);
     }
 
     private static async Task<int?> ExtractIdFromCreatedResponse(HttpResponseMessage response)
@@ -257,7 +296,7 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
     {
         var docId = bookingDoctorId ?? await CreateTempDoctorAsync();
         SetBearer(patientToken);
-        var time = when ?? NextWeekdayAt10Am().AddDays(14);
+        var time = when ?? NextUniqueWeekdayAt10Am();
         var response = await _client.PostAsJsonAsync("/api/v1/appointments", new
         {
             PatientId = patientId,
@@ -632,6 +671,7 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
         SetBearer(_seed.DoctorA_Token);
         await _client.PutAsJsonAsync($"/api/v1/appointments/{apptId}/confirm",
             new { AppointmentId = apptId, OverridePaymentRequirement = true, OverrideReason = "Test override for confirmation testing" });
+        await ForceAppointmentScheduledInPastAsync(apptId);
         var response = await _client.PutAsJsonAsync($"/api/v1/appointments/{apptId}/mark-no-show",
             new { AppointmentId = apptId });
         response.StatusCode.Should().Be(HttpStatusCode.OK);

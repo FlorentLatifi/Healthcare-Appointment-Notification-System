@@ -84,19 +84,22 @@ public sealed class CreateDoctorHandler : ICommandHandler<CreateDoctorCommand, R
             return Result<int>.Failure($"Failed to create doctor: {ex.Message}");
         }
 
-        // Persist doctor and link user atomically
+        // Persist doctor and link user atomically.
+        // Doctor.Id is a SQL identity: INSERT must flush before reading Id for LinkToDoctor.
+        // Linking before SaveChanges would persist User.DoctorId = 0 (no navigation/FK cascade).
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             await _unitOfWork.Doctors.AddAsync(doctor, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken); // materialize Doctor.Id
 
             if (requestingUser != null)
             {
                 requestingUser.LinkToDoctor(doctor.Id);
                 await _unitOfWork.Users.UpdateAsync(requestingUser, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _unitOfWork.CommitTransactionAsync(cancellationToken);
         }
         catch

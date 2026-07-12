@@ -2,51 +2,68 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Healthcare.Presentation.API.Responses;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Healthcare.UnitTests.Presentation;
 
-[Collection("RateLimitingSequential")]
-public class RateLimitingTests : IClassFixture<WebApplicationFactory<Program>>
+/// <summary>
+/// Dedicated factory so AuthPermitLimit=5 is baked into the process env before Program.Main.
+/// Sharing AuthorizationTestWebApplicationFactory left AuthPermitLimit=10000 and disabled the 429 path.
+/// </summary>
+public sealed class RateLimitingTestWebApplicationFactory : AuthorizationTestWebApplicationFactory
 {
-    private readonly WebApplicationFactory<Program> _factory;
-
-    public RateLimitingTests(WebApplicationFactory<Program> factory)
+    public RateLimitingTestWebApplicationFactory()
     {
-        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-        Environment.SetEnvironmentVariable("Jwt__Secret", "SuperSecretKeyForTestingRateLimiting123456!");
-        Environment.SetEnvironmentVariable("Stripe__SecretKey", "sk_test_mockkeyforratelimitingtests12345");
-        Environment.SetEnvironmentVariable("Stripe__PublishableKey", "pk_test_mockkeyforratelimitingtests12345");
+        Environment.SetEnvironmentVariable("RateLimiting__AuthPermitLimit", "5");
+        Environment.SetEnvironmentVariable("RateLimiting__GlobalPermitLimit", "10000");
+        Environment.SetEnvironmentVariable("RateLimiting__WindowMinutes", "1");
+    }
+}
 
-        _factory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.UseEnvironment("Development");
-        });
+[Collection("RateLimitingSequential")]
+public class RateLimitingTests : IClassFixture<RateLimitingTestWebApplicationFactory>
+{
+    private readonly RateLimitingTestWebApplicationFactory _factory;
+
+    public RateLimitingTests(RateLimitingTestWebApplicationFactory factory)
+    {
+        // Re-assert before each host client is created (other fixtures may raise the limit).
+        Environment.SetEnvironmentVariable("RateLimiting__AuthPermitLimit", "5");
+        _factory = factory;
     }
 
     [Fact]
     public async Task LoginEndpoint_AllowsUpToFiveRequests_AndFailsOnSixthRequest()
     {
-        // Arrange
-        var client = _factory.CreateClient();
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Development");
+            builder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["RateLimiting:AuthPermitLimit"] = "5",
+                    ["RateLimiting:GlobalPermitLimit"] = "10000",
+                    ["RateLimiting:WindowMinutes"] = "1",
+                });
+            });
+        }).CreateClient();
+
         var loginPayload = new { Username = "nonexistentuser", Password = "wrongpassword" };
 
-        // Act & Assert
-        // First 5 requests should get 400 Bad Request (since the user does not exist), not 429.
         for (int i = 0; i < 5; i++)
         {
-            var response = await client.PostAsJsonAsync("/api/v1/Auth/login", loginPayload);
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            var response = await client.PostAsJsonAsync("/api/v1/auth/login", loginPayload);
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+                $"request {i + 1}: {(await response.Content.ReadAsStringAsync())}");
         }
 
-        // The 6th request should trigger rate limiting (429 Too Many Requests)
-        var rateLimitedResponse = await client.PostAsJsonAsync("/api/v1/Auth/login", loginPayload);
-        rateLimitedResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        var rateLimitedResponse = await client.PostAsJsonAsync("/api/v1/auth/login", loginPayload);
+        rateLimitedResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests,
+            await rateLimitedResponse.Content.ReadAsStringAsync());
 
-        // Verify the response format matches ApiResponse
         var apiResponse = await rateLimitedResponse.Content.ReadFromJsonAsync<ApiResponse>();
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeFalse();
@@ -57,11 +74,8 @@ public class RateLimitingTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task HealthEndpoint_IsNotRestrictedByAuthPolicy()
     {
-        // Arrange
         var client = _factory.CreateClient();
 
-        // Act & Assert
-        // Sending 6 requests to health endpoint should not trigger 429 (only AuthPolicy has a limit of 5)
         for (int i = 0; i < 6; i++)
         {
             var response = await client.GetAsync("/health");

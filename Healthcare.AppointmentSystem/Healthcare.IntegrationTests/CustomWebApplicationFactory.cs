@@ -28,6 +28,29 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         .WithImage("redis:7-alpine")
         .Build();
 
+    public CustomWebApplicationFactory()
+    {
+        // Minimal hosting reads Jwt before ConfigureAppConfiguration callbacks run;
+        // env vars must be set before Program.Main builds the host.
+        SetEnv("Jwt__Secret", "TestSuperSecretKeyThatIsAtLeast32CharactersLong!");
+        SetEnv("Jwt__Issuer", "HealthcareAPI");
+        SetEnv("Jwt__Audience", "HealthcareClients");
+        SetEnv("Jwt__ExpirationInMinutes", "60");
+        SetEnv("Jwt__RefreshTokenExpirationInDays", "7");
+        SetEnv("Stripe__SecretKey", "sk_test_placeholder");
+        SetEnv("Stripe__PublishableKey", "pk_test_placeholder");
+        SetEnv("RateLimiting__GlobalPermitLimit", "10000");
+        SetEnv("RateLimiting__AuthPermitLimit", "10000");
+        SetEnv("RateLimiting__WindowMinutes", "1");
+        SetEnv("Authentication__BreachedPasswordCheckEnabled", "false");
+    }
+
+    private static void SetEnv(string key, string value)
+    {
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
+            Environment.SetEnvironmentVariable(key, value);
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         var sqlConnectionString = _sqlContainer.GetConnectionString();
@@ -51,6 +74,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 ["RateLimiting:GlobalPermitLimit"] = "10000",
                 ["RateLimiting:AuthPermitLimit"] = "10000",
                 ["RateLimiting:WindowMinutes"] = "1",
+                ["Authentication:BreachedPasswordCheckEnabled"] = "false",
             });
         });
 
@@ -72,6 +96,15 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     {
         await _sqlContainer.StartAsync();
         await _redisContainer.StartAsync();
+
+        // Force container connection strings so ambient process env (e.g. from unit-test hosts)
+        // cannot point EF at a non-existent local SQL Server.
+        Environment.SetEnvironmentVariable(
+            "ConnectionStrings__DefaultConnection",
+            _sqlContainer.GetConnectionString());
+        Environment.SetEnvironmentVariable(
+            "Redis__ConnectionString",
+            _redisContainer.GetConnectionString());
 
         using var scope = Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<HealthcareDbContext>();

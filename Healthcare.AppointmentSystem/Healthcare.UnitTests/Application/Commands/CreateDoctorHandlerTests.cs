@@ -55,6 +55,7 @@ public class CreateDoctorHandlerTests
         result.IsSuccess.Should().BeTrue();
 
         _doctorRepoMock.Verify(r => r.AddAsync(It.IsAny<Doctor>(), It.IsAny<CancellationToken>()), Times.Once);
+        // Identity INSERT (no requesting user → no second SaveChanges for link).
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _eventDispatcherMock.Verify(d => d.DispatchAsync(
             It.IsAny<DoctorCacheInvalidationNeededEvent>(),
@@ -228,9 +229,44 @@ public class CreateDoctorHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         _doctorRepoMock.Verify(r => r.AddAsync(It.IsAny<Doctor>(), It.IsAny<CancellationToken>()), Times.Once);
+        // Identity INSERT only when no requesting user is linked.
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _eventDispatcherMock.Verify(d => d.DispatchAsync(
             It.IsAny<DoctorCacheInvalidationNeededEvent>(),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithRequestingUser_ShouldSaveTwiceForIdentityThenLink()
+    {
+        var userId = 1;
+        var email = Email.Create($"user{userId}@test.com");
+        var unlinkedUser = User.Create($"user{userId}", email, "hash", UserRole.Doctor);
+
+        _doctorRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Doctor?)null);
+        _userRepoMock.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(unlinkedUser);
+
+        var command = new CreateDoctorCommand
+        {
+            FirstName = "Jane",
+            LastName = "Smith",
+            Email = "dr.smith@test.com",
+            PhoneNumber = "+355672345678",
+            LicenseNumber = "LIC-12345",
+            Specialty = "Cardiology",
+            ConsultationFeeAmount = 100m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 10,
+            RequestingUserId = userId
+        };
+
+        var result = await _handler.HandleAsync(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        _doctorRepoMock.Verify(r => r.AddAsync(It.IsAny<Doctor>(), It.IsAny<CancellationToken>()), Times.Once);
+        _userRepoMock.Verify(r => r.UpdateAsync(unlinkedUser, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 }
