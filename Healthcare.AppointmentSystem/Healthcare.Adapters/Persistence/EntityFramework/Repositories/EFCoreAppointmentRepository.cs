@@ -183,7 +183,8 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
 
     /// <summary>
     /// Reminder job: only needs Patient (email prefs) + appointment fields.
-    /// Uses filtered index IX_Appointments_Reminders when Status/RemindedAt predicates match.
+    /// Status/RemindedAt filter in SQL; time window client-side because
+    /// <c>AppointmentTime.Value</c> is not EF-translatable with the VO converter.
     /// </summary>
     public async Task<IEnumerable<Appointment>> GetAppointmentsNeedingRemindersAsync(
         CancellationToken cancellationToken = default)
@@ -191,15 +192,16 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         var now = DateTime.UtcNow;
         var twentyFourHoursFromNow = now.AddHours(24);
 
-        return await _context.Appointments
+        var candidates = await _context.Appointments
             .AsNoTracking()
             .Include(a => a.Patient)
-            .Where(a => a.Status == AppointmentStatus.Confirmed &&
-                       a.ScheduledTime.Value > now &&
-                       a.ScheduledTime.Value <= twentyFourHoursFromNow &&
-                       a.RemindedAt == null)
-            .OrderBy(a => a.ScheduledTime)
+            .Where(a => a.Status == AppointmentStatus.Confirmed && a.RemindedAt == null)
             .ToListAsync(cancellationToken);
+
+        return candidates
+            .Where(a => a.ScheduledTime.Value > now && a.ScheduledTime.Value <= twentyFourHoursFromNow)
+            .OrderBy(a => a.ScheduledTime.Value)
+            .ToList();
     }
 
     public async Task AddAsync(Appointment appointment, CancellationToken cancellationToken = default)
@@ -226,35 +228,48 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
 
     public async Task<StatusCountsResult> GetStatusCountsAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
     {
-        // Single scan, no navigations — uses IX_Appointments_Status_Time / ScheduledTime range
-        var counts = await _context.Appointments
-            .AsNoTracking()
-            .Where(a => a.ScheduledTime.Value >= from && a.ScheduledTime.Value < to)
-            .GroupBy(a => 1)
-            .Select(g => new StatusCountsResult(
-                g.Count(a => a.Status == AppointmentStatus.Pending),
-                g.Count(a => a.Status == AppointmentStatus.Confirmed),
-                g.Count(a => a.Status == AppointmentStatus.Completed),
-                g.Count(a => a.Status == AppointmentStatus.Cancelled),
-                g.Count(a => a.Status == AppointmentStatus.NoShow)))
-            .FirstOrDefaultAsync(cancellationToken);
+        // Date range filter is client-side: AppointmentTime.Value is not EF-translatable with HasConversion.
+        var inRange = await LoadAppointmentsInTimeRangeAsync(from, to, cancellationToken);
 
-        return counts ?? new StatusCountsResult(0, 0, 0, 0, 0);
+        return new StatusCountsResult(
+            inRange.Count(a => a.Status == AppointmentStatus.Pending),
+            inRange.Count(a => a.Status == AppointmentStatus.Confirmed),
+            inRange.Count(a => a.Status == AppointmentStatus.Completed),
+            inRange.Count(a => a.Status == AppointmentStatus.Cancelled),
+            inRange.Count(a => a.Status == AppointmentStatus.NoShow));
     }
 
     public async Task<List<DailyVolumeResult>> GetDailyVolumeAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
     {
-        return await _context.Appointments
-            .AsNoTracking()
-            .Where(a => a.ScheduledTime.Value >= from && a.ScheduledTime.Value < to)
-            .GroupBy(a => new { a.ScheduledTime.Value.Year, a.ScheduledTime.Value.Month, a.ScheduledTime.Value.Day })
+        var inRange = await LoadAppointmentsInTimeRangeAsync(from, to, cancellationToken);
+
+        return inRange
+            .GroupBy(a => a.ScheduledTime.Value.Date)
             .Select(g => new DailyVolumeResult(
-                new DateTime(g.Key.Year, g.Key.Month, g.Key.Day),
+                g.Key,
                 g.Count(a => a.Status == AppointmentStatus.Pending),
                 g.Count(a => a.Status == AppointmentStatus.Confirmed),
                 g.Count(a => a.Status == AppointmentStatus.Cancelled)))
             .OrderBy(r => r.Date)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Loads appointments then filters by <see cref="Appointment.ScheduledTime"/> in-process.
+    /// Avoids non-translatable <c>ScheduledTime.Value</c> comparisons against DateTime parameters.
+    /// </summary>
+    private async Task<List<Appointment>> LoadAppointmentsInTimeRangeAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken)
+    {
+        var all = await _context.Appointments
+            .AsNoTracking()
             .ToListAsync(cancellationToken);
+
+        return all
+            .Where(a => a.ScheduledTime.Value >= from && a.ScheduledTime.Value < to)
+            .ToList();
     }
 
     public async Task<List<WeeklyVolumeResult>> GetWeeklyVolumeAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
