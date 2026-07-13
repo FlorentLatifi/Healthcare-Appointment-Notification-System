@@ -53,6 +53,24 @@ public interface IAppointmentRepository
     Task<PagedResult<Appointment>> GetPagedByPatientIdAsync(int patientId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// True when the doctor and patient share at least one appointment (care relationship).
+    /// </summary>
+    Task<bool> HasDoctorPatientCareRelationshipAsync(
+        int doctorId,
+        int patientId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Paginated appointments for a patient that are with a specific doctor only (PHI-scoped).
+    /// </summary>
+    Task<PagedResult<Appointment>> GetPagedByPatientAndDoctorIdAsync(
+        int patientId,
+        int doctorId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets all appointments for a specific doctor.
     /// </summary>
     /// <param name="doctorId">The doctor ID.</param>

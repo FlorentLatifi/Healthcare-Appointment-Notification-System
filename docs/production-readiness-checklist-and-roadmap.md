@@ -2,7 +2,7 @@
 
 **System:** Healthcare Appointment Notification System  
 **Horizon:** next 2–3 months  
-**Last reviewed:** 2026-07-13 (PaymentIntent anti-rebinding)  
+**Last reviewed:** 2026-07-13 (doctor patient-appointment PHI scoping)  
 
 Use this document as the **single progress tracker**. Check boxes as work ships; update **Status** columns on the roadmap.
 
@@ -25,7 +25,7 @@ Use this document as the **single progress tracker**. Check boxes as work ships;
 | C1 | No secrets in git / images | ✅ | Empty appsettings secrets; `.env.secrets` + GH Environments (`docs/secrets-management.md`) |
 | C2 | JWT secret fail-fast + HS256-only validation | ✅ | `JwtSettings`, `JwtTokenValidation`; edge tests |
 | C3 | Password hashing (Argon2id) | ✅ | `Argon2IdPasswordHasher` + BCrypt upgrade path (ADR 0004) |
-| C4 | Access control on appointments/patients (ownership + roles) | ✅ | Controllers + integration/authz tests |
+| C4 | Access control on appointments/patients (ownership + roles) | ✅ | Controllers + integration/authz tests; **Doctor PHI scoped** via care relationship (`PatientRecordAccess` + `HasDoctorPatientCareRelationshipAsync`) on `GET Appointments/patient/{id}` and `GET Patients/{id}` |
 | C4b | Self-service profile identity link (`User.PatientId` / `DoctorId`) | ✅ | **Fixed:** `SaveChanges` before `LinkToPatient`/`LinkToDoctor`; SQLite regression tests (`CreateProfileLinkIdentityRegressionTests`); JWT claims now get real ids after re-login |
 | C5 | Double-booking prevention (lock + domain + unique index) | ✅ | Handler lock, `IsAvailable`, concurrency unit + integration tests |
 | C6 | Stripe webhook signature verification (fail closed) | ✅ | Signature path + **Production fails fast** if `Stripe:WebhookSecret` missing (`ProductionStartupGuards` + `Program.cs`); non-Production warns; tests: `StripeWebhookSecretStartupTests` |

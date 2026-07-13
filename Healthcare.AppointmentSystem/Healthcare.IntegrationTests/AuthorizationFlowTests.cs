@@ -160,6 +160,52 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task GetPatientById_DoctorAccessesUnrelatedPatient_Returns403()
+    {
+        // Patient with a profile, no appointments
+        var patToken = await RegisterAndLoginAsync("pat_unrel", "pat.unrel@test.com", "SecurePass123!", "Patient");
+        SetAuthToken(patToken);
+        var create = await Client.PostAsJsonAsync("/api/v1/patients", new
+        {
+            FirstName = "Unrelated",
+            LastName = "Patient",
+            Email = "unrelated.patient@test.com",
+            PhoneNumber = "+38349777777",
+            DateOfBirth = "1990-01-01",
+            Gender = "Male",
+            Street = "7 St",
+            City = "City",
+            State = "State",
+            PostalCode = "10000",
+            Country = "Country"
+        });
+        var created = await DeserializeResponse<int>(create);
+        var patientId = created!.Data;
+
+        // Doctor with linked profile but no care relationship to that patient
+        var docToken = await RegisterAndLoginAsync("doc_unrel", "doc.unrel@test.com", "SecurePass123!", "Doctor");
+        SetAuthToken(docToken);
+        var docCreate = await Client.PostAsJsonAsync("/api/v1/doctors", new
+        {
+            FirstName = "Unrel",
+            LastName = "Doctor",
+            Email = "unrel.doctor@clinic.com",
+            PhoneNumber = "+38348777777",
+            LicenseNumber = "MED-UNREL-1",
+            Specialty = "GeneralPractice",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 5
+        });
+        docCreate.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
+        docToken = await LoginAsync("doc_unrel", "SecurePass123!");
+        SetAuthToken(docToken);
+
+        var response = await Client.GetAsync($"/api/v1/patients/{patientId}");
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task GetAllPatients_WithoutToken_Returns401()
     {
         ClearAuthToken();

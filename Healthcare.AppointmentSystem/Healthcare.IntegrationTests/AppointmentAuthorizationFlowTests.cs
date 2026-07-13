@@ -237,6 +237,31 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task GetAppointmentsByPatient_DoctorAccessesOtherPatient_Returns403()
+    {
+        // Doctor has a care relationship with patient A (after booking) but not patient B.
+        var (ctx, _) = await SeedAndBookAsync();
+        var (_, otherPatientId) = await CreateOtherPatientAsync();
+
+        var token = await LoginAsync(ctx.DoctorUsername, "SecurePass123!");
+        SetAuthToken(token);
+
+        var response = await Client.GetAsync($"/api/v1/appointments/patient/{otherPatientId}");
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GetAppointmentsByPatient_DoctorAccessesRelatedPatient_Returns200()
+    {
+        var (ctx, _) = await SeedAndBookAsync();
+        var token = await LoginAsync(ctx.DoctorUsername, "SecurePass123!");
+        SetAuthToken(token);
+
+        var response = await Client.GetAsync($"/api/v1/appointments/patient/{ctx.PatientId}");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task GetAppointmentsByDoctor_DoctorAccessesOwn_Returns200()
     {
         var (ctx, _) = await SeedAndBookAsync();
@@ -282,10 +307,11 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         var patUsername = $"apat_{suffix}";
         var docUsername = $"adoc_{suffix}";
 
-        // Register Admin user, login, and create the doctor profile
-        var adminToken = await RegisterAndLoginAsync(
-            $"admin_{suffix}", $"admin.{suffix}@test.com", "SecurePass123!", "Admin");
-        SetAuthToken(adminToken);
+        // Register Doctor user first, then create doctor profile as that user so User.DoctorId is linked
+        // (JWT doctor_id claim after re-login). Admin-created profiles do not attach to a Doctor account.
+        var docToken = await RegisterAndLoginAsync(
+            docUsername, $"auth.doc.{suffix}@test.com", "SecurePass123!", "Doctor");
+        SetAuthToken(docToken);
 
         var docPayload = new
         {
@@ -304,8 +330,8 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         var docResult = await DeserializeResponse<int>(docResponse);
         var doctorId = docResult!.Data;
 
-        // Register Doctor user (for doctor_id claim on re-login)
-        await RegisterAndLoginAsync(docUsername, $"auth.doc.{suffix}@test.com", "SecurePass123!", "Doctor");
+        // Re-login so access token includes doctor_id
+        await LoginAsync(docUsername, "SecurePass123!");
         ClearAuthToken();
 
         // Register Patient user, login, create patient profile
@@ -399,9 +425,9 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
     {
         var suffix = Guid.NewGuid().ToString("N")[..6];
         var username = $"other_doc_{suffix}";
-        var adminToken = await RegisterAndLoginAsync(
-            $"od_admin_{suffix}", $"od.admin.{suffix}@test.com", "SecurePass123!", "Admin");
-        SetAuthToken(adminToken);
+        // Create doctor profile as the Doctor user so doctor_id is linked on the account.
+        var token = await RegisterAndLoginAsync(username, $"other.doc.user.{suffix}@test.com", "SecurePass123!", "Doctor");
+        SetAuthToken(token);
         var docPayload = new
         {
             FirstName = "Other",
@@ -416,7 +442,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         };
         var docResponse = await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
         var docResult = await DeserializeResponse<int>(docResponse);
-        var token = await RegisterAndLoginAsync(username, $"other.doc.user.{suffix}@test.com", "SecurePass123!", "Doctor");
+        token = await LoginAsync(username, "SecurePass123!");
         SetAuthToken(token);
         return (new SeedContext(0, docResult!.Data, "", username), docResult!.Data);
     }

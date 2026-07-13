@@ -137,14 +137,17 @@ public sealed class PatientsController : ControllerBase
         var role = User.GetRole();
         int? accessorId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid) ? uid : null;
 
-        if (role == AppRoles.Patient && User.GetPatientId() != id)
+        // Patient: own only. Doctor: care relationship required. Admin: unrestricted.
+        var denyReason = await PatientRecordAccess.GetDenyReasonForPatientDataAsync(
+            User, id, _unitOfWork.Appointments, cancellationToken);
+        if (denyReason is not null)
         {
             await _auditLogService.WriteAsync(
                 AuditActions.GetPatientById,
                 "Patient",
                 id,
                 AuditOutcome.Failure,
-                details: new { Reason = "forbidden_cross_patient_access" },
+                details: new { Reason = denyReason },
                 actorUserIdOverride: accessorId,
                 actorRoleOverride: role,
                 cancellationToken: cancellationToken);

@@ -86,6 +86,36 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         return new PagedResult<Appointment>(items, pageNumber, pageSize, totalCount);
     }
 
+    public Task<bool> HasDoctorPatientCareRelationshipAsync(
+        int doctorId,
+        int patientId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Appointments.AsNoTracking()
+            .AnyAsync(a => a.DoctorId == doctorId && a.PatientId == patientId, cancellationToken);
+    }
+
+    public async Task<PagedResult<Appointment>> GetPagedByPatientAndDoctorIdAsync(
+        int patientId,
+        int doctorId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var baseQuery = _context.Appointments
+            .Where(a => a.PatientId == patientId && a.DoctorId == doctorId);
+        var totalCount = await baseQuery.CountAsync(cancellationToken);
+
+        var items = await AppointmentAggregateReadOnly()
+            .Where(a => a.PatientId == patientId && a.DoctorId == doctorId)
+            .OrderByDescending(a => a.ScheduledTime)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Appointment>(items, pageNumber, pageSize, totalCount);
+    }
+
     public async Task<IEnumerable<Appointment>> GetByDoctorIdAsync(
         int doctorId,
         CancellationToken cancellationToken = default)

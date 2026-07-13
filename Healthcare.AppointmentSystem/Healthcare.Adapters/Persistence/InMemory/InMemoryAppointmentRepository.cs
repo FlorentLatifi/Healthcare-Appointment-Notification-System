@@ -63,6 +63,29 @@ public sealed class InMemoryAppointmentRepository : InMemoryRepository<Appointme
         return new PagedResult<Appointment>(items, pageNumber, pageSize, totalCount);
     }
 
+    public async Task<bool> HasDoctorPatientCareRelationshipAsync(
+        int doctorId,
+        int patientId,
+        CancellationToken cancellationToken = default)
+    {
+        var matches = await FindAsync(a => a.DoctorId == doctorId && a.PatientId == patientId);
+        return matches.Any();
+    }
+
+    public async Task<PagedResult<Appointment>> GetPagedByPatientAndDoctorIdAsync(
+        int patientId,
+        int doctorId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var all = await FindAsync(a => a.PatientId == patientId && a.DoctorId == doctorId);
+        var list = all.OrderByDescending(a => a.ScheduledTime.Value).ToList();
+        var totalCount = list.Count;
+        var items = list.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedResult<Appointment>(items, pageNumber, pageSize, totalCount);
+    }
+
     public Task<IEnumerable<Appointment>> GetByDoctorIdAsync(int doctorId, CancellationToken cancellationToken = default)
     {
         return FindAsync(a => a.DoctorId == doctorId);

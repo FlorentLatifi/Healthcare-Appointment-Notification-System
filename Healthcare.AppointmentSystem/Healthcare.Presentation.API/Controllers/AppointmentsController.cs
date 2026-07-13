@@ -176,6 +176,8 @@ public sealed class AppointmentsController : ControllerBase
 
     /// <summary>
     /// Gets paginated list of appointments for a patient.
+    /// Patient: own only. Doctor: only when care relationship exists, and only appointments with that doctor.
+    /// Admin: full patient history.
     /// </summary>
     [HttpGet("patient/{patientId}")]
     [Authorize(Roles = AppRoles.PatientOrDoctorOrAdmin)]
@@ -191,8 +193,15 @@ public sealed class AppointmentsController : ControllerBase
         _logger.LogInformation("Retrieving appointments for Patient {PatientId} - Page: {Page}, Size: {Size}",
             patientId, pageNumber, pageSize);
 
-        if (User.GetRole() == AppRoles.Patient && User.GetPatientId() != patientId)
+        var denyReason = await PatientRecordAccess.GetDenyReasonForPatientDataAsync(
+            User, patientId, _unitOfWork.Appointments, cancellationToken);
+        if (denyReason is not null)
+        {
+            _logger.LogWarning(
+                "Denied GetAppointmentsByPatient PatientId={PatientId} Reason={Reason}",
+                patientId, denyReason);
             return Forbid();
+        }
 
         // ── Read-Access Audit ──────────────────────────────────────────────
         // Skip audit for self-access (Patient role viewing own appointments).
@@ -211,8 +220,13 @@ public sealed class AppointmentsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var pagedEntities = await _unitOfWork.Appointments
-            .GetPagedByPatientIdAsync(patientId, pageNumber, pageSize, cancellationToken);
+        // Doctors never receive the patient's full multi-provider history — only their own slots.
+        var pagedEntities = PatientRecordAccess.MustScopeAppointmentsToDoctor(User)
+            ? await _unitOfWork.Appointments.GetPagedByPatientAndDoctorIdAsync(
+                patientId, User.GetDoctorId()!.Value, pageNumber, pageSize, cancellationToken)
+            : await _unitOfWork.Appointments.GetPagedByPatientIdAsync(
+                patientId, pageNumber, pageSize, cancellationToken);
+
         var pagedResult = new PagedResult<AppointmentDto>(
             pagedEntities.Items.Select(AppointmentMapper.ToDto),
             pagedEntities.PageNumber,
