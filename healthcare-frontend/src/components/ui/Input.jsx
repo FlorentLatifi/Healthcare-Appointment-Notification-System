@@ -1,9 +1,17 @@
+import { forwardRef } from 'react';
+
 /**
- * Input — text field with label, error, and helper text.
- * @param {{ label?: string, error?: string, helperText?: string, id?: string }} props
+ * Input — text field with label, error(s), and helper text.
+ * Supports react-hook-form via ref forwarding.
+ * @param {{ label?: string, error?: string | string[], helperText?: string, id?: string }} props
  */
-export default function Input({ label, error, helperText, className = '', id, ...props }) {
-  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+const Input = forwardRef(function Input(
+  { label, error, helperText, className = '', id, name, ...props },
+  ref,
+) {
+  const inputId = id || name || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const errorList = !error ? [] : Array.isArray(error) ? error.filter(Boolean) : [error];
+  const hasError = errorList.length > 0;
   return (
     <div className="mb-4">
       {label && (
@@ -12,20 +20,28 @@ export default function Input({ label, error, helperText, className = '', id, ..
         </label>
       )}
       <input
+        ref={ref}
         id={inputId}
+        name={name}
         className={`w-full min-h-10 px-3 py-2.5 rounded-md border bg-white text-text text-sm placeholder:text-text-light transition-all duration-150 ease-in-out focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none ${
-          error ? 'border-status-cancelled-text' : 'border-border'
+          hasError ? 'border-status-cancelled-text' : 'border-border'
         } ${className}`}
-        aria-invalid={error ? 'true' : undefined}
-        aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
+        aria-invalid={hasError ? 'true' : undefined}
+        aria-describedby={hasError ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
         {...props}
       />
-      {error && (
-        <p id={`${inputId}-error`} className="mt-1 text-xs text-status-cancelled-text" role="alert">{error}</p>
+      {hasError && (
+        <div id={`${inputId}-error`} className="mt-1 space-y-0.5" role="alert">
+          {errorList.map((msg, i) => (
+            <p key={`${i}-${msg}`} className="text-xs text-status-cancelled-text m-0">{msg}</p>
+          ))}
+        </div>
       )}
-      {!error && helperText && (
+      {!hasError && helperText && (
         <p id={`${inputId}-helper`} className="mt-1 text-xs text-text-muted">{helperText}</p>
       )}
     </div>
   );
-}
+});
+
+export default Input;

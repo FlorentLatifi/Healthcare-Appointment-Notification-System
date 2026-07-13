@@ -1,7 +1,17 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import apiClient, { setTokenGetter, setTokenSetter, onAuthCleared } from '../services/apiClient';
+import { parseApiError, flattenApiErrors } from '../hooks/useApiError';
 
 const AuthContext = createContext(null);
+
+function toUserFacingError(err, fallback) {
+  const parsed = parseApiError(err);
+  const message = flattenApiErrors(parsed) || err?.message || fallback;
+  const e = new Error(message);
+  e.apiError = parsed;
+  e.cause = err;
+  return e;
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -48,13 +58,19 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await apiClient.post('/Auth/login', { username, password });
       if (!data.success) {
-        throw new Error(data.errors?.[0] || data.message || 'Login failed');
+        throw toUserFacingError(
+          { response: { status: 400, data } },
+          'Login failed',
+        );
       }
       setToken(data.data.token);
       setUser({ username: data.data.username, role: data.data.role });
       setPatientId(data.data.patientId ?? null);
       setDoctorId(data.data.doctorId ?? null);
       return data.data;
+    } catch (err) {
+      if (err.apiError) throw err;
+      throw toUserFacingError(err, 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -67,9 +83,15 @@ export function AuthProvider({ children }) {
         username, email, password, role: role || 'Patient',
       });
       if (!data.success) {
-        throw new Error(data.errors?.[0] || data.message || 'Registration failed');
+        throw toUserFacingError(
+          { response: { status: 400, data } },
+          'Registration failed',
+        );
       }
       return data.data;
+    } catch (err) {
+      if (err.apiError) throw err;
+      throw toUserFacingError(err, 'Registration failed');
     } finally {
       setLoading(false);
     }

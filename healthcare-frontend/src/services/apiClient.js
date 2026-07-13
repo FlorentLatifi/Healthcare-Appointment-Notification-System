@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { parseApiError } from '../hooks/useApiError';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -35,6 +36,23 @@ function processQueue(error, token = null) {
   _failedQueue = [];
 }
 
+/** Attach normalized validation structure on every failed response. */
+function attachApiError(error) {
+  if (!error || error.apiError) return error;
+  try {
+    const parsed = parseApiError(error);
+    error.apiError = parsed;
+    error.isValidationError = !!(
+      parsed.hasFieldErrors ||
+      (error.response?.status === 400 || error.response?.status === 422) &&
+        Object.keys(parsed.fieldErrors || {}).length > 0
+    );
+  } catch {
+    // never break the interceptor
+  }
+  return error;
+}
+
 apiClient.interceptors.request.use((config) => {
   const token = typeof _getToken === 'function' ? _getToken() : null;
   if (token) {
@@ -46,6 +64,8 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
+    attachApiError(error);
+
     const originalRequest = error.config;
 
     if (
@@ -84,6 +104,7 @@ apiClient.interceptors.response.use(
       originalRequest.headers.Authorization = `Bearer ${newToken}`;
       return apiClient(originalRequest);
     } catch (refreshError) {
+      attachApiError(refreshError);
       processQueue(refreshError);
       if (typeof _onAuthCleared === 'function') {
         _onAuthCleared();

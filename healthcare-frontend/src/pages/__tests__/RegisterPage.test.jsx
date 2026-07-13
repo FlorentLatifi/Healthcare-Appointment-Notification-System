@@ -21,6 +21,7 @@ vi.mock('../../context/AuthContext', () => ({
 }));
 
 import RegisterPage from '../RegisterPage';
+import toast from 'react-hot-toast';
 
 describe('RegisterPage', () => {
   beforeEach(() => {
@@ -49,32 +50,70 @@ describe('RegisterPage', () => {
     expect(screen.getByRole('link', { name: /login/i })).toHaveAttribute('href', '/login');
   });
 
-  it('shows error when passwords do not match', async () => {
+  it('shows inline error when passwords do not match', async () => {
     const { usernameInput, emailInput, passwordInput, confirmInput } = renderPage();
 
     await userEvent.type(usernameInput, 'newuser');
     await userEvent.type(emailInput, 'new@test.com');
-    await userEvent.type(passwordInput, 'password123');
-    await userEvent.type(confirmInput, 'differentpass');
+    await userEvent.type(passwordInput, 'MyClinic!2026x');
+    await userEvent.type(confirmInput, 'MyClinic!2026y');
 
     await userEvent.click(screen.getByRole('button', { name: /register/i }));
 
-    const toast = (await import('react-hot-toast')).default;
-    expect(toast.error).toHaveBeenCalledWith('Passwords do not match');
+    expect((await screen.findAllByText('Passwords do not match')).length).toBeGreaterThan(0);
+    expect(mockRegister).not.toHaveBeenCalled();
+  });
+
+  it('shows client-side password length error for weak password', async () => {
+    const { usernameInput, emailInput, passwordInput, confirmInput } = renderPage();
+
+    await userEvent.type(usernameInput, 'newuser');
+    await userEvent.type(emailInput, 'new@test.com');
+    await userEvent.type(passwordInput, '123456');
+    await userEvent.type(confirmInput, '123456');
+
+    await userEvent.click(screen.getByRole('button', { name: /register/i }));
+
+    expect((await screen.findAllByText(/at least 12 characters/i)).length).toBeGreaterThan(0);
     expect(mockRegister).not.toHaveBeenCalled();
   });
 
   it('calls register with correct arguments on valid submission', async () => {
+    mockRegister.mockResolvedValueOnce({});
     const { usernameInput, emailInput, passwordInput, confirmInput } = renderPage();
 
     await userEvent.type(usernameInput, 'newuser');
     await userEvent.type(emailInput, 'new@test.com');
-    await userEvent.type(passwordInput, 'password123');
-    await userEvent.type(confirmInput, 'password123');
+    await userEvent.type(passwordInput, 'MyClinic!2026x');
+    await userEvent.type(confirmInput, 'MyClinic!2026x');
 
     await userEvent.click(screen.getByRole('button', { name: /register/i }));
 
-    expect(mockRegister).toHaveBeenCalledWith('newuser', 'new@test.com', 'password123', 'Patient');
+    await vi.waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledWith('newuser', 'new@test.com', 'MyClinic!2026x', 'Patient');
+    });
+  });
+
+  it('shows field-level API validation errors without toast for field-only failures', async () => {
+    const apiErr = new Error('Password must be at least 12 characters');
+    apiErr.apiError = {
+      fieldErrors: { password: ['Password must be at least 12 characters'] },
+      generalError: null,
+      hasFieldErrors: true,
+    };
+    mockRegister.mockRejectedValueOnce(apiErr);
+
+    const { usernameInput, emailInput, passwordInput, confirmInput } = renderPage();
+    await userEvent.type(usernameInput, 'newuser');
+    await userEvent.type(emailInput, 'new@test.com');
+    await userEvent.type(passwordInput, 'MyClinic!2026x');
+    await userEvent.type(confirmInput, 'MyClinic!2026x');
+    await userEvent.click(screen.getByRole('button', { name: /register/i }));
+
+    await vi.waitFor(() => {
+      expect(screen.getAllByText('Password must be at least 12 characters').length).toBeGreaterThan(0);
+    });
+    expect(toast.error).not.toHaveBeenCalled();
   });
 
   it('navigates to /login on successful registration', async () => {
@@ -84,13 +123,14 @@ describe('RegisterPage', () => {
 
     await userEvent.type(usernameInput, 'newuser');
     await userEvent.type(emailInput, 'new@test.com');
-    await userEvent.type(passwordInput, 'password123');
-    await userEvent.type(confirmInput, 'password123');
+    await userEvent.type(passwordInput, 'MyClinic!2026x');
+    await userEvent.type(confirmInput, 'MyClinic!2026x');
 
     await userEvent.click(screen.getByRole('button', { name: /register/i }));
 
     await vi.waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
     });
+    expect(toast.success).toHaveBeenCalled();
   });
 });

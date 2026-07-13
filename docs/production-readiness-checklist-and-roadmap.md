@@ -26,6 +26,7 @@ Use this document as the **single progress tracker**. Check boxes as work ships;
 | C2 | JWT secret fail-fast + HS256-only validation | ✅ | `JwtSettings`, `JwtTokenValidation`; edge tests |
 | C3 | Password hashing (Argon2id) | ✅ | `Argon2IdPasswordHasher` + BCrypt upgrade path (ADR 0004) |
 | C4 | Access control on appointments/patients (ownership + roles) | ✅ | Controllers + integration/authz tests |
+| C4b | Self-service profile identity link (`User.PatientId` / `DoctorId`) | ✅ | **Fixed:** `SaveChanges` before `LinkToPatient`/`LinkToDoctor`; SQLite regression tests (`CreateProfileLinkIdentityRegressionTests`); JWT claims now get real ids after re-login |
 | C5 | Double-booking prevention (lock + domain + unique index) | ✅ | Handler lock, `IsAvailable`, concurrency unit + integration tests |
 | C6 | Stripe webhook signature verification (fail closed) | ✅ | Signature path + **Production fails fast** if `Stripe:WebhookSecret` missing (`Program.cs`) |
 | C7 | HTTPS / HSTS / security headers / CORS lockdown | ✅ | Middleware + security config (OWASP review) |
@@ -69,6 +70,7 @@ Use this document as the **single progress tracker**. Check boxes as work ships;
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
+| M0 | Frontend validation UX (field errors + password strength) | ✅ | `useApiError` + Axios normalize; Register/Login/Book with RHF; strength meter; toast only for non-field errors |
 | M1 | Finish ADRs as living process (new decisions get ADRs) | ✅ | `docs/adr/*` foundation |
 | M2 | Dedicated SQL login + connection string without SA | ⬜ | Related H7 |
 | M3 | Field-level encryption for clinical notes / DOB | ⬜ | Product/compliance decision |
@@ -242,6 +244,7 @@ Treat these as **maintenance**, not roadmap invent-from-scratch:
 
 | Area | Reference |
 |------|-----------|
+| CreatePatient/CreateDoctor identity flush before link | `CreatePatientHandler` / `CreateDoctorHandler`; `Helpers/EfCoreSqliteFixture`; `CreateProfileLinkIdentityRegressionTests` |
 | Outbox resilience, metrics, DLQ | ADR 0003, outbox tests |
 | Observability code (OTel + business metrics + correlation) | `docs/monitoring.md` |
 | Secrets model (GH env + host files) | `docs/secrets-management.md` |

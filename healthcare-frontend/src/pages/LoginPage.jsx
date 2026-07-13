@@ -1,26 +1,53 @@
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { Button, Input } from '../components/ui';
+import useApiError, { fieldErrorList } from '../hooks/useApiError';
 
 export default function LoginPage() {
   const { login, loading } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ username: '', password: '' });
+  const {
+    fieldErrors: apiFieldErrors,
+    generalError,
+    applyError,
+    clearErrors: clearApiErrors,
+  } = useApiError();
 
-  const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm({
+    defaultValues: { username: '', password: '' },
+  });
+
+  const mergeFieldError = (name) => {
+    const client = errors[name]?.message;
+    const server = fieldErrorList(apiFieldErrors, name);
+    if (client && server?.length) return [client, ...server];
+    if (server?.length) return server;
+    if (client) return client;
+    return undefined;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
+    clearApiErrors();
     try {
-      await login(form.username, form.password);
+      await login(data.username, data.password);
       toast.success('Login successful');
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      toast.error(err.message);
+      const parsed = applyError(err);
+      Object.entries(parsed.fieldErrors || {}).forEach(([field, msgs]) => {
+        if (msgs?.length) setError(field, { type: 'server', message: msgs[0] });
+      });
+      // Auth failures are usually general (bad credentials) — toast those
+      if (!parsed.hasFieldErrors) {
+        toast.error(parsed.generalError || err.message || 'Login failed');
+      }
     }
   };
 
@@ -31,9 +58,32 @@ export default function LoginPage() {
           <h1 className="text-xl sm:text-2xl font-semibold text-text tracking-tight">Login</h1>
           <p className="text-sm text-text-muted mt-1">Sign in to your account</p>
         </div>
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light">
-          <Input label="Username" name="username" value={form.username} onChange={handleChange} required autoComplete="username" />
-          <Input label="Password" name="password" type="password" value={form.password} onChange={handleChange} required autoComplete="current-password" />
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light"
+          noValidate
+        >
+          {generalError && (
+            <div
+              className="mb-4 rounded-lg border border-status-cancelled-text/30 bg-status-cancelled-bg px-3 py-2 text-sm text-status-cancelled-text"
+              role="alert"
+            >
+              {generalError}
+            </div>
+          )}
+          <Input
+            label="Username"
+            autoComplete="username"
+            error={mergeFieldError('username')}
+            {...register('username', { required: 'Username is required' })}
+          />
+          <Input
+            label="Password"
+            type="password"
+            autoComplete="current-password"
+            error={mergeFieldError('password')}
+            {...register('password', { required: 'Password is required' })}
+          />
           <Button type="submit" disabled={loading} className="w-full mt-2" size="lg">
             {loading ? 'Logging in...' : 'Login'}
           </Button>
