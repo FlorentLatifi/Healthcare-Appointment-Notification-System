@@ -66,7 +66,11 @@ public sealed class MyHandlerIdentityTests
 
 ### Related examples
 
-- `Application/Commands/CreateProfileLinkIdentityRegressionTests.cs` — CreatePatient / CreateDoctor link order  
+- **CI-gated (required):** `Healthcare.IntegrationTests/CreateProfileLinkIdentityRegressionTests.cs` —
+  CreatePatient / CreateDoctor link order. Lives in the IntegrationTests project so the CI
+  `integration-tests` job always runs them. Do **not** put them back under UnitTests with
+  `[Trait("Category", "Integration")]` — the unit job uses `--filter Category!=Integration`
+  and would skip them again (how PatientId=0 slipped through).  
 - `Adapters/Persistence/EntityFramework/EFCorePaymentConcurrencyTests.cs` — concurrency with real SQLite  
 - Integration project `SqlServerTestFixture` / Testcontainers — full stack (slower; use when HTTP + SQL Server matter)
 

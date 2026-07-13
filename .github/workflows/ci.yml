@@ -77,6 +77,9 @@ jobs:
       - name: Build (Release)
         run: dotnet build Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln --no-restore -c Release
 
+      # Category=Integration in UnitTests is excluded (EF/SQLite concurrency suites that are opt-in).
+      # Profile-link identity regressions live in Healthcare.IntegrationTests (not UnitTests) so
+      # --filter Category!=Integration cannot skip them — Moq alone cannot catch PatientId=0.
       - name: Run unit tests
         run: >
           dotnet test Healthcare.AppointmentSystem/Healthcare.UnitTests/Healthcare.UnitTests.csproj
@@ -132,6 +135,17 @@ jobs:
 
       - name: Build (Release)
         run: dotnet build Healthcare.AppointmentSystem/Healthcare.AppointmentSystem.sln --no-restore -c Release
+
+      # Profile-link identity regressions (SQLite EF; no Testcontainers). Must stay in this project:
+      # UnitTests uses --filter Category!=Integration, which previously hid these when they lived
+      # there with Category=Integration. Moq cannot catch PatientId=0 — keep this step CI-gated.
+      - name: Profile identity regression (CreateProfileLinkIdentity)
+        run: >
+          dotnet test Healthcare.AppointmentSystem/Healthcare.IntegrationTests/Healthcare.IntegrationTests.csproj
+          --no-build -c Release
+          --filter "FullyQualifiedName~CreateProfileLinkIdentity"
+          --logger "trx;LogFileName=identity-regression-results.trx"
+          --logger "console;verbosity=normal"
 
       - name: Run integration tests
         run: >

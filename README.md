@@ -166,7 +166,9 @@ cd Healthcare.AppointmentSystem
 dotnet test
 
 # Unit tests only (faster, no Docker required)
-dotnet test --filter "Category!=Integration"
+dotnet test Healthcare.UnitTests --filter "Category!=Integration"
+# Profile-link identity regressions (PatientId=0 class): Healthcare.IntegrationTests
+# CreateProfileLinkIdentityRegressionTests — always run in CI integration job
 
 # Integration tests only (requires Docker — Testcontainers will pull SQL Server & Redis images)
 dotnet test --filter "Category=Integration"

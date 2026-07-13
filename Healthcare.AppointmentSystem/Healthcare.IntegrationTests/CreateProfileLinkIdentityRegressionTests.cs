@@ -3,21 +3,33 @@ using Healthcare.Application.Commands.CreateDoctor;
 using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Domain.Enums;
-using Healthcare.UnitTests.Helpers;
+using Healthcare.IntegrationTests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 
-namespace Healthcare.UnitTests.Application.Commands;
+namespace Healthcare.IntegrationTests;
 
 /// <summary>
 /// Regression: User.PatientId / User.DoctorId must equal the SQL identity of the new profile
 /// after CreatePatient / CreateDoctor. Linking before SaveChanges leaves Id=0 and breaks JWT claims.
 /// </summary>
 /// <remarks>
-/// Uses <see cref="EfCoreSqliteFixture"/> — see <c>Helpers/README.md</c>.
-/// Moq coverage remains in <see cref="CreatePatientHandlerTests"/> / <see cref="CreateDoctorHandlerTests"/>.
+/// <para>
+/// <b>CI gating (do not move back to UnitTests with Category=Integration):</b>
+/// These tests use real EF Core identity generation (SQLite in-memory via
+/// <see cref="EfCoreSqliteFixture"/>). Moq-only unit tests cannot catch the bug because mocks
+/// never assign database-generated keys. They previously lived in Healthcare.UnitTests with
+/// <c>[Trait("Category", "Integration")]</c>, but the CI unit job runs
+/// <c>--filter Category!=Integration</c>, so they never executed on PRs. That is how the
+/// PatientId=0 class of bug stayed green until production. Keep this class in
+/// Healthcare.IntegrationTests so the <c>integration-tests</c> job in
+/// <c>.github/workflows/ci.yml</c> always runs them (no Testcontainers required for this file).
+/// </para>
+/// <para>
+/// Moq orchestration remains in UnitTests <c>CreatePatientHandlerTests</c> /
+/// <c>CreateDoctorHandlerTests</c>.
+/// </para>
 /// </remarks>
-[Trait("Category", "Integration")]
 public sealed class CreateProfileLinkIdentityRegressionTests
 {
     [Fact]
@@ -33,7 +45,9 @@ public sealed class CreateProfileLinkIdentityRegressionTests
             email: "link.patient.user@test.com",
             role: UserRole.Patient);
 
-        var handler = new CreatePatientHandler(db.CreateUnitOfWork(ctx), Mock.Of<Healthcare.Application.Ports.Audit.IAuditLogService>());
+        var handler = new CreatePatientHandler(
+            db.CreateUnitOfWork(ctx),
+            Mock.Of<Healthcare.Application.Ports.Audit.IAuditLogService>());
 
         var result = await handler.HandleAsync(new CreatePatientCommand
         {

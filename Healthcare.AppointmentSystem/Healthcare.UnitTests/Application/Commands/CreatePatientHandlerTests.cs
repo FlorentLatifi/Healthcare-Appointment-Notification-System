@@ -13,7 +13,7 @@ namespace Healthcare.UnitTests.Application.Commands;
 
 /// <summary>
 /// Moq orchestration tests. Identity / User.PatientId linking against real EF is covered by
-/// <see cref="CreateProfileLinkIdentityRegressionTests"/> (see Helpers/README.md).
+/// Healthcare.IntegrationTests.CreateProfileLinkIdentityRegressionTests (CI-gated; see Helpers/README.md).
 /// </summary>
 public class CreatePatientHandlerTests
 {

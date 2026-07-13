@@ -2,7 +2,7 @@
 
 **System:** Healthcare Appointment Notification System  
 **Horizon:** next 2–3 months  
-**Last reviewed:** 2026-07-13 (JWT refresh after profile create)  
+**Last reviewed:** 2026-07-13 (identity regression tests CI-gated)  
 
 Use this document as the **single progress tracker**. Check boxes as work ships; update **Status** columns on the roadmap.
 
@@ -26,7 +26,7 @@ Use this document as the **single progress tracker**. Check boxes as work ships;
 | C2 | JWT secret fail-fast + HS256-only validation | ✅ | `JwtSettings`, `JwtTokenValidation`; edge tests |
 | C3 | Password hashing (Argon2id) | ✅ | `Argon2IdPasswordHasher` + BCrypt upgrade path (ADR 0004) |
 | C4 | Access control on appointments/patients (ownership + roles) | ✅ | Controllers + integration/authz tests; **Doctor PHI scoped** via care relationship (`PatientRecordAccess` + `HasDoctorPatientCareRelationshipAsync`) on `GET Appointments/patient/{id}` and `GET Patients/{id}` |
-| C4b | Self-service profile identity link (`User.PatientId` / `DoctorId`) | ✅ | **Fixed:** `SaveChanges` before `LinkToPatient`/`LinkToDoctor`; SQLite regression tests (`CreateProfileLinkIdentityRegressionTests`). **JWT claims without re-login:** FE `refreshSession()` after CreatePatient/CreateDoctor profile (`AuthContext` + `CreatePatientProfilePage` / doctor dashboard); removed client-only `setPatientId`/`setDoctorId`; integration: canary uses `/Auth/refresh`, `CreatePatientProfile_ThenBookAppointment_SameSessionWithoutRelogin_Succeeds` |
+| C4b | Self-service profile identity link (`User.PatientId` / `DoctorId`) | ✅ | **Fixed:** `SaveChanges` before `LinkToPatient`/`LinkToDoctor`. **CI-gated SQLite identity regressions:** `Healthcare.IntegrationTests/CreateProfileLinkIdentityRegressionTests` (moved out of UnitTests — was skipped by `--filter Category!=Integration`); CI step `Profile identity regression` in `ci.yml`. **JWT without re-login:** FE `refreshSession()` after profile create; integration canary + same-session book |
 | C5 | Double-booking prevention (lock + domain + unique index) | ✅ | Handler lock, `IsAvailable`, concurrency unit + integration tests |
 | C6 | Stripe webhook signature verification (fail closed) | ✅ | Signature path + **Production fails fast** if `Stripe:WebhookSecret` missing (`ProductionStartupGuards` + `Program.cs`); non-Production warns; tests: `StripeWebhookSecretStartupTests` |
 | C6b | PaymentIntent ↔ appointment binding (anti-rebinding) | ✅ | `PaymentIntentBinding` checks `metadata.appointment_id` (+ amount/currency) in `ProcessPaymentHandler` before reconcile; gateway returns PI metadata; tests: rebinding rejection in `PaymentCompensationFlowTests` / `ProcessPaymentHandlerTests` |
@@ -246,7 +246,7 @@ Treat these as **maintenance**, not roadmap invent-from-scratch:
 
 | Area | Reference |
 |------|-----------|
-| CreatePatient/CreateDoctor identity flush before link | `CreatePatientHandler` / `CreateDoctorHandler`; `Helpers/EfCoreSqliteFixture`; `CreateProfileLinkIdentityRegressionTests` |
+| CreatePatient/CreateDoctor identity flush before link | Handlers + `IntegrationTests/CreateProfileLinkIdentityRegressionTests` (CI-gated SQLite; not UnitTests Category=Integration) |
 | Outbox resilience, metrics, DLQ | ADR 0003, outbox tests |
 | Observability code (OTel + business metrics + correlation) | `docs/monitoring.md` |
 | Secrets model (GH env + host files) | `docs/secrets-management.md` |
