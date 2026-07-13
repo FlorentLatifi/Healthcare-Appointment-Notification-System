@@ -2,7 +2,7 @@
 
 **System:** Healthcare Appointment Notification System  
 **Horizon:** next 2–3 months  
-**Last reviewed:** 2026-07-13  
+**Last reviewed:** 2026-07-13 (frontend responsive/a11y pass)  
 
 Use this document as the **single progress tracker**. Check boxes as work ships; update **Status** columns on the roadmap.
 
@@ -71,6 +71,7 @@ Use this document as the **single progress tracker**. Check boxes as work ships;
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | M0 | Frontend validation UX (field errors + password strength) | ✅ | `useApiError` + Axios normalize; Register/Login/Book with RHF; strength meter; toast only for non-field errors |
+| M0b | Frontend mobile responsiveness + accessibility (patient journey) | ✅ | Shared UI: 44px touch targets, form `aria-describedby`, Modal focus trap/restore; pages: Login/Register/Book/Pay/MyAppts/Dashboard/Doctors; no page-level H-scroll (`Layout` + `overflow-x`); skip link |
 | M1 | Finish ADRs as living process (new decisions get ADRs) | ✅ | `docs/adr/*` foundation |
 | M2 | Dedicated SQL login + connection string without SA | ⬜ | Related H7 |
 | M3 | Field-level encryption for clinical notes / DOB | ⬜ | Product/compliance decision |

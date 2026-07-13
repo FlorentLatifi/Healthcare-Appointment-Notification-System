@@ -8,10 +8,11 @@ const variants = {
   outline: 'bg-transparent text-primary border border-primary hover:bg-primary-50',
 };
 
+/** Mobile-first min heights meet 44×44px touch targets; sm+ can be slightly denser. */
 const sizes = {
-  sm: 'min-h-9 px-3 py-1.5 text-xs gap-1.5',
-  md: 'min-h-10 px-4 py-2 text-sm gap-2',
-  lg: 'min-h-11 px-6 py-2.5 text-base gap-2',
+  sm: 'min-h-11 min-w-11 sm:min-h-9 sm:min-w-0 px-3 py-2 sm:py-1.5 text-xs gap-1.5',
+  md: 'min-h-11 min-w-11 sm:min-h-10 sm:min-w-0 px-4 py-2.5 sm:py-2 text-sm gap-2',
+  lg: 'min-h-12 min-w-11 sm:min-h-11 sm:min-w-0 px-6 py-3 sm:py-2.5 text-base gap-2',
 };
 
 const spinnerSizes = { sm: 14, md: 16, lg: 18 };
@@ -22,22 +23,24 @@ const spinnerSizes = { sm: 14, md: 16, lg: 18 };
  */
 export default function Button({
   variant = 'primary', size = 'md', loading = false, leftIcon, rightIcon,
-  className = '', disabled, children, ...props
+  className = '', disabled, children, type = 'button', ...props
 }) {
   const isDisabled = disabled || loading;
   return (
     <button
+      type={type}
       disabled={isDisabled}
-      className={`inline-flex items-center justify-center font-medium rounded-md transition-all duration-200 ease-in-out cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 focus-visible:outline-2 focus-visible:outline-primary ${variants[variant]} ${sizes[size]} ${className}`}
+      aria-busy={loading ? 'true' : undefined}
+      className={`inline-flex items-center justify-center font-medium rounded-md transition-all duration-200 ease-in-out cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {loading ? (
-        <Loader2 size={spinnerSizes[size]} className="animate-spin shrink-0" />
+        <Loader2 size={spinnerSizes[size]} className="animate-spin shrink-0" aria-hidden="true" />
       ) : leftIcon ? (
-        <span className="shrink-0">{leftIcon}</span>
+        <span className="shrink-0" aria-hidden="true">{leftIcon}</span>
       ) : null}
       {children}
-      {!loading && rightIcon && <span className="shrink-0">{rightIcon}</span>}
+      {!loading && rightIcon && <span className="shrink-0" aria-hidden="true">{rightIcon}</span>}
     </button>
   );
 }

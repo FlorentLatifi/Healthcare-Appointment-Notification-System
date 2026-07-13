@@ -322,7 +322,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:py-12">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:py-12 w-full min-w-0">
       <PageHeader
         title="Dashboard"
         subtitle={
@@ -475,23 +475,31 @@ export default function DashboardPage() {
 
 function QuickActions({ actions, onAction }) {
   return (
-    <div>
-      <h3 className="text-sm font-medium text-text-secondary uppercase tracking-wider mb-3">
+    <section aria-labelledby="quick-actions-heading">
+      <h3
+        id="quick-actions-heading"
+        className="text-sm font-medium text-text-secondary uppercase tracking-wider mb-3"
+      >
         Quick Actions
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {actions.map((a) => (
-          <Card key={a.path} hover onClick={() => onAction(a)}>
-            <div className="flex items-center justify-between gap-3">
+          <Card
+            key={a.path}
+            hover
+            onClick={() => onAction(a)}
+            aria-label={`${a.title}. ${a.desc}`}
+          >
+            <div className="flex items-center justify-between gap-3 min-w-0">
               <div className="min-w-0">
                 <h4 className="text-sm font-medium text-text">{a.title}</h4>
                 <p className="text-xs text-text-muted mt-0.5 break-words">{a.desc}</p>
               </div>
-              <ArrowRight size={16} className="text-text-muted shrink-0" />
+              <ArrowRight size={16} className="text-text-muted shrink-0" aria-hidden="true" />
             </div>
           </Card>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

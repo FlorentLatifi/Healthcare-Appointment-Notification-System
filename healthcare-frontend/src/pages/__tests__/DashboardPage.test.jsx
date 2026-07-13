@@ -139,7 +139,8 @@ describe('DashboardPage', () => {
       expect(screen.getByText(/no upcoming appointments/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('button', { name: /browse doctors/i })).toBeInTheDocument();
+    // EmptyState CTA and Quick Actions both expose browse-doctors affordances
+    expect(screen.getAllByRole('button', { name: /browse doctors/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows upcoming appointments and stats', async () => {
@@ -226,7 +227,8 @@ describe('DashboardPage', () => {
     });
 
     expect(mockApiClient.get).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: /create patient profile/i })).toBeInTheDocument();
+    // EmptyState CTA + Quick Actions card both match
+    expect(screen.getAllByRole('button', { name: /create patient profile/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('loads doctor dashboard data when role is Doctor', async () => {

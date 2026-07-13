@@ -66,34 +66,45 @@ export default function Navbar() {
         </Button>
 
         <button
-          className="sm:hidden inline-flex items-center justify-center min-w-10 min-h-10 p-2 rounded-md text-text-muted hover:text-text hover:bg-surface cursor-pointer bg-transparent border-none focus-visible:outline-2 focus-visible:outline-primary"
+          type="button"
+          className="sm:hidden inline-flex items-center justify-center min-w-11 min-h-11 p-2 rounded-md text-text-muted hover:text-text hover:bg-surface cursor-pointer bg-transparent border-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle navigation menu"
+          aria-expanded={menuOpen}
+          aria-controls="mobile-nav-menu"
         >
           {menuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
       {menuOpen && (
-        <div className="sm:hidden border-t border-border-light bg-white px-4 py-2 space-y-1 pb-4">
+        <div
+          id="mobile-nav-menu"
+          className="sm:hidden border-t border-border-light bg-white px-4 py-2 space-y-1 pb-4"
+          role="navigation"
+          aria-label="Mobile"
+        >
           {visibleLinks.map((l) => (
             <button
+              type="button"
               key={l.path}
-              className={`w-full text-left text-sm px-3 py-2 rounded-md transition-all duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${
+              className={`w-full text-left text-sm min-h-11 px-3 py-2.5 rounded-md transition-all duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                 loc.pathname === l.path
                   ? 'text-primary font-medium bg-surface'
                   : 'text-text-muted hover:text-text hover:bg-surface'
               }`}
+              aria-current={loc.pathname === l.path ? 'page' : undefined}
               onClick={() => { navigate(l.path); setMenuOpen(false); }}
             >
               {l.label}
             </button>
           ))}
           <button
-            className="w-full text-left text-sm px-3 py-2 rounded-md text-text-muted hover:text-text hover:bg-surface transition-all duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-primary flex items-center gap-2"
+            type="button"
+            className="w-full text-left text-sm min-h-11 px-3 py-2.5 rounded-md text-text-muted hover:text-text hover:bg-surface transition-all duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary flex items-center gap-2"
             onClick={() => { logout(); navigate('/login', { replace: true }); setMenuOpen(false); }}
           >
-            <LogOut size={14} />
+            <LogOut size={14} aria-hidden="true" />
             Logout
           </button>
         </div>

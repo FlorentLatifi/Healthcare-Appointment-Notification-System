@@ -4,10 +4,13 @@
  */
 
 /** Scroll container for wide tables — prevents page-level horizontal scroll. */
-export function TableScroll({ className = '', children }) {
+export function TableScroll({ className = '', children, label = 'Data table' }) {
   return (
     <div
-      className={`w-full max-w-full overflow-x-auto overscroll-x-contain -mx-0 rounded-xl border border-border-light bg-white shadow-card ${className}`}
+      className={`w-full max-w-full overflow-x-auto overscroll-x-contain rounded-xl border border-border-light bg-white shadow-card ${className}`}
+      role="region"
+      aria-label={label}
+      tabIndex={0}
     >
       {children}
     </div>
@@ -15,7 +18,7 @@ export function TableScroll({ className = '', children }) {
 }
 
 /**
- * @param {{ hover?: boolean }} props
+ * @param {{ hover?: boolean, className?: string }} props
  */
 export function Table({ className = '', children, ...props }) {
   return (
@@ -28,9 +31,10 @@ export function Table({ className = '', children, ...props }) {
   );
 }
 
-export function Th({ className = '', children, ...props }) {
+export function Th({ className = '', children, scope = 'col', ...props }) {
   return (
     <th
+      scope={scope}
       className={`text-left px-3 py-2.5 sm:px-4 sm:py-3 border-b-2 border-border bg-surface font-semibold text-text-secondary text-xs uppercase tracking-wider whitespace-nowrap ${className}`}
       {...props}
     >
@@ -42,7 +46,7 @@ export function Th({ className = '', children, ...props }) {
 export function Td({ className = '', children, ...props }) {
   return (
     <td
-      className={`px-3 py-2.5 sm:px-4 sm:py-3 border-b border-border-light text-text ${className}`}
+      className={`px-3 py-2.5 sm:px-4 sm:py-3 border-b border-border-light text-text break-words ${className}`}
       {...props}
     >
       {children}

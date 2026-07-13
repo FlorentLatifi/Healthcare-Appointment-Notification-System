@@ -114,36 +114,41 @@ export default function BookAppointmentPage() {
   };
 
   return (
-    <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-12">
+    <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-12 w-full min-w-0">
       <Button
         variant="ghost"
         size="sm"
         className="mb-4 sm:mb-6 -ml-1 sm:-ml-2"
         onClick={() => navigate('/doctors')}
+        leftIcon={<ArrowLeft size={14} />}
+        aria-label="Back to doctors list"
       >
-        <ArrowLeft size={14} />
-        Back to Doctors
+        <span className="sm:hidden">Back</span>
+        <span className="hidden sm:inline">Back to Doctors</span>
       </Button>
 
       <PageHeader title="Book Appointment" />
 
       {doctorLoading ? (
-        <div className="flex justify-center py-8"><Spinner /></div>
+        <div className="flex justify-center py-8" role="status" aria-label="Loading doctor">
+          <Spinner />
+        </div>
       ) : doctor ? (
-        <Card className="mb-4 sm:mb-6">
-          <p className="text-sm font-medium text-text">Dr. {doctor.fullName}</p>
+        <Card className="mb-4 sm:mb-6" aria-label="Selected doctor">
+          <p className="text-sm font-medium text-text break-words">Dr. {doctor.fullName}</p>
           <p className="text-xs text-text-muted mt-0.5 break-words">{doctor.specialties?.join(', ')}</p>
         </Card>
       ) : null}
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light"
+        className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light min-w-0"
         noValidate
+        aria-label="Book appointment form"
       >
         {generalError && (
           <div
-            className="mb-4 rounded-lg border border-status-cancelled-text/30 bg-status-cancelled-bg px-3 py-2 text-sm text-status-cancelled-text"
+            className="mb-4 rounded-lg border border-status-cancelled-text/30 bg-status-cancelled-bg px-3 py-2 text-sm text-status-cancelled-text break-words"
             role="alert"
           >
             {generalError}
@@ -156,6 +161,7 @@ export default function BookAppointmentPage() {
           min={minDate}
           step="1800"
           className="min-w-0"
+          helperText="Times must be on the hour or half-hour"
           error={mergeFieldError('scheduledTime') || mergeFieldError('datetime')}
           {...register('scheduledTime', {
             required: 'Date and time is required',

@@ -21,7 +21,6 @@ export default function RegisterPage() {
     generalError,
     applyError,
     clearErrors: clearApiErrors,
-    setFieldError,
   } = useApiError();
 
   const {
@@ -76,20 +75,22 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg px-4 sm:px-6 py-8 sm:py-12">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-6 sm:mb-8">
+    <div className="min-h-screen flex items-center justify-center bg-bg px-4 sm:px-6 py-8 sm:py-12 w-full max-w-[100vw]">
+      <div className="w-full max-w-sm min-w-0">
+        <header className="text-center mb-6 sm:mb-8">
           <h1 className="text-xl sm:text-2xl font-semibold text-text tracking-tight">Register</h1>
           <p className="text-sm text-text-muted mt-1">Create a new account</p>
-        </div>
+        </header>
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light"
+          className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light min-w-0"
           noValidate
+          aria-label="Registration form"
         >
           {generalError && (
             <div
-              className="mb-4 rounded-lg border border-status-cancelled-text/30 bg-status-cancelled-bg px-3 py-2 text-sm text-status-cancelled-text"
+              id="register-general-error"
+              className="mb-4 rounded-lg border border-status-cancelled-text/30 bg-status-cancelled-bg px-3 py-2 text-sm text-status-cancelled-text break-words"
               role="alert"
             >
               {generalError}
@@ -99,6 +100,8 @@ export default function RegisterPage() {
           <Input
             label="Username"
             autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
             error={mergeFieldError('username')}
             helperText="Letters, numbers, dashes, underscores (min 3)"
             {...register('username', {
@@ -172,7 +175,12 @@ export default function RegisterPage() {
         </form>
         <p className="text-sm text-text-muted text-center mt-6">
           Already have an account?{' '}
-          <Link to="/login" className="text-primary font-medium hover:text-primary-hover">Login</Link>
+          <Link
+            to="/login"
+            className="text-primary font-medium hover:text-primary-hover inline-flex min-h-11 items-center px-1"
+          >
+            Login
+          </Link>
         </p>
       </div>
     </div>

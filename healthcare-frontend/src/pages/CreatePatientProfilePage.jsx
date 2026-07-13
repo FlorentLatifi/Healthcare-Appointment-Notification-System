@@ -42,30 +42,35 @@ export default function CreatePatientProfilePage() {
   };
 
   return (
-    <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-12">
+    <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-12 w-full min-w-0">
       <PageHeader title="Create Patient Profile" subtitle="Fill in your details to start booking appointments." />
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
-          <Input label="First Name" value={form.firstName} onChange={set('firstName')} required />
-          <Input label="Last Name" value={form.lastName} onChange={set('lastName')} required />
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light min-w-0"
+        noValidate
+        aria-label="Create patient profile form"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-x-3">
+          <Input label="First Name" name="firstName" value={form.firstName} onChange={set('firstName')} required autoComplete="given-name" />
+          <Input label="Last Name" name="lastName" value={form.lastName} onChange={set('lastName')} required autoComplete="family-name" />
         </div>
-        <Input label="Email" type="email" value={form.email} onChange={set('email')} required />
-        <Input label="Phone Number" value={form.phoneNumber} onChange={set('phoneNumber')} required />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
-          <Input label="Date of Birth" type="date" value={form.dateOfBirth} onChange={set('dateOfBirth')} required />
-          <Select label="Gender" value={form.gender} onChange={set('gender')}>
-            {GENDERS.map((g) => <option key={g}>{g}</option>)}
+        <Input label="Email" name="email" type="email" value={form.email} onChange={set('email')} required autoComplete="email" />
+        <Input label="Phone Number" name="phoneNumber" type="tel" value={form.phoneNumber} onChange={set('phoneNumber')} required autoComplete="tel" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-x-3">
+          <Input label="Date of Birth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={set('dateOfBirth')} required />
+          <Select label="Gender" name="gender" value={form.gender} onChange={set('gender')}>
+            {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
           </Select>
         </div>
-        <Input label="Street" value={form.street} onChange={set('street')} />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
-          <Input label="City" value={form.city} onChange={set('city')} />
-          <Input label="State" value={form.state} onChange={set('state')} />
+        <Input label="Street" name="street" value={form.street} onChange={set('street')} autoComplete="street-address" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-x-3">
+          <Input label="City" name="city" value={form.city} onChange={set('city')} autoComplete="address-level2" />
+          <Input label="State" name="state" value={form.state} onChange={set('state')} autoComplete="address-level1" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
-          <Input label="Postal Code" value={form.postalCode} onChange={set('postalCode')} />
-          <Input label="Country" value={form.country} onChange={set('country')} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-x-3">
+          <Input label="Postal Code" name="postalCode" value={form.postalCode} onChange={set('postalCode')} autoComplete="postal-code" />
+          <Input label="Country" name="country" value={form.country} onChange={set('country')} autoComplete="country-name" />
         </div>
         <Button type="submit" loading={submitting} className="w-full mt-2" size="lg">
           Create Profile

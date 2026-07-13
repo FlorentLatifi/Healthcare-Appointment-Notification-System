@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
@@ -17,6 +17,7 @@ export default function MyAppointmentsPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
   const [paymentStatuses, setPaymentStatuses] = useState({});
+  const cancelReasonRef = useRef(null);
 
   useEffect(() => {
     if (!patientId) {
@@ -73,6 +74,7 @@ export default function MyAppointmentsPage() {
   const confirmCancel = async () => {
     if (!cancelReason || cancelReason.trim().length < 10) {
       setCancelError('Cancellation reason must be at least 10 characters');
+      cancelReasonRef.current?.focus?.();
       return;
     }
     try {
@@ -92,11 +94,19 @@ export default function MyAppointmentsPage() {
     }
   };
 
-  if (loading) return <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12"><Spinner /></div>;
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12 w-full min-w-0">
+        <div role="status" aria-label="Loading appointments" className="flex justify-center py-8">
+          <Spinner />
+        </div>
+      </div>
+    );
+  }
 
   if (fetchError) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12 w-full min-w-0">
         <PageHeader title="My Appointments" />
         <EmptyState message="Failed to load appointments." actionLabel="Retry" onAction={fetchAppointments} />
       </div>
@@ -104,7 +114,7 @@ export default function MyAppointmentsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12 w-full min-w-0">
       <PageHeader title="My Appointments" />
 
       {appointments.length === 0 ? (
@@ -115,79 +125,97 @@ export default function MyAppointmentsPage() {
           onAction={() => navigate('/doctors')}
         />
       ) : (
-        <div className="space-y-3">
+        <ul className="space-y-3 list-none m-0 p-0" aria-label="Your appointments">
           {appointments.map((appt) => (
-            <Card key={appt.id}>
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
-                <div className="flex flex-wrap items-center gap-2 min-w-0">
-                  <span className="text-sm font-semibold text-text break-all">{appt.referenceCode}</span>
-                  <Badge status={appt.status} />
-                </div>
-                <span className="text-xs text-text-muted shrink-0">{appt.scheduledDate}</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mb-1">
-                <span className="inline-flex items-center gap-1">
-                  <Calendar size={12} className="shrink-0" />
-                  Dr. {appt.doctor?.fullName}
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Clock size={12} className="shrink-0" />
-                  {appt.scheduledTimeFormatted}
-                </span>
-              </div>
-              <p className="text-sm text-text mt-1 break-words">{appt.reason}</p>
-              {appt.cancellationReason && (
-                <p className="text-xs text-status-cancelled-text mt-2 inline-flex items-start gap-1 break-words">
-                  <AlertCircle size={12} className="shrink-0 mt-0.5" />
-                  Cancellation reason: {appt.cancellationReason}
-                </p>
-              )}
-              {appt.status === APPOINTMENT_STATUS.PENDING && (
-                <div className="mt-3 pt-3 border-t border-border-light space-y-2">
-                  <div className="flex flex-col xs:flex-row sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <span className="text-xs text-text-muted inline-flex items-center gap-1">
-                      <CreditCard size={12} className="shrink-0" />
-                      {paymentStatuses[appt.id] === 'Succeeded' ? 'Paid' : 'Payment required'}
-                    </span>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      className="w-full sm:w-auto"
-                      leftIcon={<CreditCard size={14} />}
-                      onClick={() => navigate(`/pay/${appt.id}`)}
-                    >
-                      Pay Now
-                    </Button>
+            <li key={appt.id}>
+              <Card className="min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <span className="text-sm font-semibold text-text break-all">{appt.referenceCode}</span>
+                    <Badge status={appt.status} />
                   </div>
-                  <div className="flex justify-stretch sm:justify-end">
-                    <Button variant="ghost" size="sm" className="w-full sm:w-auto" onClick={() => openCancelModal(appt)}>Cancel</Button>
-                  </div>
+                  <span className="text-xs text-text-muted shrink-0">{appt.scheduledDate}</span>
                 </div>
-              )}
-            </Card>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mb-1">
+                  <span className="inline-flex items-center gap-1 min-w-0">
+                    <Calendar size={12} className="shrink-0" aria-hidden="true" />
+                    <span className="break-words">Dr. {appt.doctor?.fullName}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Clock size={12} className="shrink-0" aria-hidden="true" />
+                    {appt.scheduledTimeFormatted}
+                  </span>
+                </div>
+                <p className="text-sm text-text mt-1 break-words">{appt.reason}</p>
+                {appt.cancellationReason && (
+                  <p className="text-xs text-status-cancelled-text mt-2 inline-flex items-start gap-1 break-words">
+                    <AlertCircle size={12} className="shrink-0 mt-0.5" aria-hidden="true" />
+                    Cancellation reason: {appt.cancellationReason}
+                  </p>
+                )}
+                {appt.status === APPOINTMENT_STATUS.PENDING && (
+                  <div className="mt-3 pt-3 border-t border-border-light space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <span className="text-xs text-text-muted inline-flex items-center gap-1">
+                        <CreditCard size={12} className="shrink-0" aria-hidden="true" />
+                        {paymentStatuses[appt.id] === 'Succeeded' ? 'Paid' : 'Payment required'}
+                      </span>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                        leftIcon={<CreditCard size={14} />}
+                        onClick={() => navigate(`/pay/${appt.id}`)}
+                      >
+                        Pay Now
+                      </Button>
+                    </div>
+                    <div className="flex justify-stretch sm:justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                        onClick={() => openCancelModal(appt)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       <Modal
         open={!!cancelling}
         onClose={() => setCancelling(null)}
         title="Cancel Appointment"
+        initialFocusRef={cancelReasonRef}
         footer={
           <>
-            <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setCancelling(null)}>Keep</Button>
-            <Button variant="danger" className="w-full sm:w-auto" onClick={confirmCancel}>Confirm Cancel</Button>
+            <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setCancelling(null)}>
+              Keep
+            </Button>
+            <Button variant="danger" className="w-full sm:w-auto" onClick={confirmCancel}>
+              Confirm Cancel
+            </Button>
           </>
         }
       >
-        <p className="text-sm text-text-muted mb-4">
+        <p className="text-sm text-text-muted mb-4 break-words">
           {cancelling?.referenceCode} — Dr. {cancelling?.doctor?.fullName}
         </p>
         <Textarea
+          ref={cancelReasonRef}
+          id="cancel-reason"
+          label="Cancellation reason"
           placeholder="Reason for cancellation (min 10 characters)..."
           value={cancelReason}
           onChange={(e) => { setCancelReason(e.target.value); setCancelError(''); }}
           error={cancelError}
+          helperText="Minimum 10 characters"
         />
       </Modal>
     </div>
