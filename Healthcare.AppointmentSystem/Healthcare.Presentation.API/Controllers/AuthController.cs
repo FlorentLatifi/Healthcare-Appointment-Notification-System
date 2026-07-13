@@ -103,21 +103,34 @@ public sealed class AuthController : ControllerBase
         };
     }
 
+    /// <summary>
+    /// Request a password-reset email. Always returns the same success message
+    /// (no account-enumeration). Rate-limited more strictly than login/register.
+    /// </summary>
     [HttpPost("forgot-password")]
     [AllowAnonymous]
-    [EnableRateLimiting("AuthPolicy")]
+    [EnableRateLimiting("PasswordResetPolicy")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> ForgotPassword(
         [FromBody] ForgotPasswordRequest request,
         CancellationToken cancellationToken)
     {
-        var baseUrl = _configuration.GetValue<string>("App:ResetPasswordBaseUrl")
-            ?? $"{Request.Scheme}://{Request.Host}/reset-password";
+        // Prefer SPA URL (e.g. http://localhost:5173/reset-password); never fall back to API host alone.
+        var baseUrl = _configuration.GetValue<string>("App:ResetPasswordBaseUrl");
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            var origin = Request.Headers.Origin.FirstOrDefault()
+                ?? _configuration.GetValue<string>("AllowedOrigins:0");
+            baseUrl = string.IsNullOrWhiteSpace(origin)
+                ? "http://localhost:5173/reset-password"
+                : $"{origin.TrimEnd('/')}/reset-password";
+        }
 
         var command = new ForgotPasswordCommand
         {
-            Email = request.Email,
+            Email = request.Email?.Trim() ?? string.Empty,
             ResetLinkBaseUrl = baseUrl
         };
 
@@ -125,30 +138,35 @@ public sealed class AuthController : ControllerBase
 
         if (result.IsFailure)
         {
+            // Unexpected infrastructure failures only — never "email not found".
             return BadRequest(ApiResponse.ErrorResponse(
                 result.Error,
                 "Password reset request failed"));
         }
 
-        _logger.LogInformation("Password reset email sent to {Email}", request.Email);
+        _logger.LogInformation("Password reset requested (generic response returned)");
         return Ok(ApiResponse.SuccessResponse(
             "If the email address is registered, a password reset link has been sent."));
     }
 
+    /// <summary>
+    /// Complete password reset with email + single-use token + new strong password.
+    /// </summary>
     [HttpPost("reset-password")]
     [AllowAnonymous]
-    [EnableRateLimiting("AuthPolicy")]
+    [EnableRateLimiting("PasswordResetPolicy")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> ResetPassword(
         [FromBody] ResetPasswordRequest request,
         CancellationToken cancellationToken)
     {
         var command = new ResetPasswordCommand
         {
-            Email = request.Email,
-            Token = request.Token,
-            NewPassword = request.NewPassword
+            Email = request.Email?.Trim() ?? string.Empty,
+            Token = request.Token?.Trim() ?? string.Empty,
+            NewPassword = request.NewPassword ?? string.Empty
         };
 
         var result = await _resetPasswordHandler.HandleAsync(command, cancellationToken);
@@ -160,8 +178,9 @@ public sealed class AuthController : ControllerBase
                 "Password reset failed"));
         }
 
-        _logger.LogInformation("Password reset successful for {Email}", request.Email);
-        return Ok(ApiResponse.SuccessResponse("Password has been reset successfully."));
+        _logger.LogInformation("Password reset completed successfully");
+        return Ok(ApiResponse.SuccessResponse(
+            "Password has been reset successfully. You can now sign in with your new password."));
     }
 
     [HttpPost("register")]

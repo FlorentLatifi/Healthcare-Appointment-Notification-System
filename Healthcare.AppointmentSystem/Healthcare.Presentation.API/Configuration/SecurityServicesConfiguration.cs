@@ -91,8 +91,11 @@ public static class SecurityServicesConfiguration
 
         var globalRateLimit = configuration.GetValue<int>("RateLimiting:GlobalPermitLimit", 100);
         var authRateLimit = configuration.GetValue<int>("RateLimiting:AuthPermitLimit", 5);
+        var passwordResetLimit = configuration.GetValue<int>("RateLimiting:PasswordResetPermitLimit", 3);
         var rateLimitWindowMinutes = configuration.GetValue<int>("RateLimiting:WindowMinutes", 1);
+        var passwordResetWindowMinutes = configuration.GetValue<int>("RateLimiting:PasswordResetWindowMinutes", 15);
         var window = TimeSpan.FromMinutes(Math.Max(1, rateLimitWindowMinutes));
+        var passwordResetWindow = TimeSpan.FromMinutes(Math.Max(1, passwordResetWindowMinutes));
 
         services.AddRateLimiter(options =>
         {
@@ -111,7 +114,7 @@ public static class SecurityServicesConfiguration
                         Window = window
                     }));
 
-            // Stricter bucket for login/register/password endpoints (IP-based).
+            // Stricter bucket for login/register endpoints (IP-based).
             options.AddPolicy("AuthPolicy", httpContext =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: ClientIpResolver.GetAnonymousAuthPartitionKey(httpContext),
@@ -121,6 +124,18 @@ public static class SecurityServicesConfiguration
                         PermitLimit = authRateLimit,
                         QueueLimit = 0,
                         Window = window
+                    }));
+
+            // Password reset: fewer attempts, longer window (email flooding / token brute force).
+            options.AddPolicy("PasswordResetPolicy", httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: "pwreset:" + ClientIpResolver.GetAnonymousAuthPartitionKey(httpContext),
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        AutoReplenishment = true,
+                        PermitLimit = passwordResetLimit,
+                        QueueLimit = 0,
+                        Window = passwordResetWindow
                     }));
 
             options.OnRejected = async (context, cancellationToken) =>

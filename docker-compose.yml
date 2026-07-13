@@ -44,6 +44,7 @@ services:
       Stripe__PublishableKey: ${STRIPE_PUBLISHABLE_KEY:-}
       Stripe__WebhookSecret: ${STRIPE_WEBHOOK_SECRET:-}
       AllowedOrigins__0: "http://localhost:5173"
+      App__ResetPasswordBaseUrl: "http://localhost:5173/reset-password"
       # Demo doctors: Docker is not "Development", so opt-in is required.
       Seeding__SeedDemoData: "true"
       Seeding__AllowDemoDataOutsideDevelopment: "true"

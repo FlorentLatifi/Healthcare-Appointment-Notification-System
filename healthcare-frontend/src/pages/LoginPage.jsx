@@ -88,7 +88,15 @@ export default function LoginPage() {
             error={mergeFieldError('password')}
             {...register('password', { required: 'Password is required' })}
           />
-          <Button type="submit" disabled={loading} className="w-full mt-2" size="lg">
+          <div className="flex justify-end -mt-2 mb-3">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-primary font-medium hover:text-primary-hover inline-flex min-h-11 items-center px-1"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <Button type="submit" disabled={loading} className="w-full mt-0" size="lg">
             {loading ? 'Logging in...' : 'Login'}
           </Button>
         </form>

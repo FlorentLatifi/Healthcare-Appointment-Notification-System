@@ -42,6 +42,7 @@ describe('LoginPage', () => {
     expect(usernameInput).toBeInTheDocument();
     expect(passwordInput).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /register/i })).toHaveAttribute('href', '/register');
+    expect(screen.getByRole('link', { name: /forgot password/i })).toHaveAttribute('href', '/forgot-password');
   });
 
   it('calls login() with entered credentials on submit', async () => {

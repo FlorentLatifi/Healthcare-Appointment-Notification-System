@@ -28,7 +28,8 @@ public sealed class JwtAuthenticationService : IAuthenticationService
     private const string RefreshTokenKeyPrefix = "refresh_token:";
     private const string ConsumedTokenKeyPrefix = "refresh_token:consumed:";
     private const string FamilyRevokedKeyPrefix = "refresh_token:family:revoked:";
-    private const string ResetTokenKeyPrefix = "reset_token:";
+    /// <summary>Per-user key storing SHA-256 of the single active reset token (raw token never stored).</summary>
+    private const string ResetTokenUserKeyPrefix = "reset_token:user:";
 
     public JwtAuthenticationService(
         IUnitOfWork unitOfWork,
@@ -352,19 +353,18 @@ public sealed class JwtAuthenticationService : IAuthenticationService
 
     public async Task<string> GeneratePasswordResetTokenAsync(int userId, CancellationToken cancellationToken = default)
     {
+        // Cryptographically random 256-bit token; only SHA-256 hash is persisted (single active per user).
         var resetToken = GenerateRefreshTokenValue();
         var tokenHash = HashToken(resetToken);
-        var ttl = TimeSpan.FromMinutes(_jwtSettings.ResetTokenExpirationInMinutes);
-        var value = userId.ToString();
+        var ttl = TimeSpan.FromMinutes(Math.Max(5, _jwtSettings.ResetTokenExpirationInMinutes));
+        var storeKey = $"{ResetTokenUserKeyPrefix}{userId}";
 
         if (_redisDb != null)
         {
             try
             {
-                await _redisDb.StringSetAsync(
-                    $"{ResetTokenKeyPrefix}{tokenHash}",
-                    value,
-                    ttl);
+                // Overwrites any previous token for this user (single-use + single-active).
+                await _redisDb.StringSetAsync(storeKey, tokenHash, ttl);
             }
             catch (RedisConnectionException ex)
             {
@@ -379,35 +379,44 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         }
         else
         {
-            _memoryStore.TryAdd($"{ResetTokenKeyPrefix}{tokenHash}", value);
-            _ = ScheduleMemoryCleanup($"{ResetTokenKeyPrefix}{tokenHash}", ttl);
+            _memoryStore.AddOrUpdate(storeKey, tokenHash, (_, _) => tokenHash);
+            _ = ScheduleMemoryCleanup(storeKey, ttl);
         }
 
-        _logger.LogInformation("Password reset token generated for user {UserId}", userId);
+        _logger.LogInformation(
+            "Password reset token generated for user {UserId} (expires in {Minutes}m)",
+            userId,
+            (int)ttl.TotalMinutes);
         return resetToken;
     }
 
     public async Task<Result> ValidateAndConsumePasswordResetTokenAsync(int userId, string token, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(token))
+            return Result.Failure("Invalid or expired reset token.");
+
         var tokenHash = HashToken(token);
+        var storeKey = $"{ResetTokenUserKeyPrefix}{userId}";
 
         if (_redisDb != null)
         {
             try
             {
-                var script = @"
-                    local val = redis.call('GET', KEYS[1])
-                    if val and tonumber(val) == tonumber(KEYS[2]) then
+                // Atomic compare-and-delete so the token is single-use under concurrency.
+                const string script = @"
+                    local stored = redis.call('GET', KEYS[1])
+                    if stored and stored == ARGV[1] then
                         redis.call('DEL', KEYS[1])
                         return 1
                     end
-                    return nil";
+                    return 0";
 
-                var result = await _redisDb.ScriptEvaluateAsync(
+                var result = (int)(long)await _redisDb.ScriptEvaluateAsync(
                     script,
-                    new RedisKey[] { $"{ResetTokenKeyPrefix}{tokenHash}", userId.ToString() });
+                    new RedisKey[] { storeKey },
+                    new RedisValue[] { tokenHash });
 
-                if (!result.IsNull)
+                if (result == 1)
                 {
                     _logger.LogInformation("Password reset token consumed for user {UserId}", userId);
                     return Result.Success();
@@ -426,11 +435,12 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         }
         else
         {
-            var key = $"{ResetTokenKeyPrefix}{tokenHash}";
-            if (_memoryStore.TryGetValue(key, out var storedUserId) &&
-                storedUserId == userId.ToString())
+            if (_memoryStore.TryGetValue(storeKey, out var storedHash) &&
+                CryptographicOperations.FixedTimeEquals(
+                    Encoding.UTF8.GetBytes(storedHash),
+                    Encoding.UTF8.GetBytes(tokenHash)))
             {
-                _memoryStore.TryRemove(key, out _);
+                _memoryStore.TryRemove(storeKey, out _);
                 _logger.LogInformation("Password reset token consumed for user {UserId}", userId);
                 return Result.Success();
             }

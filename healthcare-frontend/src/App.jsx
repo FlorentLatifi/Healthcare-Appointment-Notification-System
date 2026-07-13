@@ -9,6 +9,8 @@ import { Loader2 } from 'lucide-react';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const DoctorsListPage = lazy(() => import('./pages/DoctorsListPage'));
 const BookAppointmentPage = lazy(() => import('./pages/BookAppointmentPage'));
@@ -47,6 +49,8 @@ export default function App() {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/403" element={<ForbiddenPage />} />
               <Route path="/dashboard" element={<ProtectedLayout><DashboardPage /></ProtectedLayout>} />
               <Route path="/doctors" element={<ProtectedLayout><DoctorsListPage /></ProtectedLayout>} />
