@@ -14,6 +14,17 @@ function toUserFacingError(err, fallback) {
 }
 
 /**
+ * Normalize profile claim ids from login/refresh payloads.
+ * Treats missing, null, or 0 as "not linked" (Id=0 was the historical identity bug).
+ */
+function normalizeProfileId(value) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
+/**
  * Apply login/refresh payload to React state.
  * patientId / doctorId must come from the server JWT claims only — never client-side mutation.
  */
@@ -21,8 +32,8 @@ function sessionFromResponse(data) {
   return {
     token: data.token,
     user: { username: data.username, role: data.role },
-    patientId: data.patientId ?? null,
-    doctorId: data.doctorId ?? null,
+    patientId: normalizeProfileId(data.patientId),
+    doctorId: normalizeProfileId(data.doctorId),
   };
 }
 
@@ -32,6 +43,8 @@ export function AuthProvider({ children }) {
   const [patientId, setPatientId] = useState(null);
   const [doctorId, setDoctorId] = useState(null);
   const [loading, setLoading] = useState(false);
+  /** False until the initial /Auth/refresh (cookie restore) attempt finishes. */
+  const [sessionReady, setSessionReady] = useState(false);
 
   const applySession = useCallback((payload) => {
     const session = sessionFromResponse(payload);
@@ -63,17 +76,23 @@ export function AuthProvider({ children }) {
   }, [clearSession]);
 
   useEffect(() => {
+    let cancelled = false;
     const restoreSession = async () => {
       try {
         const { data } = await apiClient.post('/Auth/refresh');
-        if (data.success) {
+        if (!cancelled && data.success) {
           applySession(data.data);
         }
       } catch {
         // No valid refresh cookie — user stays logged out
+      } finally {
+        if (!cancelled) setSessionReady(true);
       }
     };
     restoreSession();
+    return () => {
+      cancelled = true;
+    };
   }, [applySession]);
 
   const login = useCallback(async (username, password) => {
@@ -153,6 +172,7 @@ export function AuthProvider({ children }) {
         patientId,
         doctorId,
         loading,
+        sessionReady,
         login,
         register,
         logout,

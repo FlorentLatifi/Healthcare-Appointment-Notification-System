@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
@@ -21,42 +21,60 @@ import {
   MapPin,
   CalendarClock,
   CheckCircle2,
-  XCircle,
-  AlertCircle,
+  Calendar,
   Stethoscope,
+  AlertCircle,
+  PlusCircle,
+  List,
+  UserCircle,
 } from 'lucide-react';
 import { APPOINTMENT_STATUS } from '../constants/appointmentStatus';
-
-const ROLE_ACTIONS = {
-  Patient: [
-    { title: 'Browse Doctors', desc: 'Find available doctors and book appointments', path: '/doctors', needsPatientId: true },
-    { title: 'My Appointments', desc: 'View and manage your appointments', path: '/my-appointments', needsPatientId: true },
-  ],
-  Doctor: [
-    { title: 'Doctor Dashboard', desc: 'Manage appointments, confirm, complete, mark no-show', path: '/doctor-dashboard' },
-  ],
-  Admin: [
-    { title: 'Admin Dashboard', desc: 'Manage doctors and patients', path: '/admin' },
-  ],
-};
 
 const UPCOMING_STATUSES = new Set([
   APPOINTMENT_STATUS.PENDING,
   APPOINTMENT_STATUS.CONFIRMED,
 ]);
 
+function hasLinkedId(id) {
+  return id != null && Number(id) > 0;
+}
+
+function parseApptDate(appt) {
+  if (appt.scheduledTime) {
+    const d = new Date(appt.scheduledTime);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  if (appt.scheduledDate) {
+    const d = new Date(`${appt.scheduledDate}T12:00:00`);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return null;
+}
+
 function isUpcoming(appt) {
   if (!UPCOMING_STATUSES.has(appt.status)) return false;
-  if (!appt.scheduledDate) return true;
-  // Treat end of scheduled day as still upcoming if status is active
-  const scheduled = new Date(`${appt.scheduledDate}T23:59:59`);
-  if (Number.isNaN(scheduled.getTime())) return true;
-  return scheduled >= new Date(new Date().toDateString());
+  const scheduled = parseApptDate(appt);
+  if (!scheduled) return true;
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  return scheduled >= startOfToday;
+}
+
+function formatNextDate(appt) {
+  if (!appt) return '—';
+  if (appt.scheduledDate) return appt.scheduledDate;
+  const d = parseApptDate(appt);
+  if (!d) return '—';
+  return d.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6" data-testid="dashboard-skeleton">
+    <div className="space-y-6" data-testid="dashboard-skeleton" aria-busy="true">
       <div className="space-y-2">
         <Skeleton width="40%" height="28px" />
         <Skeleton width="55%" height="16px" />
@@ -84,7 +102,9 @@ function StatCard({ label, value, icon, accent = 'text-primary' }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs text-text-muted uppercase tracking-wider truncate">{label}</p>
-          <p className="text-2xl sm:text-3xl font-semibold text-text mt-1 tabular-nums">{value}</p>
+          <p className="text-xl sm:text-2xl lg:text-3xl font-semibold text-text mt-1 tabular-nums break-words">
+            {value}
+          </p>
         </div>
         <div className={`shrink-0 w-9 h-9 rounded-lg bg-surface flex items-center justify-center ${accent}`}>
           {icon}
@@ -99,6 +119,10 @@ function AppointmentRow({ appt, role }) {
     role === 'Doctor'
       ? appt.patient?.fullName || 'Patient'
       : `Dr. ${appt.doctor?.fullName || 'Doctor'}`;
+  const specialty =
+    role !== 'Doctor' && Array.isArray(appt.doctor?.specialties)
+      ? appt.doctor.specialties.join(', ')
+      : appt.doctor?.specialty || null;
 
   return (
     <Card>
@@ -114,6 +138,12 @@ function AppointmentRow({ appt, role }) {
           <User size={12} className="shrink-0" />
           <span className="truncate">{counterpart}</span>
         </span>
+        {specialty && (
+          <span className="inline-flex items-center gap-1 min-w-0">
+            <Stethoscope size={12} className="shrink-0" />
+            <span className="truncate">{specialty}</span>
+          </span>
+        )}
         <span className="inline-flex items-center gap-1">
           <Clock size={12} className="shrink-0" />
           {appt.scheduledTimeFormatted}
@@ -197,21 +227,76 @@ function ProfileSummary({ profile, role }) {
   );
 }
 
+function QuickActions({ actions, onAction }) {
+  return (
+    <section aria-labelledby="quick-actions-heading">
+      <h3
+        id="quick-actions-heading"
+        className="text-sm font-medium text-text-secondary uppercase tracking-wider mb-3"
+      >
+        Quick Actions
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {actions.map((a) => (
+          <Card
+            key={a.path + a.title}
+            hover
+            onClick={() => onAction(a)}
+            aria-label={`${a.title}. ${a.desc}`}
+          >
+            <div className="flex items-center justify-between gap-3 min-w-0">
+              <div className="flex items-start gap-3 min-w-0">
+                {a.icon && (
+                  <div className="shrink-0 w-9 h-9 rounded-lg bg-surface flex items-center justify-center text-primary">
+                    {a.icon}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <h4 className="text-sm font-medium text-text">{a.title}</h4>
+                  <p className="text-xs text-text-muted mt-0.5 break-words">{a.desc}</p>
+                </div>
+              </div>
+              <ArrowRight size={16} className="text-text-muted shrink-0" aria-hidden="true" />
+            </div>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function DashboardPage() {
-  const { user, logout, patientId, doctorId } = useAuth();
+  const { user, logout, patientId, doctorId, sessionReady, refreshSession } = useAuth();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const claimRefreshAttempted = useRef(false);
 
   const role = user?.role;
-  const linkedId = role === 'Patient' ? patientId : role === 'Doctor' ? doctorId : null;
+  const linkedId =
+    role === 'Patient'
+      ? (hasLinkedId(patientId) ? Number(patientId) : null)
+      : role === 'Doctor'
+        ? (hasLinkedId(doctorId) ? Number(doctorId) : null)
+        : null;
   const needsLinkedData = role === 'Patient' || role === 'Doctor';
 
+  // If patient just linked a profile but JWT claims are stale, try one refresh.
+  useEffect(() => {
+    if (!sessionReady || role !== 'Patient' || hasLinkedId(patientId)) return;
+    if (claimRefreshAttempted.current) return;
+    claimRefreshAttempted.current = true;
+    refreshSession().catch(() => {
+      // Still unlinked — empty state CTA will guide them
+    });
+  }, [sessionReady, role, patientId, refreshSession]);
+
   const fetchDashboard = useCallback(async () => {
-    // Admin (or unlinked roles) — no remote dashboard data required
+    if (!sessionReady) return;
+
     if (!needsLinkedData) {
       setLoading(false);
       setError(null);
@@ -220,7 +305,6 @@ export default function DashboardPage() {
       return;
     }
 
-    // Patient/Doctor without profile link — show setup CTA, not an error
     if (!linkedId) {
       setLoading(false);
       setError(null);
@@ -266,71 +350,132 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [needsLinkedData, linkedId, role]);
+  }, [sessionReady, needsLinkedData, linkedId, role]);
 
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
 
-  const upcoming = useMemo(
-    () => appointments.filter(isUpcoming),
-    [appointments],
-  );
+  const upcoming = useMemo(() => {
+    return appointments
+      .filter(isUpcoming)
+      .sort((a, b) => {
+        const da = parseApptDate(a)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        const db = parseApptDate(b)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        return da - db;
+      });
+  }, [appointments]);
 
   const stats = useMemo(() => {
-    const upcomingCount = upcoming.length;
     const completed = appointments.filter((a) => a.status === APPOINTMENT_STATUS.COMPLETED).length;
-    const cancelled = appointments.filter((a) => a.status === APPOINTMENT_STATUS.CANCELLED).length;
-    const pending = appointments.filter((a) => a.status === APPOINTMENT_STATUS.PENDING).length;
+    const next = upcoming[0] || null;
     return {
-      upcoming: upcomingCount,
+      upcoming: upcoming.length,
       completed,
-      cancelled,
-      pending,
+      nextDate: formatNextDate(next),
       total: appointments.length,
     };
   }, [appointments, upcoming]);
 
+  const firstName = useMemo(() => {
+    if (profile?.firstName) return profile.firstName;
+    if (profile?.fullName) return profile.fullName.split(/\s+/)[0];
+    return null;
+  }, [profile]);
+
   const displayName = useMemo(() => {
-    if (profile?.fullName) {
-      return role === 'Doctor' ? `Dr. ${profile.fullName}` : profile.fullName;
+    if (role === 'Doctor' && profile?.fullName) return `Dr. ${profile.fullName}`;
+    if (firstName) return firstName;
+    if (profile?.fullName) return profile.fullName;
+    if (user?.username) return user.username;
+    return null;
+  }, [profile, firstName, role, user?.username]);
+
+  const greetingSubtitle = useMemo(() => {
+    if (displayName) {
+      return (
+        <>
+          Welcome back, <span className="font-medium text-text">{displayName}</span>!
+        </>
+      );
     }
-    if (profile?.firstName) {
-      return profile.firstName;
-    }
-    return user?.username || 'there';
-  }, [profile, role, user?.username]);
+    return 'Welcome back!';
+  }, [displayName]);
 
   const actions = useMemo(() => {
-    const list = [...(ROLE_ACTIONS[role] || [])];
-    if (role === 'Patient' && !patientId) {
-      list.unshift({
-        title: 'Create Patient Profile',
-        desc: 'Set up your profile to start booking',
-        path: '/create-patient',
-      });
+    if (role === 'Patient') {
+      const list = [];
+      if (!hasLinkedId(patientId)) {
+        list.push({
+          title: 'Create Patient Profile',
+          desc: 'Set up your profile to start booking',
+          path: '/create-patient',
+          icon: <UserCircle size={18} />,
+        });
+      } else {
+        list.push(
+          {
+            title: 'Book New Appointment',
+            desc: 'Find a doctor and choose a time slot',
+            path: '/doctors',
+            needsPatientId: true,
+            icon: <PlusCircle size={18} />,
+          },
+          {
+            title: 'View My Appointments',
+            desc: 'See history, pay, or cancel',
+            path: '/my-appointments',
+            needsPatientId: true,
+            icon: <List size={18} />,
+          },
+        );
+      }
+      return list;
     }
-    return list;
+    if (role === 'Doctor') {
+      return [
+        {
+          title: 'Doctor Dashboard',
+          desc: 'Manage appointments, confirm, complete, mark no-show',
+          path: '/doctor-dashboard',
+          icon: <Stethoscope size={18} />,
+        },
+      ];
+    }
+    if (role === 'Admin') {
+      return [
+        {
+          title: 'Admin Dashboard',
+          desc: 'Manage doctors and patients',
+          path: '/admin',
+          icon: <User size={18} />,
+        },
+      ];
+    }
+    return [];
   }, [role, patientId]);
 
   const handleAction = (a) => {
-    if (a.needsPatientId && !patientId) {
+    if (a.needsPatientId && !hasLinkedId(patientId)) {
       toast.error('Create your patient profile first');
       return navigate('/create-patient');
     }
     navigate(a.path);
   };
 
+  // Session restore in progress
+  if (!sessionReady) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:py-12 w-full min-w-0">
+        <PageHeader title="Dashboard" subtitle="Loading your session…" />
+        <DashboardSkeleton />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:py-12 w-full min-w-0">
-      <PageHeader
-        title="Dashboard"
-        subtitle={
-          <>
-            Welcome, <span className="font-medium text-text">{displayName}</span>
-          </>
-        }
-      />
+      <PageHeader title="Dashboard" subtitle={greetingSubtitle} />
 
       {loading && <DashboardSkeleton />}
 
@@ -349,7 +494,7 @@ export default function DashboardPage() {
             icon={<User size={24} className="text-text-muted" />}
             message={
               role === 'Patient'
-                ? 'Create your patient profile to see appointments and stats.'
+                ? 'Create your patient profile to see appointments and stats on your dashboard.'
                 : 'Link your doctor profile to see your schedule and stats.'
             }
             actionLabel={role === 'Patient' ? 'Create Patient Profile' : 'Go to Doctor Dashboard'}
@@ -367,19 +512,15 @@ export default function DashboardPage() {
         <div className="space-y-6 sm:space-y-8">
           {needsLinkedData && linkedId && (
             <>
-              {/* Quick stats */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div
+                className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
+                data-testid="dashboard-stats"
+              >
                 <StatCard
-                  label="Upcoming"
+                  label="Upcoming Appointments"
                   value={stats.upcoming}
                   icon={<CalendarClock size={18} />}
                   accent="text-primary"
-                />
-                <StatCard
-                  label="Pending"
-                  value={stats.pending}
-                  icon={<Clock size={18} />}
-                  accent="text-status-pending-text"
                 />
                 <StatCard
                   label="Completed"
@@ -388,20 +529,25 @@ export default function DashboardPage() {
                   accent="text-status-confirmed-text"
                 />
                 <StatCard
-                  label="Cancelled"
-                  value={stats.cancelled}
-                  icon={<XCircle size={18} />}
-                  accent="text-status-cancelled-text"
+                  label="Next Appointment"
+                  value={stats.nextDate}
+                  icon={<Calendar size={18} />}
+                  accent="text-status-pending-text"
+                />
+                <StatCard
+                  label="Total Appointments"
+                  value={stats.total}
+                  icon={<List size={18} />}
+                  accent="text-text-muted"
                 />
               </div>
 
-              {/* Profile + upcoming appointments */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-1 order-2 lg:order-1">
                   <ProfileSummary profile={profile} role={role} />
                 </div>
-                <div className="lg:col-span-2 space-y-3">
-                  <div className="flex flex-col xs:flex-row sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="lg:col-span-2 space-y-3 order-1 lg:order-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <h3 className="text-sm font-medium text-text-secondary uppercase tracking-wider">
                       Upcoming Appointments
                     </h3>
@@ -430,16 +576,20 @@ export default function DashboardPage() {
                   {upcoming.length === 0 ? (
                     <EmptyState
                       icon={<CalendarClock size={24} className="text-text-muted" />}
-                      message="No upcoming appointments."
+                      message={
+                        role === 'Patient'
+                          ? 'No upcoming appointments. Book a visit with a doctor to get started.'
+                          : 'No upcoming appointments on your schedule.'
+                      }
                       actionLabel={
-                        role === 'Patient' ? 'Browse Doctors' : 'Open Doctor Dashboard'
+                        role === 'Patient' ? 'Book Appointment' : 'Open Doctor Dashboard'
                       }
                       onAction={() =>
                         navigate(role === 'Patient' ? '/doctors' : '/doctor-dashboard')
                       }
                     />
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-3" data-testid="upcoming-appointments">
                       {upcoming.slice(0, 5).map((appt) => (
                         <AppointmentRow key={appt.id} appt={appt} role={role} />
                       ))}
@@ -470,36 +620,5 @@ export default function DashboardPage() {
         </Button>
       </div>
     </div>
-  );
-}
-
-function QuickActions({ actions, onAction }) {
-  return (
-    <section aria-labelledby="quick-actions-heading">
-      <h3
-        id="quick-actions-heading"
-        className="text-sm font-medium text-text-secondary uppercase tracking-wider mb-3"
-      >
-        Quick Actions
-      </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {actions.map((a) => (
-          <Card
-            key={a.path}
-            hover
-            onClick={() => onAction(a)}
-            aria-label={`${a.title}. ${a.desc}`}
-          >
-            <div className="flex items-center justify-between gap-3 min-w-0">
-              <div className="min-w-0">
-                <h4 className="text-sm font-medium text-text">{a.title}</h4>
-                <p className="text-xs text-text-muted mt-0.5 break-words">{a.desc}</p>
-              </div>
-              <ArrowRight size={16} className="text-text-muted shrink-0" aria-hidden="true" />
-            </div>
-          </Card>
-        ))}
-      </div>
-    </section>
   );
 }

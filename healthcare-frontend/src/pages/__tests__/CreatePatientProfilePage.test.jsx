@@ -38,7 +38,7 @@ describe('CreatePatientProfilePage', () => {
     expect(screen.getByRole('button', { name: /create profile/i })).toBeInTheDocument();
   });
 
-  it('refreshes JWT then navigates to /doctors on successful submission', async () => {
+  it('refreshes JWT then navigates to /dashboard on successful submission', async () => {
     mockApiClient.post.mockResolvedValue({ data: { success: true, data: 42 } });
 
     render(<CreatePatientProfilePage />);
@@ -61,6 +61,6 @@ describe('CreatePatientProfilePage', () => {
     });
 
     expect(mockRefreshSession).toHaveBeenCalled();
-    expect(mockNavigate).toHaveBeenCalledWith('/doctors');
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
   });
 });

@@ -21,6 +21,7 @@ function TestConsumer() {
       <span data-testid="patientId">{auth.patientId ?? 'null'}</span>
       <span data-testid="doctorId">{auth.doctorId ?? 'null'}</span>
       <span data-testid="loading">{String(auth.loading)}</span>
+      <span data-testid="sessionReady">{String(auth.sessionReady)}</span>
       <span data-testid="hasSetPatientId">{String(typeof auth.setPatientId === 'function')}</span>
       <span data-testid="hasSetDoctorId">{String(typeof auth.setDoctorId === 'function')}</span>
       <button data-testid="loginBtn" onClick={() => { auth.login('testuser', 'pass123').catch(() => {}); }}>Login</button>
@@ -74,9 +75,19 @@ describe('AuthContext', () => {
     renderWithProvider();
     await waitFor(() => {
       expect(screen.getByTestId('isAuth')).toHaveTextContent('false');
+      expect(screen.getByTestId('sessionReady')).toHaveTextContent('true');
     });
     expect(screen.getByTestId('user')).toHaveTextContent('null');
     expect(screen.getByTestId('token')).toHaveTextContent('null');
+  });
+
+  it('sets sessionReady after restore attempt', async () => {
+    mockHasSession();
+    renderWithProvider();
+    await waitFor(() => {
+      expect(screen.getByTestId('sessionReady')).toHaveTextContent('true');
+      expect(screen.getByTestId('patientId')).toHaveTextContent('42');
+    });
   });
 
   it('login() updates state on success', async () => {

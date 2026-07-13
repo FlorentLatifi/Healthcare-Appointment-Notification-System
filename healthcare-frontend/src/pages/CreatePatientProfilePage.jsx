@@ -30,9 +30,10 @@ export default function CreatePatientProfilePage() {
       if (data.success) {
         // Re-issue JWT so patient_id claim is present for subsequent API calls.
         // Client-only setPatientId would leave the Bearer token without the claim.
+        // Refresh JWT so patient_id is present before Dashboard / booking APIs run.
         await refreshSession();
         toast.success('Patient profile created!');
-        navigate('/doctors');
+        navigate('/dashboard');
       } else {
         toast.error(data.errors?.join('. ') || data.message || 'Failed to create profile');
       }

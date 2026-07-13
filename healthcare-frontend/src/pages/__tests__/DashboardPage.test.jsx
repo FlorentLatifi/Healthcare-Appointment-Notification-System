@@ -10,6 +10,8 @@ const { mockNavigate, mockApiClient, mockAuth } = vi.hoisted(() => ({
     logout: vi.fn(),
     patientId: 1,
     doctorId: null,
+    sessionReady: true,
+    refreshSession: vi.fn().mockResolvedValue({ patientId: 1 }),
   },
 }));
 
@@ -50,7 +52,7 @@ const makeAppt = (id, status, overrides = {}) => ({
   referenceCode: `APT-20260715-00${id}`,
   scheduledDate: '2099-07-15',
   scheduledTimeFormatted: '10:00 AM',
-  doctor: { fullName: 'Smith' },
+  doctor: { fullName: 'Smith', specialties: ['Cardiology'] },
   patient: { fullName: 'Jane Doe' },
   reason: 'Checkup',
   ...overrides,
@@ -62,6 +64,8 @@ describe('DashboardPage', () => {
     mockAuth.user = { username: 'jdoe', role: 'Patient' };
     mockAuth.patientId = 1;
     mockAuth.doctorId = null;
+    mockAuth.sessionReady = true;
+    mockAuth.refreshSession = vi.fn().mockResolvedValue({ patientId: 1 });
     mockApiClient.get.mockImplementation((url) => {
       if (url.startsWith('/Patients/')) {
         return Promise.resolve({ data: { success: true, data: patientProfile } });
@@ -92,21 +96,21 @@ describe('DashboardPage', () => {
     });
   });
 
-  it('shows personalized greeting with profile name after load', async () => {
+  it('shows personalized Welcome back greeting with first name after load', async () => {
     render(<DashboardPage />);
 
     expect(screen.getByTestId('dashboard-skeleton')).toBeInTheDocument();
 
     await vi.waitFor(() => {
-      expect(screen.getAllByText(/Jane Doe/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Jane/).length).toBeGreaterThanOrEqual(1);
     });
 
     expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
-    expect(screen.getByText(/Welcome,/i)).toBeInTheDocument();
+    expect(screen.getByText(/Welcome back,/i)).toBeInTheDocument();
     expect(screen.queryByTestId('dashboard-skeleton')).not.toBeInTheDocument();
   });
 
-  it('falls back to username when profile has no fullName', async () => {
+  it('falls back to username when profile has no name fields', async () => {
     mockApiClient.get.mockImplementation((url) => {
       if (url.startsWith('/Patients/')) {
         return Promise.resolve({
@@ -132,18 +136,17 @@ describe('DashboardPage', () => {
     expect(screen.getByTestId('dashboard-skeleton')).toBeInTheDocument();
   });
 
-  it('shows empty state when there are no upcoming appointments', async () => {
+  it('shows empty state with Book Appointment CTA when no upcoming', async () => {
     render(<DashboardPage />);
 
     await vi.waitFor(() => {
       expect(screen.getByText(/no upcoming appointments/i)).toBeInTheDocument();
     });
 
-    // EmptyState CTA and Quick Actions both expose browse-doctors affordances
-    expect(screen.getAllByRole('button', { name: /browse doctors/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('button', { name: /book appointment/i })).toBeInTheDocument();
   });
 
-  it('shows upcoming appointments and stats', async () => {
+  it('shows upcoming appointments and patient stats', async () => {
     mockApiClient.get.mockImplementation((url) => {
       if (url.startsWith('/Patients/')) {
         return Promise.resolve({ data: { success: true, data: patientProfile } });
@@ -175,15 +178,17 @@ describe('DashboardPage', () => {
     expect(screen.getByText('APT-20260715-002')).toBeInTheDocument();
     expect(screen.queryByText('APT-20260715-003')).not.toBeInTheDocument();
 
-    // Stat labels (Pending/Confirmed also appear on badges)
-    expect(screen.getByText('Upcoming')).toBeInTheDocument();
-    expect(screen.getAllByText('Pending').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByTestId('dashboard-stats')).toBeInTheDocument();
+    expect(screen.getAllByText('Upcoming Appointments').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Completed')).toBeInTheDocument();
-    expect(screen.getByText('Cancelled')).toBeInTheDocument();
+    expect(screen.getByText('Next Appointment')).toBeInTheDocument();
+    expect(screen.getByText('Total Appointments')).toBeInTheDocument();
+    expect(screen.getAllByText('2099-07-15').length).toBeGreaterThanOrEqual(1);
 
-    // Profile summary
     expect(screen.getByText('Profile Summary')).toBeInTheDocument();
     expect(screen.getByText('jane@example.com')).toBeInTheDocument();
+    expect(screen.getByText(/Book New Appointment/i)).toBeInTheDocument();
+    expect(screen.getByText(/View My Appointments/i)).toBeInTheDocument();
   });
 
   it('shows error state with working Retry button', async () => {
@@ -213,7 +218,7 @@ describe('DashboardPage', () => {
     await userEvent.click(retry);
 
     await vi.waitFor(() => {
-      expect(screen.getAllByText(/Jane Doe/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Jane/).length).toBeGreaterThanOrEqual(1);
     });
     expect(screen.queryByText(/server unavailable/i)).not.toBeInTheDocument();
   });
@@ -227,8 +232,18 @@ describe('DashboardPage', () => {
     });
 
     expect(mockApiClient.get).not.toHaveBeenCalled();
-    // EmptyState CTA + Quick Actions card both match
+    expect(mockAuth.refreshSession).toHaveBeenCalled();
     expect(screen.getAllByRole('button', { name: /create patient profile/i }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('treats patientId 0 as unlinked', async () => {
+    mockAuth.patientId = 0;
+    render(<DashboardPage />);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/create your patient profile/i)).toBeInTheDocument();
+    });
+    expect(mockApiClient.get).not.toHaveBeenCalled();
   });
 
   it('loads doctor dashboard data when role is Doctor', async () => {

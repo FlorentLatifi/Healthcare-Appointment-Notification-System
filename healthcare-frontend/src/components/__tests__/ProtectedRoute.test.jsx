@@ -13,8 +13,30 @@ import { useAuth } from '../../context/AuthContext';
 import ProtectedRoute from '../ProtectedRoute';
 
 describe('ProtectedRoute', () => {
+  it('shows session restore spinner while sessionReady is false', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: false,
+      user: null,
+      sessionReady: false,
+    });
+
+    render(
+      <ProtectedRoute>
+        <div data-testid="content">Protected Content</div>
+      </ProtectedRoute>,
+    );
+
+    expect(screen.getByRole('status', { name: /restoring session/i })).toBeInTheDocument();
+    expect(screen.queryByTestId('content')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('navigate-to')).not.toBeInTheDocument();
+  });
+
   it('redirects to /login when not authenticated', () => {
-    vi.mocked(useAuth).mockReturnValue({ isAuthenticated: false, user: null });
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: false,
+      user: null,
+      sessionReady: true,
+    });
 
     render(
       <ProtectedRoute allowedRoles={['Admin']}>
@@ -27,7 +49,11 @@ describe('ProtectedRoute', () => {
   });
 
   it('redirects to /403 when role is not allowed', () => {
-    vi.mocked(useAuth).mockReturnValue({ isAuthenticated: true, user: { role: 'Patient' } });
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      user: { role: 'Patient' },
+      sessionReady: true,
+    });
 
     render(
       <ProtectedRoute allowedRoles={['Admin', 'Doctor']}>
@@ -40,7 +66,11 @@ describe('ProtectedRoute', () => {
   });
 
   it('renders children when authenticated and role is allowed', () => {
-    vi.mocked(useAuth).mockReturnValue({ isAuthenticated: true, user: { role: 'Admin' } });
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      user: { role: 'Admin' },
+      sessionReady: true,
+    });
 
     render(
       <ProtectedRoute allowedRoles={['Admin', 'Doctor']}>
@@ -53,7 +83,11 @@ describe('ProtectedRoute', () => {
   });
 
   it('renders children when authenticated and no allowedRoles specified', () => {
-    vi.mocked(useAuth).mockReturnValue({ isAuthenticated: true, user: { role: 'Patient' } });
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      user: { role: 'Patient' },
+      sessionReady: true,
+    });
 
     render(
       <ProtectedRoute>
