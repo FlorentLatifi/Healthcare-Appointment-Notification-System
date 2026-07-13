@@ -2,6 +2,8 @@ using System.Reflection;
 using FluentValidation;
 using Healthcare.Application.Behaviors;
 using Healthcare.Application.Observability;
+using Healthcare.Application.Ports.Audit;
+using Healthcare.Application.Services;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,6 +20,10 @@ public static class DependencyInjection
 
         services.AddSingleton<IBusinessMetrics, BusinessMetrics>();
 
+        // Default no-op audit context; Presentation replaces with HttpAuditContext.
+        services.AddSingleton<IAuditContext>(NullAuditContext.Instance);
+        services.AddScoped<IAuditLogService, AuditLogService>();
+
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(assembly);
@@ -26,11 +32,13 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(assembly);
 
         // Pipeline order: first registered = outermost.
-        // Logging → Metrics → Performance → Validation → Transaction → Handler
+        // Logging → Metrics → Performance → Validation → Audit → Transaction → Handler
+        // Audit is outside Transaction so failure audits are not rolled back with the business txn.
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(MetricsBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PerformanceBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditLoggingBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
 
         return services;

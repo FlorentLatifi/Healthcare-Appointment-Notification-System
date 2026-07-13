@@ -33,7 +33,7 @@ public sealed class CreateProfileLinkIdentityRegressionTests
             email: "link.patient.user@test.com",
             role: UserRole.Patient);
 
-        var handler = new CreatePatientHandler(db.CreateUnitOfWork(ctx));
+        var handler = new CreatePatientHandler(db.CreateUnitOfWork(ctx), Mock.Of<Healthcare.Application.Ports.Audit.IAuditLogService>());
 
         var result = await handler.HandleAsync(new CreatePatientCommand
         {
@@ -108,7 +108,9 @@ public sealed class CreateProfileLinkIdentityRegressionTests
         var userId = await EfCoreIdentityAssertions.SeedUserAsync(
             ctx, "id_match_user", "id.match@test.com", UserRole.Patient);
 
-        var result = await new CreatePatientHandler(db.CreateUnitOfWork(ctx)).HandleAsync(
+        var result = await new CreatePatientHandler(
+            db.CreateUnitOfWork(ctx),
+            Mock.Of<Healthcare.Application.Ports.Audit.IAuditLogService>()).HandleAsync(
             new CreatePatientCommand
             {
                 FirstName = "Id",

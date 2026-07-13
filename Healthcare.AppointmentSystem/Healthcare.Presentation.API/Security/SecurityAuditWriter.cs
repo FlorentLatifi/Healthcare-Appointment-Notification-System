@@ -1,26 +1,23 @@
-using System.Text.Json;
-using Healthcare.Application.Ports.Repositories;
-using Healthcare.Domain.Entities;
+using Healthcare.Application.Ports.Audit;
+using Healthcare.Domain.Enums;
 
 namespace Healthcare.Presentation.API.Security;
 
 /// <summary>
 /// Writes security-relevant events (auth, access control) to the durable audit log.
 /// Never include passwords, tokens, or full secrets in the details payload.
+/// Delegates to <see cref="IAuditLogService"/> (append-only).
 /// </summary>
 public sealed class SecurityAuditWriter
 {
-    private readonly IAuditLogRepository _auditLogRepository;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditLogService _auditLogService;
     private readonly ILogger<SecurityAuditWriter> _logger;
 
     public SecurityAuditWriter(
-        IAuditLogRepository auditLogRepository,
-        IUnitOfWork unitOfWork,
+        IAuditLogService auditLogService,
         ILogger<SecurityAuditWriter> logger)
     {
-        _auditLogRepository = auditLogRepository;
-        _unitOfWork = unitOfWork;
+        _auditLogService = auditLogService;
         _logger = logger;
     }
 
@@ -34,17 +31,14 @@ public sealed class SecurityAuditWriter
     {
         try
         {
-            var json = JsonSerializer.Serialize(details);
-            var entry = new AuditLogEntry(
-                eventType,
-                entityType,
-                entityId,
-                DateTime.UtcNow,
-                json,
-                actorUserId);
-
-            await _auditLogRepository.AddAsync(entry, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _auditLogService.WriteAsync(
+                action: eventType,
+                resourceType: entityType,
+                resourceId: entityId,
+                outcome: AuditOutcome.Success,
+                details: details,
+                actorUserIdOverride: actorUserId,
+                cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {

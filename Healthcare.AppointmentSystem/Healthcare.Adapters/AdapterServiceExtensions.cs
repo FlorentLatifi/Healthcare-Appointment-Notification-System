@@ -7,6 +7,7 @@ using Healthcare.Adapters.Locking;
 using Healthcare.Adapters.Notifications;
 using Healthcare.Adapters.Payments;
 using Healthcare.Adapters.Persistence.EntityFramework;
+using Healthcare.Adapters.Persistence.EntityFramework.Interceptors;
 using Healthcare.Adapters.Persistence.EntityFramework.Repositories;
 using Healthcare.Adapters.Persistence.InMemory;
 using Healthcare.Adapters.Services;
@@ -452,9 +453,15 @@ public static class AdapterServiceExtensions
     string connectionString,
     IConfiguration configuration)
     {
+        // Append-only enforcement for AuditLogs (reject Modified/Deleted)
+        services.AddSingleton<AuditLogAppendOnlyInterceptor>();
+
         // Database Context
-        services.AddDbContext<HealthcareDbContext>(options =>
-            options.UseSqlServer(connectionString));
+        services.AddDbContext<HealthcareDbContext>((sp, options) =>
+        {
+            options.UseSqlServer(connectionString);
+            options.AddInterceptors(sp.GetRequiredService<AuditLogAppendOnlyInterceptor>());
+        });
 
         // Repositories (EF Core implementations)
         services.AddScoped<IAppointmentRepository, EFCoreAppointmentRepository>();

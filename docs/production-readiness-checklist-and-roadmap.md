@@ -2,7 +2,7 @@
 
 **System:** Healthcare Appointment Notification System  
 **Horizon:** next 2–3 months  
-**Last reviewed:** 2026-07-13 (frontend responsive/a11y pass)  
+**Last reviewed:** 2026-07-13 (immutable audit logging foundation)  
 
 Use this document as the **single progress tracker**. Check boxes as work ships; update **Status** columns on the roadmap.
 
@@ -50,7 +50,7 @@ Use this document as the **single progress tracker**. Check boxes as work ships;
 |---|------|--------|-------|
 | H1 | Complete MediatR migration (all commands/queries) | 🟡 | Pilots done; many `ICommandHandler` remain (ADR 0002) |
 | H2 | Application FluentValidation for every command | 🟡 | Pilots only; API validators exist |
-| H3 | Populate audit `UserId` from ambient current user | ⬜ | Domain event audit often null actor |
+| H3 | Populate audit `UserId` from ambient current user | ✅ | `IAuditContext`/`HttpAuditContext` + `IAuditLogService`; actor/role/IP/correlation on rows; MediatR `AuditLoggingBehavior` |
 | H4 | Observability wired to real collector (OTLP) | 🟡 | Code ready; **need collector + dashboards + alerts** |
 | H5 | Alerts: DLQ, health ready, payment fail rate, auth fail spike | ⬜ | Metrics exist; alert rules not in repo |
 | H6 | Outbox DLQ runbook + optional requeue admin API | 🟡 | Logging/metrics; no admin requeue UI |
@@ -75,7 +75,7 @@ Use this document as the **single progress tracker**. Check boxes as work ships;
 | M1 | Finish ADRs as living process (new decisions get ADRs) | ✅ | `docs/adr/*` foundation |
 | M2 | Dedicated SQL login + connection string without SA | ⬜ | Related H7 |
 | M3 | Field-level encryption for clinical notes / DOB | ⬜ | Product/compliance decision |
-| M4 | SIEM export / immutable audit store | ⬜ | |
+| M4 | SIEM export / immutable audit store | 🟡 | **Immutable store done:** enriched `AuditLogEntry` + append-only interceptor + admin query API; SIEM export still open (R3.6) |
 | M5 | Tighten `AllowedHosts` per environment | ⬜ | |
 | M6 | OpenAPI / client SDK generation for frontend | ⬜ | |
 | M7 | Frontend E2E (Playwright) critical paths | ⬜ | Vitest unit exists |
@@ -171,7 +171,7 @@ flowchart TD
 | R2.1 | MediatR: Cancel / Complete / MarkNoShow + remove legacy controller injections | High | Medium | Uniform pipeline (logs/metrics/validation/tx) | R0.1 | ⬜ |
 | R2.2 | MediatR: payments + patients/doctors commands | High | High | Same | R2.1 | ⬜ |
 | R2.3 | Application validators for all migrated commands | High | Medium | Defense in depth | R2.1–R2.2 | ⬜ |
-| R2.4 | `ICurrentUser` / ambient user → audit log `UserId` on domain handlers | High | Medium | Accountability / HIPAA-aligned audit | R2.1 | ⬜ |
+| R2.4 | `ICurrentUser` / ambient user → audit log `UserId` on domain handlers | High | Medium | Accountability / HIPAA-aligned audit | R2.1 | ✅ `HttpAuditContext` + `AuditLogService`; auto-audit BookAppointment/GetAppointment; manual GetPatient/ProcessPayment/CreatePatient |
 | R2.5 | Expand architecture tests if Presentation still leaks Adapters | Medium | Low | Layering integrity | R2.1 | ⬜ |
 | R2.6 | Frontend E2E: login, book, pay (test mode), cancel | Medium | Medium | Catches contract breaks | R1.5 | ⬜ |
 

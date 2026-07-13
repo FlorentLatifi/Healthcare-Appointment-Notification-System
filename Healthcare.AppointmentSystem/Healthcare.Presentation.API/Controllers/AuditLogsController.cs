@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Healthcare.Presentation.API.Controllers;
 
+/// <summary>
+/// Admin-only query API for immutable audit logs (HIPAA accountability).
+/// </summary>
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
@@ -26,34 +29,47 @@ public sealed class AuditLogsController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>
+    /// Query audit logs with pagination and filters (action, actor, resource, outcome, time range).
+    /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<IEnumerable<AuditLogDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAuditLogs(
         [FromQuery] string? entityType = null,
+        [FromQuery] string? resourceType = null,
         [FromQuery] int? entityId = null,
+        [FromQuery] int? resourceId = null,
+        [FromQuery] string? action = null,
+        [FromQuery] int? actorUserId = null,
+        [FromQuery] string? outcome = null,
+        [FromQuery] string? correlationId = null,
         [FromQuery] DateTime? from = null,
         [FromQuery] DateTime? to = null,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        var resolvedType = resourceType ?? entityType;
+        var resolvedId = resourceId ?? entityId;
+
         _logger.LogInformation(
-            "Retrieving audit logs - EntityType: {EntityType}, EntityId: {EntityId}, " +
-            "From: {From}, To: {To}, Page: {Page}, Size: {Size}",
-            entityType, entityId, from, to, pageNumber, pageSize);
+            "Retrieving audit logs - ResourceType: {ResourceType}, ResourceId: {ResourceId}, Action: {Action}, " +
+            "Actor: {Actor}, Outcome: {Outcome}, From: {From}, To: {To}, Page: {Page}, Size: {Size}",
+            resolvedType, resolvedId, action, actorUserId, outcome, from, to, pageNumber, pageSize);
 
         if (pageNumber < 1) pageNumber = 1;
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
         var entries = await _auditLogRepo.QueryAsync(
-            entityType, entityId, from, to, pageNumber, pageSize, cancellationToken);
+            resolvedType, resolvedId, from, to, pageNumber, pageSize,
+            action, actorUserId, outcome, correlationId, cancellationToken);
 
         var totalCount = await _auditLogRepo.CountAsync(
-            entityType, entityId, from, to, cancellationToken);
+            resolvedType, resolvedId, from, to,
+            action, actorUserId, outcome, correlationId, cancellationToken);
 
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
-
         var dtos = entries.Select(MapToDto).ToList();
 
         var pagedResult = new
@@ -72,7 +88,7 @@ public sealed class AuditLogsController : ControllerBase
             $"Retrieved page {pageNumber} of {totalPages} ({dtos.Count} log(s))"));
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(ApiResponse<AuditLogDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAuditLogById(
@@ -95,12 +111,21 @@ public sealed class AuditLogsController : ControllerBase
         return new AuditLogDto
         {
             Id = entry.Id,
+            Action = entry.EventType,
             EventType = entry.EventType,
+            ResourceType = entry.EntityType,
             EntityType = entry.EntityType,
+            ResourceId = entry.EntityId,
             EntityId = entry.EntityId,
             OccurredOn = entry.OccurredOn,
             Details = entry.Details,
+            ActorUserId = entry.UserId,
             UserId = entry.UserId,
+            ActorRole = entry.ActorRole,
+            Outcome = entry.Outcome,
+            ClientIp = entry.ClientIp,
+            CorrelationId = entry.CorrelationId,
+            UserAgent = entry.UserAgent,
             CreatedAt = entry.CreatedAt
         };
     }

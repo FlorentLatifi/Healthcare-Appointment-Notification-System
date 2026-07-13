@@ -130,6 +130,7 @@ public sealed class PaymentCompensationFlowTests
             _gateway.Object,
             _reconciliation,
             new BusinessMetrics(),
+            Mock.Of<Healthcare.Application.Ports.Audit.IAuditLogService>(),
             Mock.Of<ILogger<ProcessPaymentHandler>>());
 
         var result = await handler.HandleAsync(new ProcessPaymentCommand

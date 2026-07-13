@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Audit;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -28,7 +29,7 @@ public class CreatePatientHandlerTests
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _unitOfWorkMock.Setup(u => u.Patients).Returns(_patientRepoMock.Object);
         _unitOfWorkMock.Setup(u => u.Users).Returns(_userRepoMock.Object);
-        _handler = new CreatePatientHandler(_unitOfWorkMock.Object);
+        _handler = new CreatePatientHandler(_unitOfWorkMock.Object, Mock.Of<IAuditLogService>());
     }
 
     private static User MakeUnlinkedUser(int userId)

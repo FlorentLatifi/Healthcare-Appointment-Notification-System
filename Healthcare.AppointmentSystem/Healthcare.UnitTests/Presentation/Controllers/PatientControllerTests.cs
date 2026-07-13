@@ -55,7 +55,8 @@ public class PatientControllerTests
             _unitOfWork,
             localizerMock.Object,
             loggerMock.Object,
-            eventDispatcherMock.Object);
+            eventDispatcherMock.Object,
+            Mock.Of<Healthcare.Application.Ports.Audit.IAuditLogService>());
     }
 
     [Fact]

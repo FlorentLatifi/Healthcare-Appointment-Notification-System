@@ -51,6 +51,9 @@ public static class SecurityServicesConfiguration
 
         var jwtSettings = JwtSettings.FromConfiguration(configuration);
         services.AddSingleton(jwtSettings);
+        services.AddHttpContextAccessor();
+        // Prefer HTTP ambient context over Application's NullAuditContext singleton.
+        services.AddScoped<Healthcare.Application.Ports.Audit.IAuditContext, Security.HttpAuditContext>();
         services.AddScoped<SecurityAuditWriter>();
 
         services.AddAuthentication(options =>

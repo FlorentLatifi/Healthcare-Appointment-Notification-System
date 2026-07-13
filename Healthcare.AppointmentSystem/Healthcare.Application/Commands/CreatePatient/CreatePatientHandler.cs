@@ -1,5 +1,7 @@
 ﻿using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Audit;
 using Healthcare.Application.Ports.Repositories;
+using Healthcare.Domain.Audit;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
 using Healthcare.Domain.ValueObjects;
@@ -12,10 +14,12 @@ namespace Healthcare.Application.Commands.CreatePatient;
 public sealed class CreatePatientHandler : ICommandHandler<CreatePatientCommand, Result<int>>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditLogService _auditLogService;
 
-    public CreatePatientHandler(IUnitOfWork unitOfWork)
+    public CreatePatientHandler(IUnitOfWork unitOfWork, IAuditLogService auditLogService)
     {
         _unitOfWork = unitOfWork;
+        _auditLogService = auditLogService;
     }
 
     public async Task<Result<int>> HandleAsync(
@@ -28,6 +32,7 @@ public sealed class CreatePatientHandler : ICommandHandler<CreatePatientCommand,
 
         if (existingPatient is not null)
         {
+            await WriteAuditAsync(command, null, AuditOutcome.Failure, "duplicate_email", cancellationToken);
             return Result<int>.Failure($"A patient with email '{command.Email}' already exists.");
         }
 
@@ -102,6 +107,27 @@ public sealed class CreatePatientHandler : ICommandHandler<CreatePatientCommand,
             throw;
         }
 
+        await WriteAuditAsync(command, patient.Id, AuditOutcome.Success, null, cancellationToken);
         return Result<int>.Success(patient.Id);
     }
+
+    private Task WriteAuditAsync(
+        CreatePatientCommand command,
+        int? patientId,
+        AuditOutcome outcome,
+        string? error,
+        CancellationToken cancellationToken)
+        => _auditLogService.WriteAsync(
+            AuditActions.CreatePatient,
+            "Patient",
+            patientId,
+            outcome,
+            details: new
+            {
+                command.RequestingUserId,
+                // No email / DOB / address in audit details (PHI minimization)
+                error
+            },
+            actorUserIdOverride: command.RequestingUserId,
+            cancellationToken: cancellationToken);
 }

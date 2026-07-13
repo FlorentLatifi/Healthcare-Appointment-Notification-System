@@ -3,8 +3,11 @@ using Healthcare.Application.Commands.AnonymizePatient;
 using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
+using Healthcare.Application.Ports.Audit;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
+using Healthcare.Domain.Audit;
+using Healthcare.Domain.Enums;
 using Healthcare.Domain.Events;
 using Healthcare.Presentation.API.Authorization;
 using Healthcare.Presentation.API.Requests;
@@ -42,6 +45,7 @@ public sealed class PatientsController : ControllerBase
     private readonly IStringLocalizer<Messages> _localizer;
     private readonly ILogger<PatientsController> _logger;
     private readonly IDomainEventDispatcher _eventDispatcher;
+    private readonly IAuditLogService _auditLogService;
 
     public PatientsController(
         ICommandHandler<CreatePatientCommand, Result<int>> createPatientHandler,
@@ -49,7 +53,8 @@ public sealed class PatientsController : ControllerBase
         IUnitOfWork unitOfWork,
         IStringLocalizer<Messages> localizer,
         ILogger<PatientsController> logger,
-        IDomainEventDispatcher eventDispatcher)
+        IDomainEventDispatcher eventDispatcher,
+        IAuditLogService auditLogService)
     {
         _createPatientHandler = createPatientHandler;
         _anonymizePatientHandler = anonymizePatientHandler;
@@ -57,6 +62,7 @@ public sealed class PatientsController : ControllerBase
         _localizer = localizer;
         _logger = logger;
         _eventDispatcher = eventDispatcher;
+        _auditLogService = auditLogService;
     }
 
     /// <summary>
@@ -129,14 +135,36 @@ public sealed class PatientsController : ControllerBase
         _logger.LogInformation("Retrieving patient {PatientId}", id);
 
         var role = User.GetRole();
+        int? accessorId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid) ? uid : null;
+
         if (role == AppRoles.Patient && User.GetPatientId() != id)
+        {
+            await _auditLogService.WriteAsync(
+                AuditActions.GetPatientById,
+                "Patient",
+                id,
+                AuditOutcome.Failure,
+                details: new { Reason = "forbidden_cross_patient_access" },
+                actorUserIdOverride: accessorId,
+                actorRoleOverride: role,
+                cancellationToken: cancellationToken);
             return Forbid();
+        }
 
         var patient = await _unitOfWork.Patients.GetByIdAsync(id, cancellationToken);
 
         if (patient == null)
         {
             _logger.LogWarning("Patient {PatientId} not found", id);
+            await _auditLogService.WriteAsync(
+                AuditActions.GetPatientById,
+                "Patient",
+                id,
+                AuditOutcome.Failure,
+                details: new { Reason = "not_found" },
+                actorUserIdOverride: accessorId,
+                actorRoleOverride: role,
+                cancellationToken: cancellationToken);
             return NotFound(ApiResponse<PatientDto>.ErrorResponse(
                 _localizer["PatientNotFoundWithId", id],
                 _localizer["PatientNotFound"]));
@@ -144,14 +172,20 @@ public sealed class PatientsController : ControllerBase
 
         var dto = MapToDto(patient);
 
-        // ── Read-Access Audit ──────────────────────────────────────────────
-        // Skip audit for self-access (Patient role viewing own record) to
-        // avoid noisy logs. Only non-Patient roles (Doctor, Admin) and any
-        // access where the actor cannot be identified are logged.
+        // Immutable PHI access audit (all roles including self-access for compliance trail).
+        await _auditLogService.WriteAsync(
+            AuditActions.GetPatientById,
+            "Patient",
+            id,
+            AuditOutcome.Success,
+            details: new { Via = "GetPatientById" },
+            actorUserIdOverride: accessorId,
+            actorRoleOverride: role,
+            cancellationToken: cancellationToken);
+
+        // Keep domain event for existing outbox / secondary handlers (Doctor/Admin only to reduce noise).
         if (role != AppRoles.Patient)
         {
-            int? accessorId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid) ? uid : null;
-
             await _eventDispatcher.DispatchAsync(new PatientRecordAccessedEvent(
                 id,
                 accessorId,

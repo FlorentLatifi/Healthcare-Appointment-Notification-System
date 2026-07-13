@@ -2,6 +2,9 @@ using Healthcare.Domain.Entities;
 
 namespace Healthcare.Application.Ports.Repositories;
 
+/// <summary>
+/// Append-only audit log store. Implementations must not expose update/delete.
+/// </summary>
 public interface IAuditLogRepository
 {
     Task AddAsync(AuditLogEntry entry, CancellationToken cancellationToken = default);
@@ -15,6 +18,10 @@ public interface IAuditLogRepository
         DateTime? to = null,
         int pageNumber = 1,
         int pageSize = 20,
+        string? action = null,
+        int? actorUserId = null,
+        string? outcome = null,
+        string? correlationId = null,
         CancellationToken cancellationToken = default);
 
     Task<int> CountAsync(
@@ -22,5 +29,9 @@ public interface IAuditLogRepository
         int? entityId = null,
         DateTime? from = null,
         DateTime? to = null,
+        string? action = null,
+        int? actorUserId = null,
+        string? outcome = null,
+        string? correlationId = null,
         CancellationToken cancellationToken = default);
 }

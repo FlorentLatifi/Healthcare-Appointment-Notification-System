@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Healthcare.Application.Commands.ProcessPayment;
 using Healthcare.Application.Common;
+using Healthcare.Application.Ports.Audit;
 using Healthcare.Application.Ports.Payments;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -12,6 +13,7 @@ public class ProcessPaymentHandlerTests
 {
     private readonly Mock<IPaymentGateway> _paymentGatewayMock;
     private readonly Mock<IPaymentReconciliationService> _reconciliationMock;
+    private readonly Mock<IAuditLogService> _auditMock;
     private readonly Mock<ILogger<ProcessPaymentHandler>> _loggerMock;
     private readonly ProcessPaymentHandler _handler;
 
@@ -19,12 +21,14 @@ public class ProcessPaymentHandlerTests
     {
         _paymentGatewayMock = new Mock<IPaymentGateway>();
         _reconciliationMock = new Mock<IPaymentReconciliationService>();
+        _auditMock = new Mock<IAuditLogService>();
         _loggerMock = new Mock<ILogger<ProcessPaymentHandler>>();
 
         _handler = new ProcessPaymentHandler(
             _paymentGatewayMock.Object,
             _reconciliationMock.Object,
             new Healthcare.Application.Observability.BusinessMetrics(),
+            _auditMock.Object,
             _loggerMock.Object);
     }
 
