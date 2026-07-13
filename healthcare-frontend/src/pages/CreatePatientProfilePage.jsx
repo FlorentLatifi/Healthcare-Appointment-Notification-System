@@ -8,7 +8,7 @@ import { Button, Input, Select, PageHeader } from '../components/ui';
 const GENDERS = ['Male', 'Female', 'Other'];
 
 export default function CreatePatientProfilePage() {
-  const { setPatientId } = useAuth();
+  const { refreshSession } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '',
@@ -28,14 +28,16 @@ export default function CreatePatientProfilePage() {
         dateOfBirth: new Date(form.dateOfBirth).toISOString(),
       });
       if (data.success) {
-        setPatientId(data.data);
+        // Re-issue JWT so patient_id claim is present for subsequent API calls.
+        // Client-only setPatientId would leave the Bearer token without the claim.
+        await refreshSession();
         toast.success('Patient profile created!');
         navigate('/doctors');
       } else {
         toast.error(data.errors?.join('. ') || data.message || 'Failed to create profile');
       }
     } catch (err) {
-      toast.error(err.response?.data?.errors?.join('. ') || err.response?.data?.message || 'Failed to create profile');
+      toast.error(err.response?.data?.errors?.join('. ') || err.response?.data?.message || err.message || 'Failed to create profile');
     } finally {
       setSubmitting(false);
     }

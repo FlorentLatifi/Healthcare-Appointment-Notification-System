@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Healthcare.Application.DTOs;
 using Healthcare.Presentation.API.Responses;
 
 namespace Healthcare.IntegrationTests;
@@ -96,15 +97,92 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             PostalCode = "10000",
             Country = "Country"
         });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = await DeserializeResponse<int>(create);
         var patientId = created!.Data;
 
-        // Re-login to get a token with patient_id claim
-        var newToken = await LoginAsync("own_pat", "SecurePass123!");
-        SetAuthToken(newToken);
+        // Same session: refresh (not full re-login) re-issues JWT with patient_id claim
+        var session = await RefreshSessionPayloadAsync();
+        session!.PatientId.Should().Be(patientId);
 
         var response = await Client.GetAsync($"/api/v1/patients/{patientId}");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// Acceptance: register → create patient profile → refresh → book without logout/login.
+    /// Guards against FE/API split-brain where React setPatientId but JWT still lacks patient_id.
+    /// </summary>
+    [Fact]
+    public async Task CreatePatientProfile_ThenBookAppointment_SameSessionWithoutRelogin_Succeeds()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+
+        // Admin creates a bookable doctor catalog entry (no link required for booking target)
+        var adminToken = await LoginAsPreSeededAdminAsync();
+        SetAuthToken(adminToken);
+        var doctorResponse = await Client.PostAsJsonAsync("/api/v1/doctors", new
+        {
+            FirstName = "Book",
+            LastName = "Target",
+            Email = $"dr.booktarget.{suffix}@clinic.com",
+            PhoneNumber = "+38349880001",
+            LicenseNumber = $"MED-BOOK-{suffix}",
+            Specialty = "Cardiology",
+            ConsultationFeeAmount = 50.00m,
+            ConsultationFeeCurrency = "USD",
+            YearsOfExperience = 8
+        });
+        doctorResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var doctorId = (await DeserializeResponse<int>(doctorResponse))!.Data;
+
+        // New patient registers + logs in (no patient_id claim yet)
+        var username = $"book_same_{suffix}";
+        var token = await RegisterAndLoginAsync(username, $"{username}@test.com", "SecurePass123!", "Patient");
+        SetAuthToken(token);
+
+        var createPatient = await Client.PostAsJsonAsync("/api/v1/patients", new
+        {
+            FirstName = "Same",
+            LastName = "Session",
+            Email = $"same.session.{suffix}@test.com",
+            PhoneNumber = "+38349445566",
+            DateOfBirth = "1992-03-15",
+            Gender = "Female",
+            Street = "9 Session St",
+            City = "Pristina",
+            State = "Kosovo",
+            PostalCode = "10000",
+            Country = "Kosovo"
+        });
+        createPatient.StatusCode.Should().Be(HttpStatusCode.Created);
+        var patientId = (await DeserializeResponse<int>(createPatient))!.Data;
+
+        // Critical path: refresh only — no password re-entry
+        var refreshed = await RefreshSessionPayloadAsync();
+        refreshed!.PatientId.Should().Be(patientId, "refresh must pick up User.PatientId linked by CreatePatient");
+        refreshed.Token.Should().NotBeNullOrEmpty();
+
+        var scheduledTime = DateTime.Now.Date.AddDays(3).AddHours(10);
+        while (scheduledTime.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            scheduledTime = scheduledTime.AddDays(1);
+
+        var bookResponse = await Client.PostAsJsonAsync("/api/v1/appointments", new
+        {
+            PatientId = patientId,
+            DoctorId = doctorId,
+            ScheduledTime = scheduledTime.ToString("o"),
+            Reason = "Same-session booking after profile create and JWT refresh",
+            AppointmentType = "Standard"
+        });
+
+        bookResponse.StatusCode.Should().Be(HttpStatusCode.Created,
+            $"booking without re-login failed: {await bookResponse.Content.ReadAsStringAsync()}");
+        var bookResult = await DeserializeResponse<AppointmentDto>(bookResponse);
+        bookResult!.Success.Should().BeTrue();
+        bookResult.Data.Should().NotBeNull();
+        bookResult.Data!.PatientId.Should().Be(patientId);
+        bookResult.Data.DoctorId.Should().Be(doctorId);
     }
 
     [Fact]

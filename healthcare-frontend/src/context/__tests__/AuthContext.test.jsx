@@ -21,9 +21,12 @@ function TestConsumer() {
       <span data-testid="patientId">{auth.patientId ?? 'null'}</span>
       <span data-testid="doctorId">{auth.doctorId ?? 'null'}</span>
       <span data-testid="loading">{String(auth.loading)}</span>
+      <span data-testid="hasSetPatientId">{String(typeof auth.setPatientId === 'function')}</span>
+      <span data-testid="hasSetDoctorId">{String(typeof auth.setDoctorId === 'function')}</span>
       <button data-testid="loginBtn" onClick={() => { auth.login('testuser', 'pass123').catch(() => {}); }}>Login</button>
       <button data-testid="registerBtn" onClick={async () => { await auth.register('newuser', 'e@e.com', 'pass', 'Patient'); }}>Register</button>
       <button data-testid="logoutBtn" onClick={() => auth.logout()}>Logout</button>
+      <button data-testid="refreshBtn" onClick={() => { auth.refreshSession().catch(() => {}); }}>Refresh</button>
     </div>
   );
 }
@@ -236,6 +239,48 @@ describe('AuthContext', () => {
 
     await waitFor(() => {
       expect(mockPost).toHaveBeenCalledWith('/Auth/logout');
+    });
+  });
+
+  it('refreshSession() updates token and profile claim ids from /Auth/refresh', async () => {
+    mockNoSession();
+    mockPost.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: { token: 'old-token', username: 'testuser', role: 'Patient', patientId: null, doctorId: null },
+      },
+    });
+
+    renderWithProvider();
+    await userEvent.click(screen.getByTestId('loginBtn'));
+    await waitFor(() => {
+      expect(screen.getByTestId('token')).toHaveTextContent('old-token');
+      expect(screen.getByTestId('patientId')).toHaveTextContent('null');
+    });
+
+    // Simulate post-CreatePatient: refresh returns JWT with patient_id claim
+    mockPost.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: { token: 'new-token-with-claim', username: 'testuser', role: 'Patient', patientId: 77, doctorId: null },
+      },
+    });
+
+    await userEvent.click(screen.getByTestId('refreshBtn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('token')).toHaveTextContent('new-token-with-claim');
+      expect(screen.getByTestId('patientId')).toHaveTextContent('77');
+    });
+    expect(mockPost).toHaveBeenCalledWith('/Auth/refresh');
+  });
+
+  it('does not expose client-only setPatientId / setDoctorId claim mutators', async () => {
+    mockNoSession();
+    renderWithProvider();
+    await waitFor(() => {
+      expect(screen.getByTestId('hasSetPatientId')).toHaveTextContent('false');
+      expect(screen.getByTestId('hasSetDoctorId')).toHaveTextContent('false');
     });
   });
 });

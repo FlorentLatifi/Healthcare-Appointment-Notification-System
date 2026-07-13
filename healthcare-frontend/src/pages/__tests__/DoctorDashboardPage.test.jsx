@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockNavigate, mockSetDoctorId, mockAuthContext, mockApiClient } = vi.hoisted(() => ({
+const { mockNavigate, mockRefreshSession, mockAuthContext, mockApiClient } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
-  mockSetDoctorId: vi.fn(),
+  mockRefreshSession: vi.fn(),
   mockAuthContext: { useAuth: vi.fn() },
   mockApiClient: { get: vi.fn(), put: vi.fn(), post: vi.fn() },
 }));
@@ -54,21 +54,49 @@ const makeAppt = (id, status, overrides = {}) => ({
 describe('DoctorDashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuthContext.useAuth.mockReturnValue({ doctorId: null, setDoctorId: mockSetDoctorId });
+    mockRefreshSession.mockResolvedValue({ doctorId: 9 });
+    mockAuthContext.useAuth.mockReturnValue({ doctorId: null, refreshSession: mockRefreshSession });
   });
 
-  describe('lookup mode (no doctorId)', () => {
-    it('shows doctor lookup screen', () => {
+  describe('create-profile mode (no doctorId in JWT)', () => {
+    it('shows create doctor profile form instead of email lookup spoofing', () => {
       render(<DoctorDashboardPage />);
-      expect(screen.getByRole('heading', { name: /doctor lookup/i })).toBeInTheDocument();
-      expect(screen.getByPlaceholderText(/email address/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /create doctor profile/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /create profile/i })).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(/email address/i)).not.toBeInTheDocument();
+    });
+
+    it('creates profile then refreshes session for doctor_id claim', async () => {
+      mockApiClient.post.mockResolvedValue({ data: { success: true, data: 9 } });
+
+      render(<DoctorDashboardPage />);
+
+      const form = screen.getByLabelText(/create doctor profile form/i);
+      const inputs = form.querySelectorAll('input');
+      // firstName, lastName, email, phone, license, fee, currency, years
+      await userEvent.type(inputs[0], 'Jane');
+      await userEvent.type(inputs[1], 'Smith');
+      await userEvent.type(inputs[2], 'jane@clinic.com');
+      await userEvent.type(inputs[3], '+38349987654');
+      await userEvent.type(inputs[4], 'MED-99999');
+
+      await userEvent.click(screen.getByRole('button', { name: /create profile/i }));
+
+      await vi.waitFor(() => {
+        expect(mockApiClient.post).toHaveBeenCalledWith('/Doctors', expect.objectContaining({
+          firstName: 'Jane',
+          lastName: 'Smith',
+          email: 'jane@clinic.com',
+          licenseNumber: 'MED-99999',
+        }));
+      });
+      expect(mockRefreshSession).toHaveBeenCalled();
     });
   });
 
-  describe('dashboard mode (with doctorId)', () => {
+  describe('dashboard mode (with doctorId from JWT)', () => {
     beforeEach(() => {
-      mockAuthContext.useAuth.mockReturnValue({ doctorId: 1, setDoctorId: mockSetDoctorId });
+      mockAuthContext.useAuth.mockReturnValue({ doctorId: 1, refreshSession: mockRefreshSession });
       mockApiClient.get.mockResolvedValue({ data: { success: true, data: { items: [] } } });
     });
 

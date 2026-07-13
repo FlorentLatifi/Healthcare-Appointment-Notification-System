@@ -2,21 +2,39 @@ import { useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
-import { Button, Card, Badge, Spinner, EmptyState, Modal, Input, Textarea, PageHeader } from '../components/ui';
-import { Calendar, Clock, User, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { Button, Card, Badge, Spinner, EmptyState, Modal, Input, Textarea, Select, PageHeader } from '../components/ui';
+import { Calendar, User, FileText, CheckCircle, XCircle } from 'lucide-react';
 import { APPOINTMENT_STATUS } from '../constants/appointmentStatus';
 
 const TABS = ['All', APPOINTMENT_STATUS.PENDING, APPOINTMENT_STATUS.CONFIRMED, APPOINTMENT_STATUS.COMPLETED, APPOINTMENT_STATUS.CANCELLED, APPOINTMENT_STATUS.NO_SHOW];
 
+const SPECIALTIES = [
+  'GeneralPractice', 'Cardiology', 'Dermatology', 'Orthopedics', 'Pediatrics',
+  'Neurology', 'Psychiatry', 'Gynecology', 'Ophthalmology', 'Otorhinolaryngology',
+  'Oncology', 'Surgery',
+];
+
+const emptyDoctorForm = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phoneNumber: '',
+  licenseNumber: '',
+  specialty: 'GeneralPractice',
+  consultationFeeAmount: '50',
+  consultationFeeCurrency: 'USD',
+  yearsOfExperience: '5',
+};
+
 export default function DoctorDashboardPage() {
-  const { doctorId, setDoctorId } = useAuth();
+  // doctorId comes only from JWT claims (login / refreshSession) — never client-side spoofing.
+  const { doctorId, refreshSession } = useAuth();
   const [allAppts, setAllAppts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
 
-  const [searchEmail, setSearchEmail] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
+  const [doctorForm, setDoctorForm] = useState(emptyDoctorForm);
+  const [creatingProfile, setCreatingProfile] = useState(false);
 
   const [modal, setModal] = useState(null);
   const [notes, setNotes] = useState('');
@@ -24,6 +42,8 @@ export default function DoctorDashboardPage() {
   const [overridePayment, setOverridePayment] = useState(false);
   const [overrideReason, setOverrideReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const setDoctorField = (field) => (e) => setDoctorForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const fetchAppts = async () => {
     if (!doctorId) return;
@@ -47,25 +67,28 @@ export default function DoctorDashboardPage() {
     };
   }, [allAppts]);
 
-  const searchDoctor = async () => {
-    setSearching(true);
+  const createDoctorProfile = async (e) => {
+    e.preventDefault();
+    setCreatingProfile(true);
     try {
-      const { data } = await apiClient.get('/Doctors', { params: { pageSize: 200 } });
-      if (data.success) {
-        const matches = data.data.items.filter((d) =>
-          d.email.toLowerCase().includes(searchEmail.toLowerCase()),
-        );
-        setSearchResults(matches);
-        if (matches.length === 0) toast.error('No doctors found with that email');
+      const payload = {
+        ...doctorForm,
+        consultationFeeAmount: Number(doctorForm.consultationFeeAmount),
+        yearsOfExperience: Number(doctorForm.yearsOfExperience),
+      };
+      const { data } = await apiClient.post('/Doctors', payload);
+      if (!data.success) {
+        toast.error(data.errors?.join('. ') || data.message || 'Failed to create doctor profile');
+        return;
       }
-    } catch { toast.error('Search failed'); }
-    finally { setSearching(false); }
-  };
-
-  const selectDoctor = (doc) => {
-    setDoctorId(doc.id);
-    setSearchEmail('');
-    setSearchResults([]);
+      // Re-issue JWT so doctor_id claim is present for subsequent API calls.
+      await refreshSession();
+      toast.success('Doctor profile created and linked to your account');
+    } catch (err) {
+      toast.error(err.response?.data?.errors?.join('. ') || err.response?.data?.message || err.message || 'Failed to create doctor profile');
+    } finally {
+      setCreatingProfile(false);
+    }
   };
 
   const doConfirm = async (appt) => {
@@ -118,28 +141,36 @@ export default function DoctorDashboardPage() {
 
   if (!doctorId) {
     return (
-      <div className="max-w-md mx-auto px-4 sm:px-6 py-10 sm:py-16 text-center">
-        <h2 className="text-lg sm:text-xl font-semibold text-text tracking-tight mb-2">Doctor Lookup</h2>
-        <p className="text-sm text-text-muted mb-6">Search for your doctor profile by email.</p>
-        <div className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light">
-          <Input
-            placeholder="Your email address..."
-            value={searchEmail}
-            onChange={(e) => setSearchEmail(e.target.value)}
-          />
-          <Button loading={searching} className="w-full" onClick={searchDoctor}>Search</Button>
-          {searchResults.map((doc) => (
-            <Card
-              key={doc.id}
-              hover
-              className="mt-3 text-left"
-              onClick={() => selectDoctor(doc)}
-            >
-              <p className="text-sm font-medium text-text">Dr. {doc.fullName}</p>
-              <p className="text-xs text-text-muted mt-0.5 break-words">{doc.email} — {doc.specialties.join(', ')}</p>
-            </Card>
-          ))}
-        </div>
+      <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-12 w-full min-w-0">
+        <PageHeader
+          title="Create Doctor Profile"
+          subtitle="Your account is not linked to a doctor profile yet. Create one to manage appointments. Your session will refresh automatically so API calls use the new doctor_id claim."
+        />
+        <form
+          onSubmit={createDoctorProfile}
+          className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light min-w-0"
+          noValidate
+          aria-label="Create doctor profile form"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-x-3">
+            <Input label="First Name" name="firstName" value={doctorForm.firstName} onChange={setDoctorField('firstName')} required autoComplete="given-name" />
+            <Input label="Last Name" name="lastName" value={doctorForm.lastName} onChange={setDoctorField('lastName')} required autoComplete="family-name" />
+          </div>
+          <Input label="Email" name="email" type="email" value={doctorForm.email} onChange={setDoctorField('email')} required autoComplete="email" />
+          <Input label="Phone Number" name="phoneNumber" type="tel" value={doctorForm.phoneNumber} onChange={setDoctorField('phoneNumber')} required autoComplete="tel" />
+          <Input label="License Number" name="licenseNumber" value={doctorForm.licenseNumber} onChange={setDoctorField('licenseNumber')} required />
+          <Select label="Specialty" name="specialty" value={doctorForm.specialty} onChange={setDoctorField('specialty')}>
+            {SPECIALTIES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </Select>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-0 sm:gap-x-3">
+            <Input label="Fee Amount" name="consultationFeeAmount" type="number" min="0" step="0.01" value={doctorForm.consultationFeeAmount} onChange={setDoctorField('consultationFeeAmount')} required />
+            <Input label="Currency" name="consultationFeeCurrency" value={doctorForm.consultationFeeCurrency} onChange={setDoctorField('consultationFeeCurrency')} required />
+            <Input label="Years Experience" name="yearsOfExperience" type="number" min="0" value={doctorForm.yearsOfExperience} onChange={setDoctorField('yearsOfExperience')} required />
+          </div>
+          <Button type="submit" loading={creatingProfile} className="w-full mt-2" size="lg">
+            Create Profile
+          </Button>
+        </form>
       </div>
     );
   }

@@ -13,12 +13,41 @@ function toUserFacingError(err, fallback) {
   return e;
 }
 
+/**
+ * Apply login/refresh payload to React state.
+ * patientId / doctorId must come from the server JWT claims only — never client-side mutation.
+ */
+function sessionFromResponse(data) {
+  return {
+    token: data.token,
+    user: { username: data.username, role: data.role },
+    patientId: data.patientId ?? null,
+    doctorId: data.doctorId ?? null,
+  };
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [patientId, setPatientId] = useState(null);
   const [doctorId, setDoctorId] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const applySession = useCallback((payload) => {
+    const session = sessionFromResponse(payload);
+    setToken(session.token);
+    setUser(session.user);
+    setPatientId(session.patientId);
+    setDoctorId(session.doctorId);
+    return session;
+  }, []);
+
+  const clearSession = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    setPatientId(null);
+    setDoctorId(null);
+  }, []);
 
   const getToken = useCallback(() => token, [token]);
 
@@ -29,29 +58,23 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     setTokenSetter(setToken);
     onAuthCleared(() => {
-      setToken(null);
-      setUser(null);
-      setPatientId(null);
-      setDoctorId(null);
+      clearSession();
     });
-  }, [setToken]);
+  }, [clearSession]);
 
   useEffect(() => {
     const restoreSession = async () => {
       try {
         const { data } = await apiClient.post('/Auth/refresh');
         if (data.success) {
-          setToken(data.data.token);
-          setUser({ username: data.data.username, role: data.data.role });
-          setPatientId(data.data.patientId ?? null);
-          setDoctorId(data.data.doctorId ?? null);
+          applySession(data.data);
         }
       } catch {
         // No valid refresh cookie — user stays logged out
       }
     };
     restoreSession();
-  }, []);
+  }, [applySession]);
 
   const login = useCallback(async (username, password) => {
     setLoading(true);
@@ -63,18 +86,34 @@ export function AuthProvider({ children }) {
           'Login failed',
         );
       }
-      setToken(data.data.token);
-      setUser({ username: data.data.username, role: data.data.role });
-      setPatientId(data.data.patientId ?? null);
-      setDoctorId(data.data.doctorId ?? null);
-      return data.data;
+      return applySession(data.data);
     } catch (err) {
       if (err.apiError) throw err;
       throw toUserFacingError(err, 'Login failed');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applySession]);
+
+  /**
+   * Re-issue access token (and rotate refresh cookie) from the server.
+   * Call after profile creation so JWT patient_id / doctor_id claims match the DB link.
+   */
+  const refreshSession = useCallback(async () => {
+    try {
+      const { data } = await apiClient.post('/Auth/refresh');
+      if (!data.success) {
+        throw toUserFacingError(
+          { response: { status: 400, data } },
+          'Session refresh failed',
+        );
+      }
+      return applySession(data.data);
+    } catch (err) {
+      if (err.apiError) throw err;
+      throw toUserFacingError(err, 'Session refresh failed');
+    }
+  }, [applySession]);
 
   const register = useCallback(async (username, email, password, role) => {
     setLoading(true);
@@ -103,14 +142,24 @@ export function AuthProvider({ children }) {
     } catch {
       // Even if server-side revocation fails, clear local state
     }
-    setToken(null);
-    setUser(null);
-    setPatientId(null);
-    setDoctorId(null);
-  }, []);
+    clearSession();
+  }, [clearSession]);
 
   return (
-    <AuthContext.Provider value={{ user, token, patientId, doctorId, loading, login, register, logout, setPatientId, setDoctorId, isAuthenticated: !!token }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        patientId,
+        doctorId,
+        loading,
+        login,
+        register,
+        logout,
+        refreshSession,
+        isAuthenticated: !!token,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

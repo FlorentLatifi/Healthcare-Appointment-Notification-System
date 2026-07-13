@@ -157,13 +157,18 @@ public sealed class EFCoreAppointmentRepository : IAppointmentRepository
         var startOfDay = date.Date;
         var endOfDay = startOfDay.AddDays(1);
 
-        return await _context.Appointments
+        // AppointmentTime is a VO with HasConversion; comparing `.Value` is not EF-translatable.
+        // Load by doctor (uses IX_Appointments_Doctor_Time), then filter the day range in-process.
+        // For a single doctor-day this is small; avoids InvalidCast when binding DateTime params to the VO converter.
+        var forDoctor = await _context.Appointments
             .AsNoTracking()
-            .Where(a => a.DoctorId == doctorId &&
-                       a.ScheduledTime.Value >= startOfDay &&
-                       a.ScheduledTime.Value < endOfDay)
-            .OrderBy(a => a.ScheduledTime)
+            .Where(a => a.DoctorId == doctorId)
             .ToListAsync(cancellationToken);
+
+        return forDoctor
+            .Where(a => a.ScheduledTime.Value >= startOfDay && a.ScheduledTime.Value < endOfDay)
+            .OrderBy(a => a.ScheduledTime.Value)
+            .ToList();
     }
 
     public async Task<IEnumerable<Appointment>> GetByStatusAsync(

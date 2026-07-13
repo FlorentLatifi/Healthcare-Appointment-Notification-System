@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockNavigate, mockSetPatientId, mockApiClient } = vi.hoisted(() => ({
+const { mockNavigate, mockRefreshSession, mockApiClient } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
-  mockSetPatientId: vi.fn(),
+  mockRefreshSession: vi.fn(),
   mockApiClient: { post: vi.fn() },
 }));
 
@@ -21,7 +21,7 @@ vi.mock('../../services/apiClient', () => ({
 }));
 
 vi.mock('../../context/AuthContext', () => ({
-  useAuth: () => ({ setPatientId: mockSetPatientId }),
+  useAuth: () => ({ refreshSession: mockRefreshSession }),
 }));
 
 import CreatePatientProfilePage from '../CreatePatientProfilePage';
@@ -29,6 +29,7 @@ import CreatePatientProfilePage from '../CreatePatientProfilePage';
 describe('CreatePatientProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRefreshSession.mockResolvedValue({ patientId: 42 });
   });
 
   it('renders required fields', () => {
@@ -37,7 +38,7 @@ describe('CreatePatientProfilePage', () => {
     expect(screen.getByRole('button', { name: /create profile/i })).toBeInTheDocument();
   });
 
-  it('navigates to /doctors on successful submission', async () => {
+  it('refreshes JWT then navigates to /doctors on successful submission', async () => {
     mockApiClient.post.mockResolvedValue({ data: { success: true, data: 42 } });
 
     render(<CreatePatientProfilePage />);
@@ -59,7 +60,7 @@ describe('CreatePatientProfilePage', () => {
       }));
     });
 
-    expect(mockSetPatientId).toHaveBeenCalledWith(42);
+    expect(mockRefreshSession).toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith('/doctors');
   });
 });

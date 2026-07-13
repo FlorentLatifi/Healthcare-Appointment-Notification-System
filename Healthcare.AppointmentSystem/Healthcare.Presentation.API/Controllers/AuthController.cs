@@ -54,37 +54,29 @@ public sealed class AuthController : ControllerBase
         _metrics = metrics;
     }
 
-    private static readonly CookieOptions RefreshCookieOptions = new()
+    private CookieOptions BuildRefreshCookieOptions(DateTimeOffset? expires = null)
     {
-        HttpOnly = true,
-        Secure = true,
-        SameSite = SameSiteMode.Strict,
-        Path = "/api/v1/auth"
-    };
+        // Secure only when the request is HTTPS so production keeps HttpOnly+Secure cookies,
+        // while integration tests and local HTTP can still receive/send the refresh cookie.
+        return new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = Request.IsHttps,
+            SameSite = SameSiteMode.Strict,
+            Path = "/api/v1/auth",
+            Expires = expires,
+        };
+    }
 
     private void SetRefreshCookie(string refreshToken)
     {
         var expires = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationInDays);
-        Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Path = "/api/v1/auth",
-            Expires = expires,
-        });
+        Response.Cookies.Append("refreshToken", refreshToken, BuildRefreshCookieOptions(expires));
     }
 
     private void ClearRefreshCookie()
     {
-        Response.Cookies.Append("refreshToken", "", new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Path = "/api/v1/auth",
-            Expires = DateTime.UtcNow.AddDays(-1),
-        });
+        Response.Cookies.Append("refreshToken", "", BuildRefreshCookieOptions(DateTime.UtcNow.AddDays(-1)));
     }
 
     private static LoginResponse BuildLoginResponse(LoginResult result)

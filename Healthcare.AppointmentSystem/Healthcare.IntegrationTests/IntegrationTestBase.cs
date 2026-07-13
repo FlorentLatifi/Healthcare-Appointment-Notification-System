@@ -82,4 +82,29 @@ public abstract class IntegrationTestBase : IClassFixture<CustomWebApplicationFa
     {
         Client.DefaultRequestHeaders.Authorization = null;
     }
+
+    /// <summary>
+    /// Re-issues the access token from the httpOnly refresh cookie (same path as the SPA after profile create).
+    /// Reloads User from DB so patient_id / doctor_id claims match the newly linked profile.
+    /// </summary>
+    protected async Task<string> RefreshSessionAsync()
+    {
+        var payload = await RefreshSessionPayloadAsync();
+        return payload!.Token;
+    }
+
+    protected async Task<LoginResponse?> RefreshSessionPayloadAsync()
+    {
+        var refreshResponse = await Client.PostAsync("/api/v1/auth/refresh", content: null);
+        if (!refreshResponse.IsSuccessStatusCode)
+        {
+            var body = await refreshResponse.Content.ReadAsStringAsync();
+            throw new HttpRequestException(
+                $"Token refresh failed with {(int)refreshResponse.StatusCode}: {body}");
+        }
+
+        var result = await DeserializeResponse<LoginResponse>(refreshResponse);
+        SetAuthToken(result!.Data!.Token);
+        return result.Data;
+    }
 }
