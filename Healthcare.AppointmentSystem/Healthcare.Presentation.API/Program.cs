@@ -159,8 +159,14 @@ try
     }
 
     // ── Middleware Pipeline ──────────────────────────────────
-    // Order: forwarded headers → exception → correlation (for all logs) → request logging
+    // Order: forwarded headers → security headers (early OnStarting) → exception → correlation → …
+    // Rate limiting stays after CORS/auth path; SecurityHeaders does not alter request flow.
     app.UseForwardedHeaders();
+
+    // Register security headers as early as practical so all responses (success, 4xx/5xx, health)
+    // get HSTS/CSP/XFO/etc. via Response.OnStarting.
+    app.UseMiddleware<SecurityHeadersMiddleware>();
+
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseSerilogRequestLogging(options =>
@@ -193,6 +199,7 @@ try
     }
     else
     {
+        // Built-in HSTS (max-age 365d, includeSubDomains, preload) — configured in SecurityServicesConfiguration.
         app.UseHsts();
         app.MapGet("/", () => Results.Ok(new { status = "Healthy" }));
     }
@@ -206,7 +213,6 @@ try
         .AddSupportedUICultures(supportedCultures);
     app.UseRequestLocalization(localizationOptions);
 
-    app.UseMiddleware<SecurityHeadersMiddleware>();
     app.UseCors("ConfiguredOrigins");
     app.UseRateLimiter();
     app.UseAuthentication();

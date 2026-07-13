@@ -2,7 +2,7 @@
 
 **System:** Healthcare Appointment Notification System  
 **Horizon:** next 2–3 months  
-**Last reviewed:** 2026-07-13 (immutable audit logging foundation)  
+**Last reviewed:** 2026-07-13 (PaymentIntent anti-rebinding)  
 
 Use this document as the **single progress tracker**. Check boxes as work ships; update **Status** columns on the roadmap.
 
@@ -29,7 +29,8 @@ Use this document as the **single progress tracker**. Check boxes as work ships;
 | C4b | Self-service profile identity link (`User.PatientId` / `DoctorId`) | ✅ | **Fixed:** `SaveChanges` before `LinkToPatient`/`LinkToDoctor`; SQLite regression tests (`CreateProfileLinkIdentityRegressionTests`); JWT claims now get real ids after re-login |
 | C5 | Double-booking prevention (lock + domain + unique index) | ✅ | Handler lock, `IsAvailable`, concurrency unit + integration tests |
 | C6 | Stripe webhook signature verification (fail closed) | ✅ | Signature path + **Production fails fast** if `Stripe:WebhookSecret` missing (`ProductionStartupGuards` + `Program.cs`); non-Production warns; tests: `StripeWebhookSecretStartupTests` |
-| C7 | HTTPS / HSTS / security headers / CORS lockdown | ✅ | Middleware + security config (OWASP review) |
+| C6b | PaymentIntent ↔ appointment binding (anti-rebinding) | ✅ | `PaymentIntentBinding` checks `metadata.appointment_id` (+ amount/currency) in `ProcessPaymentHandler` before reconcile; gateway returns PI metadata; tests: rebinding rejection in `PaymentCompensationFlowTests` / `ProcessPaymentHandlerTests` |
+| C7 | HTTPS / HSTS / security headers / CORS lockdown | ✅ | `SecurityHeadersMiddleware` (CSP, XFO DENY, nosniff, Referrer-Policy, Permissions-Policy, CORP/COOP) + `UseHsts` (365d, includeSubDomains, preload) early in pipeline; CORS locked down; tests: `SecurityHeadersMiddlewareTests` |
 | C8 | Rate limiting (proxy-aware) | ✅ | Implemented; **Production fails fast** without `TrustedProxies` / `TrustedNetworks` (`ProductionStartupGuards` + `Program.cs`); non-Production warns; tests: `TrustedProxyGuardTests`, `TrustedProxyStartupTests` |
 | C9 | Database migrations on deploy/start | ✅ | `DatabaseSeeder` applies migrations |
 | C10 | No demo data / default admin in Production | ✅ | Gated seeding + bootstrap secrets |

@@ -19,9 +19,9 @@ namespace Healthcare.Adapters.Payments;
 /// - Testable (can mock IPaymentGateway)
 /// 
 /// Stripe Flow:
-/// 1. CreatePaymentIntent → Returns client secret for frontend
-/// 2. Frontend collects payment details (Stripe.js)
-/// 3. ConfirmPayment → Charges the customer
+/// 1. CreatePaymentIntent → Returns client secret; metadata includes appointment_id (binding)
+/// 2. Frontend collects payment details and confirms via Stripe.js (client-side charge)
+/// 3. ConfirmPaymentAsync → Retrieves PI status + metadata for local reconciliation (does not re-charge)
 /// 4. RefundPayment → Returns money to customer
 /// </remarks>
 public sealed class StripePaymentGateway : IPaymentGateway
@@ -108,9 +108,10 @@ public sealed class StripePaymentGateway : IPaymentGateway
     {
         try
         {
-            _logger.LogInformation("Confirming payment intent: {PaymentIntentId}", paymentIntentId);
+            // Retrieve only — charge is completed by Stripe.js / webhook. We need status + binding metadata.
+            _logger.LogInformation(
+                "Retrieving payment intent for reconciliation: {PaymentIntentId}", paymentIntentId);
 
-            // Retrieve payment intent to check status
             var paymentIntent = await _paymentIntentService.GetAsync(
                 paymentIntentId,
                 cancellationToken: cancellationToken);
@@ -124,11 +125,18 @@ public sealed class StripePaymentGateway : IPaymentGateway
                     paymentIntentId, paymentIntent.Status);
             }
 
+            var metadata = paymentIntent.Metadata != null
+                ? new Dictionary<string, string>(paymentIntent.Metadata, StringComparer.Ordinal)
+                : new Dictionary<string, string>(StringComparer.Ordinal);
+
             var result = new PaymentConfirmationResult
             {
                 Succeeded = succeeded,
-                TransactionId = paymentIntent.Id,
-                PaymentMethod = paymentIntent.PaymentMethodTypes?.FirstOrDefault() ?? "unknown"
+                TransactionId = paymentIntent.LatestChargeId ?? paymentIntent.Id,
+                PaymentMethod = paymentIntent.PaymentMethodTypes?.FirstOrDefault() ?? "unknown",
+                AmountInCents = paymentIntent.Amount,
+                Currency = paymentIntent.Currency ?? string.Empty,
+                Metadata = metadata
             };
 
             if (!succeeded)
@@ -139,19 +147,19 @@ public sealed class StripePaymentGateway : IPaymentGateway
             }
 
             _logger.LogInformation(
-                "Payment confirmation result: ID={PaymentIntentId}, Succeeded={Succeeded}",
-                paymentIntentId, succeeded);
+                "Payment intent retrieve result: ID={PaymentIntentId}, Succeeded={Succeeded}, BoundAppointment={BoundAppointmentId}",
+                paymentIntentId, succeeded, result.BoundAppointmentId);
 
             return Result<PaymentConfirmationResult>.Success(result);
         }
         catch (StripeException ex)
         {
-            _logger.LogError(ex, "Stripe API error while confirming payment: {PaymentIntentId}", paymentIntentId);
+            _logger.LogError(ex, "Stripe API error while retrieving payment intent: {PaymentIntentId}", paymentIntentId);
             return Result<PaymentConfirmationResult>.Failure($"Payment gateway error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error while confirming payment: {PaymentIntentId}", paymentIntentId);
+            _logger.LogError(ex, "Unexpected error while retrieving payment intent: {PaymentIntentId}", paymentIntentId);
             return Result<PaymentConfirmationResult>.Failure($"An unexpected error occurred: {ex.Message}");
         }
     }

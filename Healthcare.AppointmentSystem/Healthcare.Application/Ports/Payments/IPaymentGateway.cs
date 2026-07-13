@@ -40,11 +40,13 @@ public interface IPaymentGateway
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Confirms a payment (after customer provides payment method).
+    /// Retrieves PaymentIntent status and binding metadata from the gateway.
+    /// Does <strong>not</strong> charge the card — Stripe.js (or the webhook) completes the charge.
+    /// Callers must verify <see cref="PaymentConfirmationResult"/> is bound to the expected appointment.
     /// </summary>
     /// <param name="paymentIntentId">The payment intent ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Result with confirmation status.</returns>
+    /// <returns>Result with status, amounts, and metadata (including appointment_id when set).</returns>
     Task<Result<PaymentConfirmationResult>> ConfirmPaymentAsync(
         string paymentIntentId,
         CancellationToken cancellationToken = default);
@@ -103,12 +105,13 @@ public sealed class PaymentIntentResult
 }
 
 /// <summary>
-/// Result of confirming a payment.
+/// Result of retrieving a PaymentIntent after client-side confirmation (or webhook-driven success).
+/// Used to reconcile local appointment state — not to initiate a new charge.
 /// </summary>
 public sealed class PaymentConfirmationResult
 {
     /// <summary>
-    /// Whether the payment succeeded.
+    /// Whether the payment succeeded (gateway status == succeeded).
     /// </summary>
     public bool Succeeded { get; set; }
 
@@ -118,7 +121,7 @@ public sealed class PaymentConfirmationResult
     public string PaymentMethod { get; set; } = string.Empty;
 
     /// <summary>
-    /// Transaction ID from payment gateway.
+    /// Transaction ID from payment gateway (usually the PaymentIntent id).
     /// </summary>
     public string TransactionId { get; set; } = string.Empty;
 
@@ -126,6 +129,36 @@ public sealed class PaymentConfirmationResult
     /// Failure reason (if payment failed).
     /// </summary>
     public string? FailureReason { get; set; }
+
+    /// <summary>
+    /// Gateway amount in smallest currency unit (cents for USD/EUR).
+    /// </summary>
+    public long AmountInCents { get; set; }
+
+    /// <summary>
+    /// ISO currency code from the gateway (e.g. "usd").
+    /// </summary>
+    public string Currency { get; set; } = string.Empty;
+
+    /// <summary>
+    /// PaymentIntent metadata as stored at create-intent time (must include appointment_id).
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Metadata { get; set; }
+        = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Convenience: metadata["appointment_id"] when present and parseable.
+    /// </summary>
+    public int? BoundAppointmentId
+    {
+        get
+        {
+            if (Metadata.TryGetValue("appointment_id", out var raw)
+                && int.TryParse(raw, out var id))
+                return id;
+            return null;
+        }
+    }
 }
 
 /// <summary>

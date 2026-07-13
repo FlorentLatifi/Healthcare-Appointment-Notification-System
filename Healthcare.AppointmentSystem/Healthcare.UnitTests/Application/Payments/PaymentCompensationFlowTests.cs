@@ -69,21 +69,54 @@ public sealed class PaymentCompensationFlowTests
         return AppointmentTime.Create(d.AddHours(10));
     }
 
-    private async Task<Appointment> SeedPendingAppointmentAsync()
+    private async Task<Appointment> SeedPendingAppointmentAsync(DateTime? slotOverride = null)
     {
         var (patient, doctor) = People();
         await _uow.Patients.AddAsync(patient);
         await _uow.Doctors.AddAsync(doctor);
         await _uow.SaveChangesAsync();
 
+        var slot = slotOverride is null
+            ? FutureSlot()
+            : AppointmentTime.Create(slotOverride.Value);
+
         var appointment = Appointment.Create(
-            patient, doctor, FutureSlot(),
+            patient, doctor, slot,
             "Payment compensation flow test visit",
             new AppointmentCodeGenerator());
         appointment.ClearDomainEvents();
         await _uow.Appointments.AddAsync(appointment);
         await _uow.SaveChangesAsync();
         return appointment;
+    }
+
+    private async Task<(Appointment A, Appointment B)> SeedTwoPendingAppointmentsSamePatientAsync()
+    {
+        var (patient, doctor) = People();
+        await _uow.Patients.AddAsync(patient);
+        await _uow.Doctors.AddAsync(doctor);
+        await _uow.SaveChangesAsync();
+
+        var day = DateTime.Now.Date.AddDays(11);
+        while (day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) day = day.AddDays(1);
+
+        var a = Appointment.Create(
+            patient, doctor, AppointmentTime.Create(day.AddHours(9)),
+            "Appointment A for rebinding test visit",
+            new AppointmentCodeGenerator());
+        a.ClearDomainEvents();
+        await _uow.Appointments.AddAsync(a);
+        await _uow.SaveChangesAsync();
+
+        var b = Appointment.Create(
+            patient, doctor, AppointmentTime.Create(day.AddHours(11)),
+            "Appointment B for rebinding test visit",
+            new AppointmentCodeGenerator());
+        b.ClearDomainEvents();
+        await _uow.Appointments.AddAsync(b);
+        await _uow.SaveChangesAsync();
+
+        return (a, b);
     }
 
     [Fact]
@@ -129,6 +162,7 @@ public sealed class PaymentCompensationFlowTests
         var handler = new ProcessPaymentHandler(
             _gateway.Object,
             _reconciliation,
+            _uow,
             new BusinessMetrics(),
             Mock.Of<Healthcare.Application.Ports.Audit.IAuditLogService>(),
             Mock.Of<ILogger<ProcessPaymentHandler>>());
@@ -143,6 +177,95 @@ public sealed class PaymentCompensationFlowTests
         result.Error.Should().Contain("Payment confirmation failed");
         (await _uow.Appointments.GetByIdAsync(appointment.Id))!.Status.Should().Be(AppointmentStatus.Pending);
         (await _uow.Payments.GetByAppointmentIdAsync(appointment.Id)).Should().BeNull();
+    }
+
+    /// <summary>
+    /// Rebinding attack: same patient owns A and B; succeeded PI metadata points at A;
+    /// process against B must be rejected and B must stay unpaid/unconfirmed.
+    /// </summary>
+    [Fact]
+    public async Task ProcessPaymentHandler_RebindingSucceededPiFromAppointmentA_ToB_IsRejected()
+    {
+        var (appointmentA, appointmentB) = await SeedTwoPendingAppointmentsSamePatientAsync();
+
+        _gateway.Setup(g => g.ConfirmPaymentAsync("pi_for_appointment_A", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PaymentConfirmationResult>.Success(new PaymentConfirmationResult
+            {
+                Succeeded = true,
+                TransactionId = "pi_for_appointment_A",
+                PaymentMethod = "card",
+                AmountInCents = (long)(appointmentA.ConsultationFee.Amount * 100),
+                Currency = appointmentA.ConsultationFee.Currency.ToLowerInvariant(),
+                Metadata = new Dictionary<string, string>
+                {
+                    ["appointment_id"] = appointmentA.Id.ToString()
+                }
+            }));
+
+        var handler = new ProcessPaymentHandler(
+            _gateway.Object,
+            _reconciliation,
+            _uow,
+            new BusinessMetrics(),
+            Mock.Of<Healthcare.Application.Ports.Audit.IAuditLogService>(),
+            Mock.Of<ILogger<ProcessPaymentHandler>>());
+
+        var result = await handler.HandleAsync(new ProcessPaymentCommand
+        {
+            AppointmentId = appointmentB.Id,
+            PaymentIntentId = "pi_for_appointment_A"
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain($"bound to appointment {appointmentA.Id}");
+        result.Error.Should().Contain($"appointment {appointmentB.Id}");
+
+        (await _uow.Appointments.GetByIdAsync(appointmentB.Id))!.Status
+            .Should().Be(AppointmentStatus.Pending);
+        (await _uow.Payments.GetByAppointmentIdAsync(appointmentB.Id))
+            .Should().BeNull();
+        (await _uow.Appointments.GetByIdAsync(appointmentA.Id))!.Status
+            .Should().Be(AppointmentStatus.Pending);
+    }
+
+    [Fact]
+    public async Task ProcessPaymentHandler_MatchingBinding_ReconcilesSuccessfully()
+    {
+        var appointment = await SeedPendingAppointmentAsync();
+
+        _gateway.Setup(g => g.ConfirmPaymentAsync("pi_match_binding_ok", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PaymentConfirmationResult>.Success(new PaymentConfirmationResult
+            {
+                Succeeded = true,
+                TransactionId = "pi_match_binding_ok",
+                PaymentMethod = "card",
+                AmountInCents = (long)(appointment.ConsultationFee.Amount * 100),
+                Currency = appointment.ConsultationFee.Currency.ToLowerInvariant(),
+                Metadata = new Dictionary<string, string>
+                {
+                    ["appointment_id"] = appointment.Id.ToString()
+                }
+            }));
+
+        var handler = new ProcessPaymentHandler(
+            _gateway.Object,
+            _reconciliation,
+            _uow,
+            new BusinessMetrics(),
+            Mock.Of<Healthcare.Application.Ports.Audit.IAuditLogService>(),
+            Mock.Of<ILogger<ProcessPaymentHandler>>());
+
+        var result = await handler.HandleAsync(new ProcessPaymentCommand
+        {
+            AppointmentId = appointment.Id,
+            PaymentIntentId = "pi_match_binding_ok"
+        });
+
+        result.IsSuccess.Should().BeTrue();
+        (await _uow.Payments.GetByAppointmentIdAsync(appointment.Id))!.Status
+            .Should().Be(PaymentStatus.Succeeded);
+        (await _uow.Appointments.GetByIdAsync(appointment.Id))!.Status
+            .Should().Be(AppointmentStatus.Confirmed);
     }
 
     [Fact]

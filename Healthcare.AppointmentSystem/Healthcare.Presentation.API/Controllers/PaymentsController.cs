@@ -27,12 +27,14 @@ namespace Healthcare.Presentation.API.Controllers;
 /// ↓
 /// Frontend uses this with Stripe.js to show payment form
 /// 
-/// STEP 2 - Process Payment (after customer provides card):
+/// STEP 2 - Process Payment (after Stripe.js confirms the PaymentIntent client-side):
 /// POST /api/payments/process
 /// ↓
-/// Confirms payment with Stripe
+/// Retrieves PaymentIntent status + metadata from Stripe (does not re-charge)
 /// ↓
-/// Creates Payment entity + Auto-confirms Appointment
+/// Rejects if metadata.appointment_id != request.appointmentId (anti-rebinding)
+/// ↓
+/// Creates/updates Payment entity + Auto-confirms Appointment
 /// 
 /// Refund Flow:
 /// POST /api/payments/refund
@@ -173,13 +175,15 @@ public sealed class PaymentsController : ControllerBase
     }
 
     /// <summary>
-    /// Processes a payment (Step 2 - after customer provides payment details).
+    /// Reconciles a client-confirmed PaymentIntent against an appointment (Step 2).
+    /// The card is charged by Stripe.js; this endpoint verifies PI metadata is bound to
+    /// the appointment and then updates local payment/appointment state.
     /// </summary>
     /// <param name="request">Payment processing details.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Payment ID if successful.</returns>
     /// <response code="200">Payment processed successfully.</response>
-    /// <response code="400">Invalid request or payment failed.</response>
+    /// <response code="400">Invalid request, rebinding rejected, or payment failed.</response>
     [HttpPost("process")]
     [Authorize(Roles = AppRoles.Patient)]
     [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status200OK)]
@@ -189,7 +193,7 @@ public sealed class PaymentsController : ControllerBase
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Processing payment for appointment {AppointmentId} with intent {PaymentIntentId}",
+            "Reconciling payment for appointment {AppointmentId} with intent {PaymentIntentId}",
             request.AppointmentId, request.PaymentIntentId);
 
         // 1. Fetch appointment and verify ownership
