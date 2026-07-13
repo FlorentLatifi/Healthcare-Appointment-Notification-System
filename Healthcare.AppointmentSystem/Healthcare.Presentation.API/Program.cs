@@ -137,7 +137,8 @@ try
 
     var app = builder.Build();
 
-    // Rate limiting / audit IPs + Stripe webhook signing: fail closed in Production.
+    // Rate limiting / audit IPs + Stripe webhook signing: fail closed in Production;
+    // non-Production logs a warning only (same convention as Seeding demo-data gates).
     if (!ProductionStartupGuards.EnsureTrustedProxyConfigOrThrow(app.Environment, builder.Configuration)
         && !app.Environment.IsDevelopment())
     {
@@ -148,7 +149,14 @@ try
             "Set TrustedProxies or TrustedNetworks in production configuration.");
     }
 
-    ProductionStartupGuards.EnsureStripeWebhookSecretOrThrow(app.Environment, builder.Configuration);
+    if (!ProductionStartupGuards.EnsureStripeWebhookSecretOrThrow(app.Environment, builder.Configuration)
+        && !app.Environment.IsDevelopment())
+    {
+        Log.Warning(
+            "Stripe:WebhookSecret is not configured. " +
+            "Webhook signature verification cannot fail closed until a signing secret is set. " +
+            "Production requires Stripe:WebhookSecret (env Stripe__WebhookSecret).");
+    }
 
     // ── Middleware Pipeline ──────────────────────────────────
     // Order: forwarded headers → exception → correlation (for all logs) → request logging

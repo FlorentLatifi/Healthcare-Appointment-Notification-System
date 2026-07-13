@@ -46,17 +46,21 @@ public static class ProductionStartupGuards
 
     /// <summary>
     /// Production requires Stripe:WebhookSecret so webhook signature verification can fail closed.
-    /// Development and other non-Production environments may omit it.
+    /// Development and other non-Production environments may omit it (caller may log a warning).
     /// </summary>
-    public static void EnsureStripeWebhookSecretOrThrow(
+    /// <returns>
+    /// <c>true</c> if a non-empty secret is configured; <c>false</c> if missing and environment is
+    /// non-Production. Throws when missing/whitespace in Production.
+    /// </returns>
+    public static bool EnsureStripeWebhookSecretOrThrow(
         IHostEnvironment environment,
         IConfiguration configuration)
     {
-        if (!environment.IsProduction())
-            return;
-
         var webhookSecret = configuration["Stripe:WebhookSecret"];
-        if (string.IsNullOrWhiteSpace(webhookSecret))
+        if (!string.IsNullOrWhiteSpace(webhookSecret))
+            return true;
+
+        if (environment.IsProduction())
         {
             throw new InvalidOperationException(
                 "Production requires Stripe:WebhookSecret. " +
@@ -64,5 +68,7 @@ public static class ProductionStartupGuards
                 "Set Stripe:WebhookSecret from the Stripe Dashboard (Developers → Webhooks → signing secret), " +
                 "e.g. environment variable Stripe__WebhookSecret or a secrets file.");
         }
+
+        return false;
     }
 }

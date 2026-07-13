@@ -38,18 +38,17 @@ public sealed class StripeWebhookSecretStartupTests
     }
 
     [Fact]
-    public void Production_WithWebhookSecret_DoesNotThrow()
+    public void Production_WithWebhookSecret_ReturnsTrue()
     {
         var env = new FakeHostEnvironment(Environments.Production);
         var config = BuildConfig(webhookSecret: "whsec_live_or_test_signing_secret");
 
-        var act = () => ProductionStartupGuards.EnsureStripeWebhookSecretOrThrow(env, config);
-
-        act.Should().NotThrow();
+        ProductionStartupGuards.EnsureStripeWebhookSecretOrThrow(env, config)
+            .Should().BeTrue();
     }
 
     [Fact]
-    public void Development_WithoutWebhookSecret_DoesNotThrow()
+    public void Development_WithoutWebhookSecret_ReturnsFalse_DoesNotThrow()
     {
         var env = new FakeHostEnvironment(Environments.Development);
         var config = BuildConfig(webhookSecret: null);
@@ -57,18 +56,30 @@ public sealed class StripeWebhookSecretStartupTests
         var act = () => ProductionStartupGuards.EnsureStripeWebhookSecretOrThrow(env, config);
 
         act.Should().NotThrow();
+        act().Should().BeFalse();
     }
 
     [Fact]
-    public void Staging_WithoutWebhookSecret_DoesNotThrow()
+    public void Staging_WithoutWebhookSecret_ReturnsFalse_DoesNotThrow()
     {
-        // Only Production is hard-fail; Staging may still warn elsewhere.
+        // Only Production is hard-fail; non-Production may log a warning from Program.cs.
         var env = new FakeHostEnvironment("Staging");
+        var config = BuildConfig(webhookSecret: "");
+
+        ProductionStartupGuards.EnsureStripeWebhookSecretOrThrow(env, config)
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void Production_WithEmptyWebhookSecret_Throws()
+    {
+        var env = new FakeHostEnvironment(Environments.Production);
         var config = BuildConfig(webhookSecret: "");
 
         var act = () => ProductionStartupGuards.EnsureStripeWebhookSecretOrThrow(env, config);
 
-        act.Should().NotThrow();
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain("Stripe:WebhookSecret");
     }
 
     private static IConfiguration BuildConfig(string? webhookSecret)
