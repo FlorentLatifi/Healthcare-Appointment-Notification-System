@@ -46,8 +46,8 @@ public sealed class TrustedProxyStartupTests
         if (ex is AggregateException agg)
         {
             foreach (var inner in agg.Flatten().InnerExceptions)
-            foreach (var nested in FlattenExceptions(inner))
-                yield return nested;
+                foreach (var nested in FlattenExceptions(inner))
+                    yield return nested;
         }
         else if (ex.InnerException is not null)
         {
