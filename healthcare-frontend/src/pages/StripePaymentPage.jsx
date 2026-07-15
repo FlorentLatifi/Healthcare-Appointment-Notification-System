@@ -7,9 +7,13 @@ import apiClient from '../services/apiClient';
 import { Button, Card, Spinner, PageHeader } from '../components/ui';
 import { ArrowLeft, CreditCard, AlertCircle } from 'lucide-react';
 
+/** Playwright / CI: skip real Stripe Elements and card network. Never enable in production builds. */
+const E2E_MOCK_STRIPE = import.meta.env.VITE_E2E_MOCK_STRIPE === 'true';
+
 let stripePromise;
 
 function getStripe() {
+  if (E2E_MOCK_STRIPE) return null;
   if (!stripePromise) {
     const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
     if (!key) {
@@ -19,6 +23,77 @@ function getStripe() {
     stripePromise = loadStripe(key);
   }
   return stripePromise;
+}
+
+/**
+ * E2E-only payment control: posts the same /Payments/process payload the real Stripe path uses,
+ * with a deterministic fake PaymentIntent id (no external Stripe calls).
+ */
+function MockPaymentForm({ appointmentId, appointment, onSuccess }) {
+  const [error, setError] = useState(null);
+  const [processing, setProcessing] = useState(false);
+
+  const payLabel = appointment?.consultationFeeAmount != null
+    ? `Pay $${Number(appointment.consultationFeeAmount).toFixed(2)}`
+    : 'Pay now';
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setProcessing(true);
+    setError(null);
+    try {
+      const { data } = await apiClient.post('/Payments/process', {
+        appointmentId,
+        paymentIntentId: `pi_e2e_mock_${appointmentId}`,
+      });
+      if (data.success) {
+        toast.success('Payment successful! Your appointment is confirmed.');
+        onSuccess();
+      } else {
+        setError(data.message || 'Payment reconciliation failed. Contact support.');
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.errors?.join('. ')
+        || err.response?.data?.message
+        || 'Failed to process payment. Contact support.',
+      );
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} aria-label="Payment form" data-testid="e2e-mock-payment-form" className="min-w-0">
+      <div className="bg-white rounded-xl shadow-card p-4 sm:p-6 border border-border-light mb-4 min-w-0">
+        <div className="flex items-center gap-2 mb-2">
+          <CreditCard size={18} className="text-primary shrink-0" aria-hidden="true" />
+          <h3 className="text-sm font-semibold text-text m-0">Test payment (E2E mock)</h3>
+        </div>
+        <p className="text-xs text-text-muted m-0">
+          Stripe is mocked for automated tests. No real card is charged.
+        </p>
+      </div>
+      {error && (
+        <div
+          className="flex items-start gap-2 bg-status-cancelled-bg text-status-cancelled-text rounded-lg p-3 mb-4 text-sm break-words"
+          role="alert"
+        >
+          <AlertCircle size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
+          <span>{error}</span>
+        </div>
+      )}
+      <Button
+        type="submit"
+        loading={processing}
+        className="w-full"
+        size="lg"
+        data-testid="e2e-mock-pay-button"
+      >
+        {processing ? 'Processing Payment...' : payLabel}
+      </Button>
+    </form>
+  );
 }
 
 function PaymentForm({ appointmentId, appointment, onSuccess }) {
@@ -141,6 +216,12 @@ export default function StripePaymentPage() {
         }
         setAppointment(apptData.data);
 
+        // E2E: skip Stripe PaymentIntent creation; still load appointment for the money UI.
+        if (E2E_MOCK_STRIPE) {
+          setClientSecret('e2e_mock_client_secret');
+          return;
+        }
+
         const { data: intentData } = await apiClient.post('/Payments/create-intent', {
           appointmentId: Number(appointmentId),
         });
@@ -224,6 +305,12 @@ export default function StripePaymentPage() {
             Try Again
           </Button>
         </div>
+      ) : E2E_MOCK_STRIPE && appointment ? (
+        <MockPaymentForm
+          appointmentId={Number(appointmentId)}
+          appointment={appointment}
+          onSuccess={handleSuccess}
+        />
       ) : clientSecret && stripeInstance ? (
         <Elements stripe={stripeInstance} options={{ clientSecret }}>
           <PaymentForm

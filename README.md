@@ -202,6 +202,13 @@ dotnet test --filter "Category=Integration"
 
 ```sh
 cd healthcare-frontend
-npm run test        # single run (CI)
+npm run test        # unit tests (Vitest) — single run (CI)
 npm run test:watch  # watch mode
+
+# Playwright E2E (patient money path + doctor confirm/complete)
+# API and Stripe are mocked — no SQL/Redis/live cards required.
+npm run test:e2e:install   # once: download Chromium + OS deps
+npm run test:e2e           # build (e2e mode) + run specs under e2e/
 ```
+
+See `healthcare-frontend/e2e/README.md` for details. CI job **Frontend Playwright E2E** gates merges.
