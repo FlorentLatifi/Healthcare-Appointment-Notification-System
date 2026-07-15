@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Healthcare.Application.Commands.CreateDoctor;
 using Healthcare.Application.Commands.DeactivateDoctor;
 using Healthcare.Application.Commands.UpdateDoctor;
+using Healthcare.Application.Commands.UpdateDoctorSchedule;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Authentication;
@@ -28,6 +29,7 @@ public sealed class DoctorsController : ControllerBase
 {
     private readonly ICommandHandler<CreateDoctorCommand, Result<int>> _createDoctorHandler;
     private readonly ICommandHandler<UpdateDoctorCommand, Result> _updateDoctorHandler;
+    private readonly ICommandHandler<UpdateDoctorScheduleCommand, Result> _updateDoctorScheduleHandler;
     private readonly ICommandHandler<DeactivateDoctorCommand, Result> _deactivateDoctorHandler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDoctorCacheService _doctorCache;
@@ -39,6 +41,7 @@ public sealed class DoctorsController : ControllerBase
     public DoctorsController(
         ICommandHandler<CreateDoctorCommand, Result<int>> createDoctorHandler,
         ICommandHandler<UpdateDoctorCommand, Result> updateDoctorHandler,
+        ICommandHandler<UpdateDoctorScheduleCommand, Result> updateDoctorScheduleHandler,
         ICommandHandler<DeactivateDoctorCommand, Result> deactivateDoctorHandler,
         IUnitOfWork unitOfWork,
         IDoctorCacheService doctorCache,
@@ -49,6 +52,7 @@ public sealed class DoctorsController : ControllerBase
     {
         _createDoctorHandler = createDoctorHandler;
         _updateDoctorHandler = updateDoctorHandler;
+        _updateDoctorScheduleHandler = updateDoctorScheduleHandler;
         _deactivateDoctorHandler = deactivateDoctorHandler;
         _unitOfWork = unitOfWork;
         _doctorCache = doctorCache;
@@ -254,6 +258,43 @@ public sealed class DoctorsController : ControllerBase
     }
 
     /// <summary>
+    /// Replace the doctor's weekly working hours (owner or admin).
+    /// Invalidates schedule and availability caches so booking free slots pick up the change.
+    /// </summary>
+    [HttpPut("{id:int}/schedule")]
+    [Authorize(Roles = AppRoles.AdminOrDoctor)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateDoctorSchedule(
+        int id,
+        [FromBody] UpdateDoctorScheduleRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (User.IsInRole(AppRoles.Doctor) && User.GetDoctorId() != id)
+            return Forbid();
+
+        _logger.LogInformation("Updating working hours for doctor {DoctorId}", id);
+
+        var command = new UpdateDoctorScheduleCommand
+        {
+            DoctorId = id,
+            WeeklySchedule = request.WeeklySchedule ?? new List<WorkingHoursDto>()
+        };
+
+        var result = await _updateDoctorScheduleHandler.HandleAsync(command, cancellationToken);
+        if (result.IsFailure)
+        {
+            if (result.Error.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                return NotFound(ApiResponse.ErrorResponse(result.Error, "Doctor not found"));
+            return BadRequest(ApiResponse.ErrorResponse(result.Error, "Failed to update schedule"));
+        }
+
+        return Ok(ApiResponse.SuccessResponse("Working hours updated successfully"));
+    }
+
+    /// <summary>
     /// Updates an existing doctor profile (owner or admin).
     /// </summary>
     [HttpPut("{id:int}")]
@@ -443,7 +484,17 @@ public sealed class DoctorsController : ControllerBase
         IsAcceptingPatients = doctor.IsAcceptingPatients,
         IsActive = doctor.IsActive,
         YearsOfExperience = doctor.YearsOfExperience,
-        CreatedAt = doctor.CreatedAt
+        CreatedAt = doctor.CreatedAt,
+        WeeklySchedule = doctor.WeeklySchedule
+            .OrderBy(h => h.DayOfWeek)
+            .Select(h => new WorkingHoursDto
+            {
+                DayOfWeek = h.DayOfWeek,
+                IsWorkingDay = h.IsWorkingDay,
+                StartTime = h.StartTime?.ToString("HH:mm"),
+                EndTime = h.EndTime?.ToString("HH:mm")
+            })
+            .ToList()
     };
 
     private static DoctorScheduleDto MapToScheduleDto(Doctor doctor) => new()

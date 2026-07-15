@@ -279,6 +279,7 @@ public sealed class DoctorCacheTests
         var controller = new DoctorsController(
             new Mock<ICommandHandler<CreateDoctorCommand, Result<int>>>().Object,
             new Mock<ICommandHandler<UpdateDoctorCommand, Result>>().Object,
+            new Mock<ICommandHandler<Healthcare.Application.Commands.UpdateDoctorSchedule.UpdateDoctorScheduleCommand, Result>>().Object,
             deactivateHandlerMock.Object,
             new Mock<IUnitOfWork>().Object,
             _doctorCache,
@@ -317,6 +318,7 @@ public sealed class DoctorCacheTests
         new(
             create ?? new Mock<ICommandHandler<CreateDoctorCommand, Result<int>>>().Object,
             new Mock<ICommandHandler<UpdateDoctorCommand, Result>>().Object,
+            new Mock<ICommandHandler<Healthcare.Application.Commands.UpdateDoctorSchedule.UpdateDoctorScheduleCommand, Result>>().Object,
             new Mock<ICommandHandler<DeactivateDoctorCommand, Result>>().Object,
             uow,
             _doctorCache,
