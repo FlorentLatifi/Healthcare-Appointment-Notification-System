@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Force patched Caching.Memory (GHSA-qj66-m88j-hmgj) across all projects. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
+  </ItemGroup>
+
 </Project>
