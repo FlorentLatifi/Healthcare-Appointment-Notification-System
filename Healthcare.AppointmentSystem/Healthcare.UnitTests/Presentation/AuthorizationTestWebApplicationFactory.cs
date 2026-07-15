@@ -82,6 +82,14 @@ public class AuthorizationTestWebApplicationFactory : WebApplicationFactory<Prog
             services.RemoveAll<IAuditLogRepository>();
             services.RemoveAll<IUserSessionRepository>();
             services.RemoveAll<IUserNotificationRepository>();
+            services.RemoveAll<Healthcare.Application.Ports.Notifications.IInAppNotificationService>();
+            // Drop EF-backed notification types that still appear as concrete descriptors.
+            for (int i = services.Count - 1; i >= 0; i--)
+            {
+                var implName = services[i].ImplementationType?.Name ?? string.Empty;
+                if (implName is "EFCoreUserNotificationRepository")
+                    services.RemoveAt(i);
+            }
             services.RemoveAll<IUnitOfWork>();
 
             services.RemoveAll<IBreachedPasswordChecker>();
@@ -112,6 +120,8 @@ public class AuthorizationTestWebApplicationFactory : WebApplicationFactory<Prog
             services.AddSingleton<IUserSessionRepository, InMemoryUserSessionRepository>();
             // In-app notifications: EF repo needs DbContext — use in-memory for authz / rate-limit suites.
             services.AddSingleton<IUserNotificationRepository, InMemoryUserNotificationRepository>();
+            services.AddScoped<Healthcare.Application.Ports.Notifications.IInAppNotificationService,
+                Healthcare.Adapters.Notifications.InAppNotificationService>();
             services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
 
             services.AddSingleton<IDistributedLockService, InMemoryLockService>();

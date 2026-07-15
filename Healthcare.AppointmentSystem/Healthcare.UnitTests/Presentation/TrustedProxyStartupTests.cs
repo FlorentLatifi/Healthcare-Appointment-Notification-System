@@ -90,6 +90,8 @@ public sealed class TrustedProxyStartupTests
         services.RemoveAll<IPaymentRepository>();
         services.RemoveAll<IAuditLogRepository>();
         services.RemoveAll<IUserSessionRepository>();
+        services.RemoveAll<IUserNotificationRepository>();
+        services.RemoveAll<Healthcare.Application.Ports.Notifications.IInAppNotificationService>();
         services.RemoveAll<IUnitOfWork>();
         services.RemoveAll<IConnectionMultiplexer>();
         services.RemoveAll<IDistributedLockService>();
@@ -100,6 +102,12 @@ public sealed class TrustedProxyStartupTests
         services.RemoveAll<IAppointmentCodeGenerator>();
         services.RemoveAll<IPaymentGateway>();
         services.RemoveAll<IBreachedPasswordChecker>();
+        for (int i = services.Count - 1; i >= 0; i--)
+        {
+            var implName = services[i].ImplementationType?.Name ?? string.Empty;
+            if (implName is "EFCoreUserNotificationRepository")
+                services.RemoveAt(i);
+        }
 
         services.AddSingleton<IAppointmentRepository, InMemoryAppointmentRepository>();
         services.AddSingleton<IPatientRepository, InMemoryPatientRepository>();
@@ -108,6 +116,9 @@ public sealed class TrustedProxyStartupTests
         services.AddSingleton<IPaymentRepository, InMemoryPaymentRepository>();
         services.AddSingleton<IAuditLogRepository, InMemoryAuditLogRepository>();
         services.AddSingleton<IUserSessionRepository, InMemoryUserSessionRepository>();
+        services.AddSingleton<IUserNotificationRepository, InMemoryUserNotificationRepository>();
+        services.AddScoped<Healthcare.Application.Ports.Notifications.IInAppNotificationService,
+            Healthcare.Adapters.Notifications.InAppNotificationService>();
         services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
         services.AddSingleton<IDistributedLockService, InMemoryLockService>();
         services.AddSingleton(new CacheSettings());
