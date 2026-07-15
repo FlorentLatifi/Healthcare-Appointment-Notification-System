@@ -22,7 +22,12 @@ const Textarea = forwardRef(function Textarea(
       {label && (
         <label htmlFor={inputId} className="block text-sm font-medium text-text mb-1.5">
           {label}
-          {required && <span className="text-status-cancelled-text ml-0.5" aria-hidden="true">*</span>}
+          {required && (
+            <span className="text-status-cancelled-text ml-0.5">
+              <span aria-hidden="true">*</span>
+              <span className="sr-only"> (required)</span>
+            </span>
+          )}
         </label>
       )}
       <textarea
@@ -30,7 +35,7 @@ const Textarea = forwardRef(function Textarea(
         id={inputId}
         name={name}
         required={required}
-        className={`w-full min-w-0 px-3 py-2.5 rounded-md border bg-white text-text text-sm placeholder:text-text-light transition-all duration-150 ease-in-out focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none resize-y min-h-[88px] ${
+        className={`w-full min-w-0 px-3 py-2.5 rounded-md border bg-white text-text text-sm placeholder:text-text-muted/80 transition-all duration-150 ease-in-out focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none resize-y min-h-[88px] ${
           hasError ? 'border-status-cancelled-text' : 'border-border'
         } ${className}`}
         aria-invalid={hasError ? 'true' : undefined}

@@ -9,9 +9,18 @@ const textSizes = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
  */
 export default function Spinner({ size = 'md', text = 'Loading...', className = '' }) {
   return (
-    <div className={`flex items-center justify-center py-12 text-text-muted ${className}`}>
-      <Loader2 size={sizes[size]} className="animate-spin shrink-0" />
-      {text && <span className={`ml-2 ${textSizes[size]}`}>{text}</span>}
+    <div
+      className={`flex items-center justify-center py-12 text-text-muted ${className}`}
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <Loader2 size={sizes[size]} className="animate-spin shrink-0" aria-hidden="true" />
+      {text ? (
+        <span className={`ml-2 ${textSizes[size]}`}>{text}</span>
+      ) : (
+        <span className="sr-only">Loading</span>
+      )}
     </div>
   );
 }

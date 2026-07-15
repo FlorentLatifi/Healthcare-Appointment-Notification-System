@@ -22,17 +22,6 @@ vi.mock('../../services/apiClient', () => ({
   default: mockApiClient,
 }));
 
-vi.mock('../../theme', () => ({
-  STATUS_COLORS: {
-    Pending: { bg: '#E8E4DB', color: '#5C5546' },
-    Scheduled: { bg: '#E8E4DB', color: '#5C5546' },
-    Confirmed: { bg: '#d1fae5', color: '#065f46' },
-    Completed: { bg: '#f3f4f6', color: '#374151' },
-    Cancelled: { bg: '#fee2e2', color: '#991b1b' },
-    NoShow: { bg: '#fef3c7', color: '#92400e' },
-  },
-}));
-
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({ patientId: 1 }),
 }));

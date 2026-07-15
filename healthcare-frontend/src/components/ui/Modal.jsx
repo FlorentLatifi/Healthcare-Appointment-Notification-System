@@ -52,9 +52,17 @@ export default function Modal({ open, onClose, title, footer, children, initialF
     if (!el) return;
 
     const getFocusable = () =>
-      el.querySelectorAll(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      );
+      Array.from(
+        el.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((node) => {
+        // Skip elements that cannot receive focus (hidden / display:none)
+        if (!(node instanceof HTMLElement)) return false;
+        if (node.getAttribute('aria-hidden') === 'true') return false;
+        const style = window.getComputedStyle(node);
+        return style.visibility !== 'hidden' && style.display !== 'none';
+      });
 
     const focusable = getFocusable();
     const preferred = initialFocusRef?.current;
@@ -72,6 +80,7 @@ export default function Modal({ open, onClose, title, footer, children, initialF
       const nodes = getFocusable();
       if (!nodes.length) {
         e.preventDefault();
+        el.focus();
         return;
       }
       const first = nodes[0];

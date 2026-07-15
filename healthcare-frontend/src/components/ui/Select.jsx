@@ -5,7 +5,7 @@ import { forwardRef } from 'react';
  * Touch target ≥44px on mobile.
  */
 const Select = forwardRef(function Select(
-  { label, error, helperText, className = '', children, name, id, required, ...props },
+  { label, error, helperText, className = '', children, name, id, required, 'aria-label': ariaLabel, ...props },
   ref,
 ) {
   const inputId = id || name || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
@@ -23,7 +23,12 @@ const Select = forwardRef(function Select(
       {label && (
         <label htmlFor={inputId} className="block text-sm font-medium text-text mb-1.5">
           {label}
-          {required && <span className="text-status-cancelled-text ml-0.5" aria-hidden="true">*</span>}
+          {required && (
+            <span className="text-status-cancelled-text ml-0.5">
+              <span aria-hidden="true">*</span>
+              <span className="sr-only"> (required)</span>
+            </span>
+          )}
         </label>
       )}
       <select
@@ -37,6 +42,7 @@ const Select = forwardRef(function Select(
         aria-invalid={hasError ? 'true' : undefined}
         aria-describedby={describedBy}
         aria-required={required ? 'true' : undefined}
+        aria-label={label ? undefined : ariaLabel}
         {...props}
       >
         {children}

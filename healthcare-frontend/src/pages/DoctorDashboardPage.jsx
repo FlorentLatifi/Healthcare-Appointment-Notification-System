@@ -392,17 +392,28 @@ export default function DoctorDashboardPage() {
         }
       >
         <p className="text-sm text-text-muted mb-4 break-words">{modal?.appt.referenceCode} — {modal?.appt.patient?.fullName}</p>
-        <label className="flex items-start sm:items-center gap-2 text-sm text-text mb-4">
-          <input
-            type="checkbox"
-            checked={overridePayment}
-            onChange={(e) => setOverridePayment(e.target.checked)}
-            className="rounded border-border text-primary focus:ring-primary mt-0.5 sm:mt-0 min-w-4 min-h-4"
-          />
-          Override payment requirement
-        </label>
+        <div className="mb-4">
+          <label htmlFor="override-payment" className="flex items-start sm:items-center gap-3 text-sm text-text min-h-11 cursor-pointer">
+            <input
+              id="override-payment"
+              name="overridePayment"
+              type="checkbox"
+              checked={overridePayment}
+              onChange={(e) => setOverridePayment(e.target.checked)}
+              className="rounded border-border text-primary focus:ring-primary mt-0.5 sm:mt-0 min-w-5 min-h-5"
+            />
+            Override payment requirement
+          </label>
+        </div>
         {overridePayment && (
-          <Input label="Override Reason" value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} />
+          <Input
+            label="Override reason"
+            id="override-reason"
+            name="overrideReason"
+            value={overrideReason}
+            onChange={(e) => setOverrideReason(e.target.value)}
+            required
+          />
         )}
       </Modal>
 

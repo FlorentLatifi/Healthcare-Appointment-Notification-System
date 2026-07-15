@@ -209,7 +209,7 @@ export default function AdminAuditLogsPanel() {
       ) : (
         <>
           <TableScroll label="Audit logs">
-            <Table className="min-w-[56rem]">
+            <Table className="min-w-[40rem] sm:min-w-[56rem]">
               <thead>
                 <tr>
                   <Th>When</Th>

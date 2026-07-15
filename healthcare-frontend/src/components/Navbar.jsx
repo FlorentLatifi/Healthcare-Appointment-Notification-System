@@ -44,24 +44,28 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white border-b border-border-light shadow-card">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-2 sm:gap-4">
-        <div
-          className="font-semibold text-base text-primary cursor-pointer mr-auto tracking-tight shrink-0"
+    <nav className="sticky top-0 z-50 bg-white border-b border-border-light shadow-card" aria-label="Main">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-2 sm:gap-3 min-w-0">
+        <button
+          type="button"
+          className="font-semibold text-base text-primary cursor-pointer mr-auto tracking-tight shrink-0 bg-transparent border-none p-0 min-h-11 inline-flex items-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-md"
           onClick={() => navigate('/dashboard')}
+          aria-label="Healthcare home"
         >
           Healthcare
-        </div>
+        </button>
 
-        <div className="hidden sm:flex items-center gap-1 flex-wrap justify-end">
+        <div className="hidden sm:flex items-center gap-0.5 flex-wrap justify-end max-w-[min(100%,28rem)] lg:max-w-none">
           {visibleLinks.map((l) => (
             <button
+              type="button"
               key={l.path}
-              className={`text-sm px-2 py-1.5 transition-all duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-primary rounded-md ${
+              className={`text-sm min-h-11 px-2.5 py-1.5 transition-all duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-primary rounded-md ${
                 isActivePath(l.path)
                   ? 'text-primary font-medium'
                   : 'text-text-muted hover:text-text'
               }`}
+              aria-current={isActivePath(l.path) ? 'page' : undefined}
               onClick={() => navigate(l.path)}
             >
               {l.label}
@@ -69,16 +73,17 @@ export default function Navbar() {
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <NotificationsMenu enabled={!!isAuthenticated && !!user?.role} />
           <Button
             variant="ghost"
             size="sm"
             className="shrink-0"
             leftIcon={<LogOut size={14} />}
+            aria-label="Logout"
             onClick={() => { logout(); navigate('/login', { replace: true }); }}
           >
-            <span className="hidden sm:inline">Logout</span>
+            <span className="hidden sm:inline" aria-hidden="true">Logout</span>
           </Button>
         </div>
 

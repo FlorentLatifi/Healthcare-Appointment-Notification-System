@@ -6,7 +6,7 @@ import { forwardRef } from 'react';
  * @param {{ label?: string, error?: string | string[], helperText?: string, id?: string }} props
  */
 const Input = forwardRef(function Input(
-  { label, error, helperText, className = '', id, name, required, ...props },
+  { label, error, helperText, className = '', id, name, required, 'aria-label': ariaLabel, ...props },
   ref,
 ) {
   const inputId = id || name || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
@@ -18,13 +18,20 @@ const Input = forwardRef(function Input(
     hasError && errorId,
     !hasError && helperText && helperId,
   ].filter(Boolean).join(' ') || undefined;
+  // Prefer visible label; fall back to explicit aria-label (search boxes, etc.)
+  const accessibleName = ariaLabel || (!label ? props.placeholder : undefined);
 
   return (
     <div className="mb-4 min-w-0">
       {label && (
         <label htmlFor={inputId} className="block text-sm font-medium text-text mb-1.5">
           {label}
-          {required && <span className="text-status-cancelled-text ml-0.5" aria-hidden="true">*</span>}
+          {required && (
+            <span className="text-status-cancelled-text ml-0.5">
+              <span aria-hidden="true">*</span>
+              <span className="sr-only"> (required)</span>
+            </span>
+          )}
         </label>
       )}
       <input
@@ -32,12 +39,13 @@ const Input = forwardRef(function Input(
         id={inputId}
         name={name}
         required={required}
-        className={`w-full min-w-0 min-h-11 sm:min-h-10 px-3 py-2.5 rounded-md border bg-white text-text text-sm placeholder:text-text-light transition-all duration-150 ease-in-out focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none ${
+        className={`w-full min-w-0 min-h-11 sm:min-h-10 px-3 py-2.5 rounded-md border bg-white text-text text-sm placeholder:text-text-muted/80 transition-all duration-150 ease-in-out focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none ${
           hasError ? 'border-status-cancelled-text' : 'border-border'
         } ${className}`}
         aria-invalid={hasError ? 'true' : undefined}
         aria-describedby={describedBy}
         aria-required={required ? 'true' : undefined}
+        aria-label={label ? undefined : accessibleName}
         {...props}
       />
       {hasError && (

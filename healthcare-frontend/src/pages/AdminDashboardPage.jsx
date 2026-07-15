@@ -320,15 +320,21 @@ export default function AdminDashboardPage() {
 
       {page === 'patients' && (
         <>
-          <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row gap-2 mb-4 sm:items-end">
             <div className="flex-1 sm:max-w-xs min-w-0">
               <Input
-                placeholder="Search patients by name..."
+                label="Search patients"
+                id="admin-patient-search"
+                name="patientSearch"
+                placeholder="Search by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                autoComplete="off"
               />
             </div>
-            <Button variant="primary" size="sm" className="w-full sm:w-auto shrink-0" onClick={fetchPatients}>Search</Button>
+            <Button variant="primary" size="sm" className="w-full sm:w-auto shrink-0 mb-4" onClick={fetchPatients}>
+              Search
+            </Button>
           </div>
 
           {patsLoading ? <Spinner /> : patients.length === 0 ? <EmptyState message="No patients found." /> : (

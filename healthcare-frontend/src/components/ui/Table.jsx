@@ -3,11 +3,11 @@
  * Use <TableScroll> around wide tables so 375px viewports never force page overflow.
  */
 
-/** Scroll container for wide tables — prevents page-level horizontal scroll. */
+/** Scroll container for wide tables — prevents page-level horizontal scroll at 375px. */
 export function TableScroll({ className = '', children, label = 'Data table' }) {
   return (
     <div
-      className={`w-full max-w-full overflow-x-auto overscroll-x-contain rounded-xl border border-border-light bg-white shadow-card ${className}`}
+      className={`w-full max-w-full overflow-x-auto overscroll-x-contain rounded-xl border border-border-light bg-white shadow-card [-webkit-overflow-scrolling:touch] ${className}`}
       role="region"
       aria-label={label}
       tabIndex={0}
@@ -18,12 +18,13 @@ export function TableScroll({ className = '', children, label = 'Data table' }) 
 }
 
 /**
- * @param {{ hover?: boolean, className?: string }} props
+ * Wide tables scroll inside TableScroll — never expand the page past the viewport.
+ * @param {{ className?: string }} props
  */
 export function Table({ className = '', children, ...props }) {
   return (
     <table
-      className={`w-full min-w-[36rem] border-collapse text-sm ${className}`}
+      className={`w-full min-w-[min(100%,20rem)] sm:min-w-[36rem] border-collapse text-sm ${className}`}
       {...props}
     >
       {children}

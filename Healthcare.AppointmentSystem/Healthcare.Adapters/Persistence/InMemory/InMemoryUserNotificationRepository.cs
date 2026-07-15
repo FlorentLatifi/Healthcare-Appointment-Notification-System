@@ -13,8 +13,10 @@ public sealed class InMemoryUserNotificationRepository : IUserNotificationReposi
     {
         lock (_lock)
         {
-            typeof(UserNotification).GetProperty(nameof(UserNotification.Id))!
-                .SetValue(notification, _nextId++);
+            var idProp = typeof(Healthcare.Domain.Common.Entity).GetProperty(
+                nameof(UserNotification.Id),
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+            idProp?.SetValue(notification, _nextId++);
             _items.Add(notification);
         }
         return Task.CompletedTask;
