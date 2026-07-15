@@ -288,8 +288,10 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
         });
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.Created, $"CreateTempDoctor failed: {body}");
-        using var doc = JsonDocument.Parse(body);
-        return doc.RootElement.GetProperty("data").GetInt32();
+        // Create doctor may return a bare id or ProfileCreatedResponse { id, token, ... }.
+        var id = await ExtractIdFromCreatedResponse(response);
+        id.Should().NotBeNull($"CreateTempDoctor response missing id: {body}");
+        return id!.Value;
     }
 
     private async Task<int> BookAppointmentAsync(string patientToken, int patientId, int? bookingDoctorId = null, DateTime? when = null)
@@ -446,11 +448,12 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
     }
 
     [Fact]
-    public async Task Doctor_GetPatientById_Any_Returns200()
+    public async Task Doctor_GetPatientById_WithoutCareRelationship_Returns403()
     {
+        // PHI: doctors may only read patients they have an appointment relationship with.
         SetBearer(_seed.DoctorA_Token);
         var response = await _client.GetAsync($"/api/v1/patients/{_seed.PatientB_PatientId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -561,11 +564,12 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
     }
 
     [Fact]
-    public async Task Doctor_GetAppointmentsByPatient_Any_Returns200()
+    public async Task Doctor_GetAppointmentsByPatient_WithoutCareRelationship_Returns403()
     {
+        // PHI: listing another patient's appointments requires a care relationship.
         SetBearer(_seed.DoctorA_Token);
         var response = await _client.GetAsync($"/api/v1/appointments/patient/{_seed.PatientB_PatientId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

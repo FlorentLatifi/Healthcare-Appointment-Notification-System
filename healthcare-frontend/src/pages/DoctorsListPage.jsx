@@ -5,6 +5,7 @@ import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { Card, Button, Spinner, Input, EmptyState, PageHeader } from '../components/ui';
 import { Clock, DollarSign } from 'lucide-react';
+import { formatWeeklyHoursSummary } from '../utils/bookingSlots';
 
 export default function DoctorsListPage() {
   const { patientId, user } = useAuth();
@@ -18,7 +19,25 @@ export default function DoctorsListPage() {
       try {
         const { data } = await apiClient.get('/Doctors/accepting-patients', { params: { pageSize: 100 } });
         if (data.success) {
-          setDoctors(data.data.items);
+          const items = data.data.items || [];
+          // Prefer schedule embedded on doctor DTO; fall back to /schedule for older responses.
+          const enriched = await Promise.all(
+            items.map(async (doc) => {
+              if (Array.isArray(doc.weeklySchedule) && doc.weeklySchedule.length) {
+                return doc;
+              }
+              try {
+                const sched = await apiClient.get(`/Doctors/${doc.id}/schedule`);
+                if (sched.data?.success) {
+                  return { ...doc, weeklySchedule: sched.data.data?.weeklySchedule || [] };
+                }
+              } catch {
+                // ignore — card still works without hours
+              }
+              return doc;
+            }),
+          );
+          setDoctors(enriched);
         } else {
           toast.error(data.message || 'Failed to load doctors');
         }
@@ -91,7 +110,7 @@ export default function DoctorsListPage() {
             <Card key={doc.id} className="min-w-0 flex flex-col">
               <h3 className="text-base font-semibold text-text mb-1 break-words">Dr. {doc.fullName}</h3>
               <p className="text-xs text-text-muted mb-2 break-words">{doc.specialties.join(', ')}</p>
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-text-secondary mb-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-text-secondary mb-2">
                 <span className="inline-flex items-center gap-1">
                   <DollarSign size={12} aria-hidden="true" />
                   {doc.consultationFeeCurrency} {doc.consultationFeeAmount}
@@ -101,6 +120,12 @@ export default function DoctorsListPage() {
                   {doc.yearsOfExperience} yr{doc.yearsOfExperience !== 1 ? 's' : ''}
                 </span>
               </div>
+              {formatWeeklyHoursSummary(doc.weeklySchedule) && (
+                <p className="text-xs text-text-muted m-0 mb-3 break-words inline-flex items-start gap-1">
+                  <Clock size={12} className="shrink-0 mt-0.5" aria-hidden="true" />
+                  <span>{formatWeeklyHoursSummary(doc.weeklySchedule)}</span>
+                </p>
+              )}
               <Button
                 size="sm"
                 className="w-full mt-auto"

@@ -38,9 +38,9 @@ public class AuthorizationTestWebApplicationFactory : WebApplicationFactory<Prog
         SetEnv("Stripe__SecretKey", "sk_test_mock_auth_tests");
         SetEnv("Stripe__PublishableKey", "pk_test_mock_auth_tests");
         SetEnv("RateLimiting__GlobalPermitLimit", "10000");
-        // Default high for authz suite; RateLimitingTestWebApplicationFactory overwrites to 5.
-        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RateLimiting__AuthPermitLimit")))
-            Environment.SetEnvironmentVariable("RateLimiting__AuthPermitLimit", "10000");
+        // Always force a high auth limit for this suite (RateLimitingTestWebApplicationFactory
+        // re-sets AuthPermitLimit=5 in its own ctor/test setup after this runs).
+        Environment.SetEnvironmentVariable("RateLimiting__AuthPermitLimit", "10000");
         SetEnv("RateLimiting__WindowMinutes", "1");
         SetEnv("ConnectionStrings__DefaultConnection", "Server=.;Database=AuthTest_Unused;Trusted_Connection=true;");
         SetEnv("Redis__ConnectionString", "localhost:6379");
@@ -81,6 +81,15 @@ public class AuthorizationTestWebApplicationFactory : WebApplicationFactory<Prog
             services.RemoveAll<IPaymentRepository>();
             services.RemoveAll<IAuditLogRepository>();
             services.RemoveAll<IUserSessionRepository>();
+            services.RemoveAll<IUserNotificationRepository>();
+            services.RemoveAll<Healthcare.Application.Ports.Notifications.IInAppNotificationService>();
+            // Drop EF-backed notification types that still appear as concrete descriptors.
+            for (int i = services.Count - 1; i >= 0; i--)
+            {
+                var implName = services[i].ImplementationType?.Name ?? string.Empty;
+                if (implName is "EFCoreUserNotificationRepository")
+                    services.RemoveAt(i);
+            }
             services.RemoveAll<IUnitOfWork>();
 
             services.RemoveAll<IBreachedPasswordChecker>();
@@ -109,6 +118,10 @@ public class AuthorizationTestWebApplicationFactory : WebApplicationFactory<Prog
             services.AddSingleton<IPaymentRepository, InMemoryPaymentRepository>();
             services.AddSingleton<IAuditLogRepository, InMemoryAuditLogRepository>();
             services.AddSingleton<IUserSessionRepository, InMemoryUserSessionRepository>();
+            // In-app notifications: EF repo needs DbContext — use in-memory for authz / rate-limit suites.
+            services.AddSingleton<IUserNotificationRepository, InMemoryUserNotificationRepository>();
+            services.AddScoped<Healthcare.Application.Ports.Notifications.IInAppNotificationService,
+                Healthcare.Adapters.Notifications.InAppNotificationService>();
             services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
 
             services.AddSingleton<IDistributedLockService, InMemoryLockService>();
