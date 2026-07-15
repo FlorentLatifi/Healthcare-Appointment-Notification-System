@@ -45,8 +45,7 @@ public partial class AddUserNotifications : Migration
         migrationBuilder.CreateIndex(
             name: "IX_UserNotifications_User_Unread",
             table: "UserNotifications",
-            columns: new[] { "UserId", "IsRead" },
-            filter: "[IsRead] = 0");
+            columns: new[] { "UserId", "IsRead" });
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

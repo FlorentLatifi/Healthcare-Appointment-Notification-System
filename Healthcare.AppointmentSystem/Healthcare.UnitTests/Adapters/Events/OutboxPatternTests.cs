@@ -67,7 +67,7 @@ public sealed class OutboxPatternTests
         var appointment = CreateConfirmedAppointment();
         var expectedEventIds = appointment.DomainEvents.Select(e => e.EventId).ToHashSet();
 
-        await using (var context = new HealthcareDbContext(options, outboxSettings))
+        await using (var context = new SqliteCompatibleDbContext(options, outboxSettings))
         {
             await context.Database.EnsureCreatedAsync();
 
@@ -104,7 +104,7 @@ public sealed class OutboxPatternTests
         var outboxSettings = new OutboxSettings { UseOutboxForDomainEvents = false };
         var appointment = CreateConfirmedAppointment();
 
-        await using (var context = new HealthcareDbContext(options, outboxSettings))
+        await using (var context = new SqliteCompatibleDbContext(options, outboxSettings))
         {
             await context.Database.EnsureCreatedAsync();
 
@@ -128,7 +128,7 @@ public sealed class OutboxPatternTests
 
         var appointment = CreateConfirmedAppointment();
 
-        await using (var context = new HealthcareDbContext(options))
+        await using (var context = new SqliteCompatibleDbContext(options))
         {
             await context.Database.EnsureCreatedAsync();
 
@@ -159,7 +159,7 @@ public sealed class OutboxPatternTests
 
         var services = new ServiceCollection();
         services.AddSingleton(outboxSettings);
-        services.AddScoped(_ => new HealthcareDbContext(options, outboxSettings));
+        services.AddScoped<HealthcareDbContext>(_ => new SqliteCompatibleDbContext(options, outboxSettings));
         services.AddSingleton<IDomainEventDispatcher>(sp =>
             new DomainEventDispatcher(sp, sp.GetRequiredService<ILogger<DomainEventDispatcher>>()));
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
@@ -168,13 +168,13 @@ public sealed class OutboxPatternTests
         var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
 
         // Ensure schema once on the shared connection
-        await using (var bootstrap = new HealthcareDbContext(options, outboxSettings))
+        await using (var bootstrap = new SqliteCompatibleDbContext(options, outboxSettings))
             await bootstrap.Database.EnsureCreatedAsync();
 
         var appointment = CreateConfirmedAppointment();
         var domainEvent = appointment.DomainEvents.First();
 
-        await using (var writeCtx = new HealthcareDbContext(options, outboxSettings))
+        await using (var writeCtx = new SqliteCompatibleDbContext(options, outboxSettings))
         {
             var outboxMessage = new OutboxMessage(
                 domainEvent.GetType().AssemblyQualifiedName!,
@@ -190,7 +190,7 @@ public sealed class OutboxPatternTests
         var relay = CreateRelay(scopeFactory, logger, outboxSettings);
         await relay.ProcessBatchAsync(CancellationToken.None);
 
-        await using (var readCtx = new HealthcareDbContext(options, outboxSettings))
+        await using (var readCtx = new SqliteCompatibleDbContext(options, outboxSettings))
         {
             var processed = await readCtx.OutboxMessages.FirstAsync();
             processed.Status.Should().Be(OutboxMessageStatus.Processed);
@@ -221,7 +221,7 @@ public sealed class OutboxPatternTests
 
         var services = new ServiceCollection();
         services.AddSingleton(outboxSettings);
-        services.AddScoped(_ => new HealthcareDbContext(options, outboxSettings));
+        services.AddScoped<HealthcareDbContext>(_ => new SqliteCompatibleDbContext(options, outboxSettings));
         services.AddSingleton<IDomainEventDispatcher>(sp =>
             new DomainEventDispatcher(sp, sp.GetRequiredService<ILogger<DomainEventDispatcher>>()));
         services.AddSingleton<ILogger<OutboxRelayService>>(loggerMock.Object);
@@ -230,13 +230,13 @@ public sealed class OutboxPatternTests
         var provider = services.BuildServiceProvider();
         var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
 
-        await using (var bootstrap = new HealthcareDbContext(options, outboxSettings))
+        await using (var bootstrap = new SqliteCompatibleDbContext(options, outboxSettings))
             await bootstrap.Database.EnsureCreatedAsync();
 
         var appointment = CreateConfirmedAppointment();
         var domainEvent = appointment.DomainEvents.First();
 
-        await using (var writeCtx = new HealthcareDbContext(options, outboxSettings))
+        await using (var writeCtx = new SqliteCompatibleDbContext(options, outboxSettings))
         {
             var outboxMessage = new OutboxMessage(
                 domainEvent.GetType().AssemblyQualifiedName!,
@@ -251,7 +251,7 @@ public sealed class OutboxPatternTests
         var relay = CreateRelay(scopeFactory, loggerMock.Object, outboxSettings);
         await relay.ProcessBatchAsync(CancellationToken.None);
 
-        await using (var readCtx = new HealthcareDbContext(options, outboxSettings))
+        await using (var readCtx = new SqliteCompatibleDbContext(options, outboxSettings))
         {
             var dead = await readCtx.OutboxMessages.FirstAsync();
             dead.Status.Should().Be(OutboxMessageStatus.DeadLetter);
@@ -289,7 +289,7 @@ public sealed class OutboxPatternTests
 
         var services = new ServiceCollection();
         services.AddSingleton(outboxSettings);
-        services.AddScoped(_ => new HealthcareDbContext(options, outboxSettings));
+        services.AddScoped<HealthcareDbContext>(_ => new SqliteCompatibleDbContext(options, outboxSettings));
         services.AddSingleton<IDomainEventDispatcher>(sp =>
             new DomainEventDispatcher(sp, sp.GetRequiredService<ILogger<DomainEventDispatcher>>()));
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
@@ -297,10 +297,10 @@ public sealed class OutboxPatternTests
         var provider = services.BuildServiceProvider();
         var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
 
-        await using (var bootstrap = new HealthcareDbContext(options, outboxSettings))
+        await using (var bootstrap = new SqliteCompatibleDbContext(options, outboxSettings))
             await bootstrap.Database.EnsureCreatedAsync();
 
-        await using (var writeCtx = new HealthcareDbContext(options, outboxSettings))
+        await using (var writeCtx = new SqliteCompatibleDbContext(options, outboxSettings))
         {
             var outboxMessage = new OutboxMessage(
                 "NonExistent.Event.Type.ThatDoesNotExist, NonExistentAssembly",
@@ -316,7 +316,7 @@ public sealed class OutboxPatternTests
         var relay = CreateRelay(scopeFactory, logger, outboxSettings);
         await relay.ProcessBatchAsync(CancellationToken.None);
 
-        await using (var readCtx = new HealthcareDbContext(options, outboxSettings))
+        await using (var readCtx = new SqliteCompatibleDbContext(options, outboxSettings))
         {
             var failed = await readCtx.OutboxMessages.FirstAsync();
             failed.Status.Should().Be(OutboxMessageStatus.DeadLetter);
@@ -354,21 +354,21 @@ public sealed class OutboxPatternTests
 
         var services = new ServiceCollection();
         services.AddSingleton(outboxSettings);
-        services.AddScoped(_ => new HealthcareDbContext(options, outboxSettings));
+        services.AddScoped<HealthcareDbContext>(_ => new SqliteCompatibleDbContext(options, outboxSettings));
         services.AddSingleton(dispatcherMock.Object);
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
 
         var provider = services.BuildServiceProvider();
         var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
 
-        await using (var bootstrap = new HealthcareDbContext(options, outboxSettings))
+        await using (var bootstrap = new SqliteCompatibleDbContext(options, outboxSettings))
             await bootstrap.Database.EnsureCreatedAsync();
 
         var appointment = CreateConfirmedAppointment();
         var domainEvent = appointment.DomainEvents.First();
         var before = DateTime.UtcNow;
 
-        await using (var writeCtx = new HealthcareDbContext(options, outboxSettings))
+        await using (var writeCtx = new SqliteCompatibleDbContext(options, outboxSettings))
         {
             writeCtx.OutboxMessages.Add(new OutboxMessage(
                 domainEvent.GetType().AssemblyQualifiedName!,
@@ -382,7 +382,7 @@ public sealed class OutboxPatternTests
         var relay = CreateRelay(scopeFactory, logger, outboxSettings);
         await relay.ProcessBatchAsync(CancellationToken.None);
 
-        await using (var readCtx = new HealthcareDbContext(options, outboxSettings))
+        await using (var readCtx = new SqliteCompatibleDbContext(options, outboxSettings))
         {
             var failed = await readCtx.OutboxMessages.FirstAsync();
             failed.Status.Should().Be(OutboxMessageStatus.Pending);

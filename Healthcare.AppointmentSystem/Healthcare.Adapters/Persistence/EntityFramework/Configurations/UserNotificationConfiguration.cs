@@ -26,9 +26,10 @@ public sealed class UserNotificationConfiguration : IEntityTypeConfiguration<Use
         builder.HasIndex(n => new { n.UserId, n.CreatedAt })
             .HasDatabaseName("IX_UserNotifications_User_Created");
 
+        // No SQL Server-only filtered index: SQLite EnsureCreated (unit tests) rejects
+        // filter syntax / provider-specific DDL. Composite index is enough for inbox queries.
         builder.HasIndex(n => new { n.UserId, n.IsRead })
-            .HasDatabaseName("IX_UserNotifications_User_Unread")
-            .HasFilter("[IsRead] = 0");
+            .HasDatabaseName("IX_UserNotifications_User_Unread");
 
         builder.Ignore(n => n.DomainEvents);
     }

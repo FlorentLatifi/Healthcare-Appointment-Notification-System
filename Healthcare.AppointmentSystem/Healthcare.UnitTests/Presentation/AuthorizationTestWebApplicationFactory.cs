@@ -38,9 +38,9 @@ public class AuthorizationTestWebApplicationFactory : WebApplicationFactory<Prog
         SetEnv("Stripe__SecretKey", "sk_test_mock_auth_tests");
         SetEnv("Stripe__PublishableKey", "pk_test_mock_auth_tests");
         SetEnv("RateLimiting__GlobalPermitLimit", "10000");
-        // Default high for authz suite; RateLimitingTestWebApplicationFactory overwrites to 5.
-        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RateLimiting__AuthPermitLimit")))
-            Environment.SetEnvironmentVariable("RateLimiting__AuthPermitLimit", "10000");
+        // Always force a high auth limit for this suite (RateLimitingTestWebApplicationFactory
+        // re-sets AuthPermitLimit=5 in its own ctor/test setup after this runs).
+        Environment.SetEnvironmentVariable("RateLimiting__AuthPermitLimit", "10000");
         SetEnv("RateLimiting__WindowMinutes", "1");
         SetEnv("ConnectionStrings__DefaultConnection", "Server=.;Database=AuthTest_Unused;Trusted_Connection=true;");
         SetEnv("Redis__ConnectionString", "localhost:6379");
