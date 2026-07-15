@@ -31,11 +31,15 @@ public sealed class ArchitectureTests
         // Top-level Program (SDK-style minimal hosting)
         "Program",
         "Healthcare.Presentation.API.Services.DatabaseSeeder",
+        // Hosted worker registered from the composition root (uses adapter ports + health state).
+        "Healthcare.Presentation.API.Services.AppointmentReminderBackgroundService",
     };
 
     private static readonly string[] CompositionRootNamespaceAllowList =
     {
         "Healthcare.Presentation.API.Configuration",
+        // Health checks resolve adapter worker health state from DI — composition-root surface only.
+        "Healthcare.Presentation.API.HealthChecks",
     };
 
     #region Layer dependency rules (NetArchTest)

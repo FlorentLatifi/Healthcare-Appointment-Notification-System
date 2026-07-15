@@ -210,7 +210,7 @@ function normalizeFieldName(raw) {
   let key = raw.trim();
   if (key.startsWith('$.')) key = key.slice(2);
   // Take last segment of dotted path
-  const parts = key.split(/[.\[]/).filter(Boolean);
+  const parts = key.split(/\.|\[/).filter(Boolean);
   key = parts[parts.length - 1] || key;
   key = key.replace(/\]/g, '');
   // camelCase first letter

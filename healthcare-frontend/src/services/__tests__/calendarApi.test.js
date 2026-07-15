@@ -19,8 +19,8 @@ describe('downloadAppointmentIcs', () => {
     vi.clearAllMocks();
     createObjectURL = vi.fn(() => 'blob:mock-url');
     revokeObjectURL = vi.fn();
-    global.URL.createObjectURL = createObjectURL;
-    global.URL.revokeObjectURL = revokeObjectURL;
+    globalThis.URL.createObjectURL = createObjectURL;
+    globalThis.URL.revokeObjectURL = revokeObjectURL;
 
     clickSpy = vi.fn();
     vi.spyOn(document, 'createElement').mockImplementation((tag) => {
