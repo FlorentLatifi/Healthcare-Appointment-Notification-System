@@ -203,6 +203,18 @@ namespace Healthcare.Adapters.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ActorRole")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ClientIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -229,16 +241,36 @@ namespace Healthcare.Adapters.Migrations
                     b.Property<DateTime>("OccurredOn")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Success");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
                     b.Property<int?>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("IX_AuditLogs_CorrelationId");
 
                     b.HasIndex("EventType")
                         .HasDatabaseName("IX_AuditLogs_EventType");
 
                     b.HasIndex("OccurredOn")
                         .HasDatabaseName("IX_AuditLogs_OccurredOn");
+
+                    b.HasIndex("Outcome")
+                        .HasDatabaseName("IX_AuditLogs_Outcome");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_AuditLogs_UserId");
 
                     b.HasIndex("EntityType", "EntityId", "OccurredOn")
                         .HasDatabaseName("IX_AuditLogs_Entity_Time");

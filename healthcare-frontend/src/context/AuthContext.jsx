@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import apiClient, { setTokenGetter, setTokenSetter, onAuthCleared } from '../services/apiClient';
+import apiClient, {
+  setTokenGetter,
+  setTokenSetter,
+  setSessionApplier,
+  onAuthCleared,
+} from '../services/apiClient';
 import { parseApiError, flattenApiErrors } from '../hooks/useApiError';
 
 const AuthContext = createContext(null);
@@ -10,6 +15,7 @@ function toUserFacingError(err, fallback) {
   const e = new Error(message);
   e.apiError = parsed;
   e.cause = err;
+  e.code = err?.code;
   return e;
 }
 
@@ -25,13 +31,24 @@ function normalizeProfileId(value) {
 }
 
 /**
+ * True when login/refresh payload can drive role-based UI.
+ * Empty role was the root cause of the "blank dashboard after login" bug.
+ */
+export function isCompleteSessionPayload(data) {
+  if (!data || typeof data !== 'object') return false;
+  if (!data.token || typeof data.token !== 'string') return false;
+  if (!data.role || typeof data.role !== 'string' || !data.role.trim()) return false;
+  return true;
+}
+
+/**
  * Apply login/refresh payload to React state.
  * patientId / doctorId must come from the server JWT claims only — never client-side mutation.
  */
 function sessionFromResponse(data) {
   return {
     token: data.token,
-    user: { username: data.username, role: data.role },
+    user: { username: data.username || '', role: data.role },
     patientId: normalizeProfileId(data.patientId),
     doctorId: normalizeProfileId(data.doctorId),
   };
@@ -46,7 +63,21 @@ export function AuthProvider({ children }) {
   /** False until the initial /Auth/refresh (cookie restore) attempt finishes. */
   const [sessionReady, setSessionReady] = useState(false);
 
-  const applySession = useCallback((payload) => {
+  const applySession = useCallback((payload, { requireComplete = true } = {}) => {
+    if (requireComplete && !isCompleteSessionPayload(payload)) {
+      const e = new Error(
+        'Session is incomplete (missing role or token). Please sign in again.',
+      );
+      e.code = 'INCOMPLETE_SESSION';
+      throw e;
+    }
+    if (!payload?.token) {
+      return null;
+    }
+    // Soft path (requireComplete false): still skip applying empty-role sessions.
+    if (!payload.role || !String(payload.role).trim()) {
+      return null;
+    }
     const session = sessionFromResponse(payload);
     setToken(session.token);
     setUser(session.user);
@@ -70,18 +101,27 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     setTokenSetter(setToken);
+    // Full session apply on silent refresh so patientId/doctorId/role stay in sync.
+    setSessionApplier((payload) => {
+      try {
+        applySession(payload, { requireComplete: true });
+      } catch {
+        clearSession();
+      }
+    });
     onAuthCleared(() => {
       clearSession();
     });
-  }, [clearSession]);
+  }, [clearSession, applySession]);
 
   useEffect(() => {
     let cancelled = false;
     const restoreSession = async () => {
       try {
         const { data } = await apiClient.post('/Auth/refresh');
-        if (!cancelled && data.success) {
-          applySession(data.data);
+        if (!cancelled && data.success && data.data) {
+          // Soft apply: incomplete payloads leave the user logged out (no blank UI).
+          applySession(data.data, { requireComplete: false });
         }
       } catch {
         // No valid refresh cookie — user stays logged out
@@ -105,9 +145,16 @@ export function AuthProvider({ children }) {
           'Login failed',
         );
       }
-      return applySession(data.data);
+      if (!isCompleteSessionPayload(data.data)) {
+        const e = new Error(
+          'Login succeeded but the server did not return a user role. Please contact support or try again.',
+        );
+        e.code = 'INCOMPLETE_SESSION';
+        throw e;
+      }
+      return applySession(data.data, { requireComplete: true });
     } catch (err) {
-      if (err.apiError) throw err;
+      if (err.apiError || err.code === 'INCOMPLETE_SESSION') throw err;
       throw toUserFacingError(err, 'Login failed');
     } finally {
       setLoading(false);
@@ -127,12 +174,39 @@ export function AuthProvider({ children }) {
           'Session refresh failed',
         );
       }
-      return applySession(data.data);
+      if (!isCompleteSessionPayload(data.data)) {
+        clearSession();
+        const e = new Error('Session refresh returned an incomplete session.');
+        e.code = 'INCOMPLETE_SESSION';
+        throw e;
+      }
+      return applySession(data.data, { requireComplete: true });
     } catch (err) {
-      if (err.apiError) throw err;
+      if (err.apiError || err.code === 'INCOMPLETE_SESSION') throw err;
       throw toUserFacingError(err, 'Session refresh failed');
     }
-  }, [applySession]);
+  }, [applySession, clearSession]);
+
+  /**
+   * Apply session fields returned from profile-create endpoints
+   * (POST /Patients, POST /Doctors self-service). Falls back to /Auth/refresh
+   * when the server did not include a token (e.g. admin catalog create).
+   */
+  const applyProfileSession = useCallback(async (profilePayload) => {
+    if (profilePayload?.token && profilePayload?.role) {
+      return applySession(
+        {
+          token: profilePayload.token,
+          username: profilePayload.username,
+          role: profilePayload.role,
+          patientId: profilePayload.patientId,
+          doctorId: profilePayload.doctorId,
+        },
+        { requireComplete: true },
+      );
+    }
+    return refreshSession();
+  }, [applySession, refreshSession]);
 
   const register = useCallback(async (username, email, password, role) => {
     setLoading(true);
@@ -177,7 +251,8 @@ export function AuthProvider({ children }) {
         register,
         logout,
         refreshSession,
-        isAuthenticated: !!token,
+        applyProfileSession,
+        isAuthenticated: !!token && !!user?.role,
       }}
     >
       {children}

@@ -10,6 +10,11 @@ public sealed class UserSession : Entity
     public string? UserAgent { get; private set; }
     public string? IpAddress { get; private set; }
     public DateTime? RevokedAt { get; private set; }
+
+    /// <summary>
+    /// Domain convenience only. Never use in EF Core LINQ — query <see cref="RevokedAt"/> instead
+    /// (<c>RevokedAt == null</c> for active sessions).
+    /// </summary>
     public bool IsRevoked => RevokedAt.HasValue;
 
     public User User { get; private set; } = null!;

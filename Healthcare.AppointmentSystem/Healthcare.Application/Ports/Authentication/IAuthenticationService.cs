@@ -38,6 +38,15 @@ public interface IAuthenticationService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Re-issues an access token for an existing user from current DB state (e.g. after
+    /// linking PatientId / DoctorId). Does not rotate the refresh-token cookie — use
+    /// <see cref="RefreshTokenAsync"/> for full session rotation.
+    /// </summary>
+    Task<Result<LoginResult>> IssueAccessTokenForUserAsync(
+        int userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Revokes a refresh token and its rotation family (single-device logout).
     /// Returns the revoked family id when known (for UserSession cleanup).
     /// </summary>

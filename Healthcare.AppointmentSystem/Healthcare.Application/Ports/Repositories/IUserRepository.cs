@@ -14,4 +14,10 @@ public interface IUserRepository
     Task AddAsync(User user, CancellationToken cancellationToken = default);
     Task UpdateAsync(User user, CancellationToken cancellationToken = default);
     Task DeleteAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>Users linked to the given patient profile (usually zero or one).</summary>
+    Task<IReadOnlyList<User>> FindByPatientIdAsync(int patientId, CancellationToken cancellationToken = default);
+
+    /// <summary>Users linked to the given doctor profile (usually zero or one).</summary>
+    Task<IReadOnlyList<User>> FindByDoctorIdAsync(int doctorId, CancellationToken cancellationToken = default);
 }

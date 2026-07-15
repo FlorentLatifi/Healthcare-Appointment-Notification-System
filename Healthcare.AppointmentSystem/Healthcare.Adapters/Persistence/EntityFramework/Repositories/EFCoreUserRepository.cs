@@ -62,4 +62,18 @@ public sealed class EFCoreUserRepository : IUserRepository
             _context.Users.Remove(user);
         }
     }
+
+    public async Task<IReadOnlyList<User>> FindByPatientIdAsync(int patientId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Users
+            .Where(u => u.PatientId == patientId)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<User>> FindByDoctorIdAsync(int doctorId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Users
+            .Where(u => u.DoctorId == doctorId)
+            .ToListAsync(cancellationToken);
+    }
 }

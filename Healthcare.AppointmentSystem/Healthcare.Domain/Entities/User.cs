@@ -55,6 +55,24 @@ public sealed class User : Entity
         MarkAsModified();
     }
 
+    /// <summary>
+    /// Clears the patient profile link (e.g. after self-service profile deactivation).
+    /// </summary>
+    public void UnlinkPatient()
+    {
+        PatientId = null;
+        MarkAsModified();
+    }
+
+    /// <summary>
+    /// Clears the doctor profile link (e.g. after self-service profile deactivation).
+    /// </summary>
+    public void UnlinkDoctor()
+    {
+        DoctorId = null;
+        MarkAsModified();
+    }
+
     public void SetPasswordHash(string passwordHash)
     {
         Guard.AgainstNullOrWhiteSpace(passwordHash, nameof(passwordHash));

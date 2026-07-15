@@ -3,6 +3,7 @@ using Healthcare.Adapters.Caching;
 using Healthcare.Adapters.Events.Handlers;
 using Healthcare.Application.Commands.CreateDoctor;
 using Healthcare.Application.Commands.DeactivateDoctor;
+using Healthcare.Application.Commands.UpdateDoctor;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Caching;
@@ -277,12 +278,24 @@ public sealed class DoctorCacheTests
 
         var controller = new DoctorsController(
             new Mock<ICommandHandler<CreateDoctorCommand, Result<int>>>().Object,
+            new Mock<ICommandHandler<UpdateDoctorCommand, Result>>().Object,
             deactivateHandlerMock.Object,
             new Mock<IUnitOfWork>().Object,
             _doctorCache,
             _availabilityCache,
             new Mock<IStringLocalizer<Messages>>().Object,
-            new Mock<ILogger<DoctorsController>>().Object);
+            new Mock<ILogger<DoctorsController>>().Object,
+            Mock.Of<Healthcare.Application.Ports.Authentication.IAuthenticationService>());
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    new[] { new Claim(ClaimTypes.Role, "Admin"), new Claim(ClaimTypes.NameIdentifier, "1") },
+                    "Test"))
+            }
+        };
 
         var response = await controller.DeleteDoctor(1, CancellationToken.None);
         response.Should().BeOfType<NoContentResult>();
@@ -303,12 +316,14 @@ public sealed class DoctorCacheTests
         ICommandHandler<CreateDoctorCommand, Result<int>>? create = null) =>
         new(
             create ?? new Mock<ICommandHandler<CreateDoctorCommand, Result<int>>>().Object,
+            new Mock<ICommandHandler<UpdateDoctorCommand, Result>>().Object,
             new Mock<ICommandHandler<DeactivateDoctorCommand, Result>>().Object,
             uow,
             _doctorCache,
             _availabilityCache,
             new Mock<IStringLocalizer<Messages>>().Object,
-            new Mock<ILogger<DoctorsController>>().Object);
+            new Mock<ILogger<DoctorsController>>().Object,
+            Mock.Of<Healthcare.Application.Ports.Authentication.IAuthenticationService>());
 
     private static Doctor CreateDoctor(int id, string firstName, string lastName,
         bool isActive, bool acceptingPatients)

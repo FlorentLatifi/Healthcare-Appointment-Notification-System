@@ -1,8 +1,10 @@
 using Asp.Versioning;
 using Healthcare.Application.Commands.CreateDoctor;
 using Healthcare.Application.Commands.DeactivateDoctor;
+using Healthcare.Application.Commands.UpdateDoctor;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
+using Healthcare.Application.Ports.Authentication;
 using Healthcare.Application.Ports.Caching;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Entities;
@@ -25,34 +27,45 @@ namespace Healthcare.Presentation.API.Controllers;
 public sealed class DoctorsController : ControllerBase
 {
     private readonly ICommandHandler<CreateDoctorCommand, Result<int>> _createDoctorHandler;
+    private readonly ICommandHandler<UpdateDoctorCommand, Result> _updateDoctorHandler;
     private readonly ICommandHandler<DeactivateDoctorCommand, Result> _deactivateDoctorHandler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDoctorCacheService _doctorCache;
     private readonly IAvailabilityCacheService _availabilityCache;
     private readonly IStringLocalizer<Messages> _localizer;
     private readonly ILogger<DoctorsController> _logger;
+    private readonly IAuthenticationService _authService;
 
     public DoctorsController(
         ICommandHandler<CreateDoctorCommand, Result<int>> createDoctorHandler,
+        ICommandHandler<UpdateDoctorCommand, Result> updateDoctorHandler,
         ICommandHandler<DeactivateDoctorCommand, Result> deactivateDoctorHandler,
         IUnitOfWork unitOfWork,
         IDoctorCacheService doctorCache,
         IAvailabilityCacheService availabilityCache,
         IStringLocalizer<Messages> localizer,
-        ILogger<DoctorsController> logger)
+        ILogger<DoctorsController> logger,
+        IAuthenticationService authService)
     {
         _createDoctorHandler = createDoctorHandler;
+        _updateDoctorHandler = updateDoctorHandler;
         _deactivateDoctorHandler = deactivateDoctorHandler;
         _unitOfWork = unitOfWork;
         _doctorCache = doctorCache;
         _availabilityCache = availabilityCache;
         _localizer = localizer;
         _logger = logger;
+        _authService = authService;
     }
 
+    /// <summary>
+    /// Creates a doctor profile. When the caller is a Doctor, the profile is linked to their
+    /// account and the response includes a re-issued access token with <c>doctor_id</c>.
+    /// Admin catalog creates return the profile id without a session token.
+    /// </summary>
     [HttpPost]
     [Authorize(Roles = AppRoles.AdminOrDoctor)]
-    [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<ProfileCreatedResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -61,6 +74,10 @@ public sealed class DoctorsController : ControllerBase
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating doctor: {Email}", request.Email);
+
+        int? requestingUserId = User.IsInRole(AppRoles.Doctor)
+            ? int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value)
+            : null;
 
         var command = new CreateDoctorCommand
         {
@@ -73,7 +90,7 @@ public sealed class DoctorsController : ControllerBase
             ConsultationFeeAmount = request.ConsultationFeeAmount,
             ConsultationFeeCurrency = request.ConsultationFeeCurrency,
             YearsOfExperience = request.YearsOfExperience,
-            RequestingUserId = User.IsInRole(AppRoles.Doctor) ? int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value) : null
+            RequestingUserId = requestingUserId
         };
 
         var result = await _createDoctorHandler.HandleAsync(command, cancellationToken);
@@ -81,14 +98,40 @@ public sealed class DoctorsController : ControllerBase
         if (result.IsFailure)
         {
             _logger.LogWarning("Failed to create doctor: {Error}", result.Error);
-            return BadRequest(ApiResponse<int>.ErrorResponse(result.Error, "Doctor already exists"));
+            return BadRequest(ApiResponse<ProfileCreatedResponse>.ErrorResponse(
+                result.Error, "Doctor already exists"));
         }
 
         _logger.LogInformation("Doctor {DoctorId} created successfully", result.Value);
+
+        var payload = new ProfileCreatedResponse { Id = result.Value };
+
+        // Self-service doctor: re-issue JWT with doctor_id so the SPA skips /Auth/refresh.
+        if (requestingUserId is int userId)
+        {
+            var session = await _authService.IssueAccessTokenForUserAsync(userId, cancellationToken);
+            if (session.IsSuccess)
+            {
+                payload.Token = session.Value.AccessToken;
+                payload.ExpiresAt = session.Value.ExpiresAt;
+                payload.Username = session.Value.Username;
+                payload.Role = session.Value.Role;
+                payload.PatientId = session.Value.PatientId;
+                payload.DoctorId = session.Value.DoctorId;
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Doctor {DoctorId} created but could not re-issue access token for user {UserId}: {Error}",
+                    result.Value, userId, session.Error);
+            }
+        }
+
         return CreatedAtAction(
             nameof(GetDoctorById),
             new { id = result.Value },
-            ApiResponse<int>.SuccessResponse(result.Value, "Doctor created successfully"));
+            ApiResponse<ProfileCreatedResponse>.SuccessResponse(
+                payload, "Doctor created successfully"));
     }
 
     /// <summary>
@@ -210,8 +253,52 @@ public sealed class DoctorsController : ControllerBase
         return Ok(ApiResponse<DoctorDayAvailabilityDto>.SuccessResponse(availability!));
     }
 
+    /// <summary>
+    /// Updates an existing doctor profile (owner or admin).
+    /// </summary>
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = AppRoles.AdminOrDoctor)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateDoctor(
+        int id,
+        [FromBody] UpdateDoctorRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (User.IsInRole(AppRoles.Doctor) && User.GetDoctorId() != id)
+            return Forbid();
+
+        _logger.LogInformation("Updating doctor {DoctorId}", id);
+
+        var command = new UpdateDoctorCommand
+        {
+            DoctorId = id,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            PhoneNumber = request.PhoneNumber,
+            LicenseNumber = request.LicenseNumber,
+            Specialty = request.Specialty,
+            ConsultationFeeAmount = request.ConsultationFeeAmount,
+            ConsultationFeeCurrency = request.ConsultationFeeCurrency,
+            YearsOfExperience = request.YearsOfExperience
+        };
+
+        var result = await _updateDoctorHandler.HandleAsync(command, cancellationToken);
+        if (result.IsFailure)
+        {
+            if (result.Error.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                return NotFound(ApiResponse.ErrorResponse(result.Error, "Doctor not found"));
+            return BadRequest(ApiResponse.ErrorResponse(result.Error, "Failed to update doctor"));
+        }
+
+        return Ok(ApiResponse.SuccessResponse("Doctor profile updated successfully"));
+    }
+
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.AdminOrDoctor)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -219,6 +306,9 @@ public sealed class DoctorsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> DeleteDoctor(int id, CancellationToken cancellationToken)
     {
+        if (User.IsInRole(AppRoles.Doctor) && User.GetDoctorId() != id)
+            return Forbid();
+
         _logger.LogInformation("Deactivating doctor {DoctorId}", id);
 
         var command = new DeactivateDoctorCommand { DoctorId = id };
@@ -228,6 +318,19 @@ public sealed class DoctorsController : ControllerBase
         {
             _logger.LogWarning("Failed to deactivate doctor {DoctorId}: {Error}", id, result.Error);
             return BadRequest(ApiResponse.ErrorResponse(result.Error, "Doctor already deactivated"));
+        }
+
+        // Self-service: clear User.DoctorId claim source.
+        if (User.IsInRole(AppRoles.Doctor))
+        {
+            var userId = User.GetUserId();
+            var user = await _unitOfWork.Users.GetByIdAsync(userId, cancellationToken);
+            if (user is not null && user.DoctorId == id)
+            {
+                user.UnlinkDoctor();
+                await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
         }
 
         _logger.LogInformation("Doctor {DoctorId} deactivated successfully", id);

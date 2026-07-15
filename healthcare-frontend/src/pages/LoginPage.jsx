@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { Button, Input } from '../components/ui';
 import useApiError, { fieldErrorList } from '../hooks/useApiError';
+import { postLoginPath } from '../utils/postLoginRedirect';
 
 export default function LoginPage() {
   const { login, loading } = useAuth();
@@ -36,10 +37,14 @@ export default function LoginPage() {
   const onSubmit = async (data) => {
     clearApiErrors();
     try {
-      await login(data.username, data.password);
+      const session = await login(data.username, data.password);
       toast.success('Login successful');
-      navigate('/dashboard', { replace: true });
+      navigate(postLoginPath(session), { replace: true });
     } catch (err) {
+      if (err?.code === 'INCOMPLETE_SESSION') {
+        toast.error(err.message || 'Login session incomplete. Please try again.');
+        return;
+      }
       const parsed = applyError(err);
       Object.entries(parsed.fieldErrors || {}).forEach(([field, msgs]) => {
         if (msgs?.length) setError(field, { type: 'server', message: msgs[0] });

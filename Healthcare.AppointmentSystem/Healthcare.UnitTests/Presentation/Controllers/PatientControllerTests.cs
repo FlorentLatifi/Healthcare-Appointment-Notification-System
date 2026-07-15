@@ -3,6 +3,7 @@ using FluentAssertions;
 using Healthcare.Adapters.Persistence.InMemory;
 using Healthcare.Application.Commands.AnonymizePatient;
 using Healthcare.Application.Commands.CreatePatient;
+using Healthcare.Application.Commands.UpdatePatient;
 using Healthcare.Application.Common;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
@@ -44,6 +45,7 @@ public class PatientControllerTests
             Mock.Of<IUserSessionRepository>());
 
         var handlerMock = new Mock<ICommandHandler<CreatePatientCommand, Result<int>>>();
+        var updateHandlerMock = new Mock<ICommandHandler<UpdatePatientCommand, Result>>();
         var anonymizeHandlerMock = new Mock<ICommandHandler<AnonymizePatientCommand, Result>>();
         var localizerMock = new Mock<IStringLocalizer<Messages>>();
         var loggerMock = new Mock<ILogger<PatientsController>>();
@@ -51,12 +53,14 @@ public class PatientControllerTests
 
         _controller = new PatientsController(
             handlerMock.Object,
+            updateHandlerMock.Object,
             anonymizeHandlerMock.Object,
             _unitOfWork,
             localizerMock.Object,
             loggerMock.Object,
             eventDispatcherMock.Object,
-            Mock.Of<Healthcare.Application.Ports.Audit.IAuditLogService>());
+            Mock.Of<Healthcare.Application.Ports.Audit.IAuditLogService>(),
+            Mock.Of<Healthcare.Application.Ports.Authentication.IAuthenticationService>());
     }
 
     [Fact]

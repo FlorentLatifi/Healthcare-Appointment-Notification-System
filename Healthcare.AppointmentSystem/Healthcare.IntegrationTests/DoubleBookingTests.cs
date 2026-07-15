@@ -44,8 +44,7 @@ public sealed class DoubleBookingTests : IntegrationTestBase
             YearsOfExperience = 5
         };
         var doctorResponse = await Client.PostAsJsonAsync("/api/v1/doctors", doctorPayload);
-        var doctorResult = await DeserializeResponse<int>(doctorResponse);
-        var doctorId = doctorResult!.Data;
+        var doctorId = await ReadCreatedProfileIdAsync(doctorResponse);
 
         var patientPayload = new
         {

@@ -98,8 +98,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             Country = "Country"
         });
         create.StatusCode.Should().Be(HttpStatusCode.Created);
-        var created = await DeserializeResponse<int>(create);
-        var patientId = created!.Data;
+        var patientId = await ReadCreatedProfileIdAsync(create);
 
         // Same session: refresh (not full re-login) re-issues JWT with patient_id claim
         var session = await RefreshSessionPayloadAsync();
@@ -134,7 +133,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             YearsOfExperience = 8
         });
         doctorResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var doctorId = (await DeserializeResponse<int>(doctorResponse))!.Data;
+        var doctorId = await ReadCreatedProfileIdAsync(doctorResponse);
 
         // New patient registers + logs in (no patient_id claim yet)
         var username = $"book_same_{suffix}";
@@ -156,11 +155,16 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             Country = "Kosovo"
         });
         createPatient.StatusCode.Should().Be(HttpStatusCode.Created);
-        var patientId = (await DeserializeResponse<int>(createPatient))!.Data;
+        var created = await DeserializeResponse<ProfileCreatedResponse>(createPatient);
+        var patientId = created!.Data!.Id;
+        // Preferred path: create response includes re-issued token with patient_id claim.
+        created.Data.Token.Should().NotBeNullOrEmpty();
+        created.Data.PatientId.Should().Be(patientId);
+        SetAuthToken(created.Data.Token!);
 
-        // Critical path: refresh only — no password re-entry
+        // Refresh remains valid as a fallback for normal token rotation.
         var refreshed = await RefreshSessionPayloadAsync();
-        refreshed!.PatientId.Should().Be(patientId, "refresh must pick up User.PatientId linked by CreatePatient");
+        refreshed!.PatientId.Should().Be(patientId, "refresh must still pick up User.PatientId");
         refreshed.Token.Should().NotBeNullOrEmpty();
 
         var scheduledTime = DateTime.Now.Date.AddDays(3).AddHours(10);
@@ -205,8 +209,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             PostalCode = "10000",
             Country = "Country"
         });
-        var createdA = await DeserializeResponse<int>(createA);
-        var patientIdA = createdA!.Data;
+        var patientIdA = await ReadCreatedProfileIdAsync(createA);
 
         // Patient B registers and tries to view Patient A's record
         var tokenB = await RegisterAndLoginAsync("pat_b", "pat.b@test.com", "SecurePass123!", "Patient");
@@ -225,8 +228,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             PostalCode = "10000",
             Country = "Country"
         });
-        var createdB = await DeserializeResponse<int>(createB);
-        var patientIdB = createdB!.Data;
+        var patientIdB = await ReadCreatedProfileIdAsync(createB);
 
         // Re-login as Patient B to get a token with patient_id = patientIdB
         var tokenBRelogin = await LoginAsync("pat_b", "SecurePass123!");
@@ -257,8 +259,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             PostalCode = "10000",
             Country = "Country"
         });
-        var created = await DeserializeResponse<int>(create);
-        var patientId = created!.Data;
+        var patientId = await ReadCreatedProfileIdAsync(create);
 
         // Doctor with linked profile but no care relationship to that patient
         var docToken = await RegisterAndLoginAsync("doc_unrel", "doc.unrel@test.com", "SecurePass123!", "Doctor");

@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockNavigate, mockRefreshSession, mockAuthContext, mockApiClient } = vi.hoisted(() => ({
+const { mockNavigate, mockApplyProfileSession, mockAuthContext, mockApiClient } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
-  mockRefreshSession: vi.fn(),
+  mockApplyProfileSession: vi.fn(),
   mockAuthContext: { useAuth: vi.fn() },
   mockApiClient: { get: vi.fn(), put: vi.fn(), post: vi.fn() },
 }));
@@ -54,8 +54,8 @@ const makeAppt = (id, status, overrides = {}) => ({
 describe('DoctorDashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRefreshSession.mockResolvedValue({ doctorId: 9 });
-    mockAuthContext.useAuth.mockReturnValue({ doctorId: null, refreshSession: mockRefreshSession });
+    mockApplyProfileSession.mockResolvedValue({ doctorId: 9 });
+    mockAuthContext.useAuth.mockReturnValue({ doctorId: null, applyProfileSession: mockApplyProfileSession });
   });
 
   describe('create-profile mode (no doctorId in JWT)', () => {
@@ -66,8 +66,16 @@ describe('DoctorDashboardPage', () => {
       expect(screen.queryByPlaceholderText(/email address/i)).not.toBeInTheDocument();
     });
 
-    it('creates profile then refreshes session for doctor_id claim', async () => {
-      mockApiClient.post.mockResolvedValue({ data: { success: true, data: 9 } });
+    it('creates profile then applies session for doctor_id claim', async () => {
+      const sessionPayload = {
+        id: 9,
+        token: 'fresh-jwt',
+        role: 'Doctor',
+        username: 'jane',
+        doctorId: 9,
+        patientId: null,
+      };
+      mockApiClient.post.mockResolvedValue({ data: { success: true, data: sessionPayload } });
 
       render(<DoctorDashboardPage />);
 
@@ -90,13 +98,13 @@ describe('DoctorDashboardPage', () => {
           licenseNumber: 'MED-99999',
         }));
       });
-      expect(mockRefreshSession).toHaveBeenCalled();
+      expect(mockApplyProfileSession).toHaveBeenCalledWith(sessionPayload);
     });
   });
 
   describe('dashboard mode (with doctorId from JWT)', () => {
     beforeEach(() => {
-      mockAuthContext.useAuth.mockReturnValue({ doctorId: 1, refreshSession: mockRefreshSession });
+      mockAuthContext.useAuth.mockReturnValue({ doctorId: 1, applyProfileSession: mockApplyProfileSession });
       mockApiClient.get.mockResolvedValue({ data: { success: true, data: { items: [] } } });
     });
 
@@ -108,9 +116,9 @@ describe('DoctorDashboardPage', () => {
 
       await vi.waitFor(() => expect(screen.getByText('REF-1')).toBeInTheDocument());
 
-      expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Complete' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'No-Show' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /confirm appointment/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /complete with notes/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /mark no-show/i })).toBeInTheDocument();
     });
 
     it('shows only Complete for Confirmed appointments', async () => {
@@ -121,9 +129,9 @@ describe('DoctorDashboardPage', () => {
 
       await vi.waitFor(() => expect(screen.getByText('REF-2')).toBeInTheDocument());
 
-      expect(screen.getByRole('button', { name: 'Complete' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'No-Show' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /complete appointment/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /confirm appointment/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /mark no-show/i })).not.toBeInTheDocument();
     });
 
     it('shows no action buttons for Completed or Cancelled', async () => {
@@ -134,9 +142,10 @@ describe('DoctorDashboardPage', () => {
 
       await vi.waitFor(() => expect(screen.getByText('REF-3')).toBeInTheDocument());
 
-      expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Complete' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'No-Show' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /confirm appointment/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /complete appointment/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /complete with notes/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /mark no-show/i })).not.toBeInTheDocument();
     });
 
     describe('complete modal', () => {
@@ -147,9 +156,7 @@ describe('DoctorDashboardPage', () => {
         render(<DoctorDashboardPage />);
 
         await vi.waitFor(() => expect(screen.getByText('REF-5')).toBeInTheDocument());
-        await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
-
-        await userEvent.click(screen.getByRole('button', { name: 'Complete' }));
+        await userEvent.click(screen.getByRole('button', { name: /complete with notes/i }));
         await userEvent.type(screen.getByPlaceholderText(/clinical notes/i), 'Short');
         await userEvent.click(screen.getAllByRole('button', { name: /^complete$/i }).pop());
 
@@ -168,7 +175,7 @@ describe('DoctorDashboardPage', () => {
         render(<DoctorDashboardPage />);
 
         await vi.waitFor(() => expect(screen.getByText('REF-6')).toBeInTheDocument());
-        await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+        await userEvent.click(screen.getByRole('button', { name: /confirm appointment/i }));
 
         await userEvent.click(screen.getByLabelText(/override payment/i));
 
@@ -183,7 +190,7 @@ describe('DoctorDashboardPage', () => {
         render(<DoctorDashboardPage />);
 
         await vi.waitFor(() => expect(screen.getByText('REF-7')).toBeInTheDocument());
-        await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+        await userEvent.click(screen.getByRole('button', { name: /confirm appointment/i }));
 
         await userEvent.click(screen.getByLabelText(/override payment/i));
         await userEvent.type(document.querySelector('input:not([type="checkbox"])'), 'Admin waiver');

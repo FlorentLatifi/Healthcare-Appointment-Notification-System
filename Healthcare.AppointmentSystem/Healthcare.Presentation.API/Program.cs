@@ -9,6 +9,8 @@ using Healthcare.Application.Commands.ConfirmAppointment;
 using Healthcare.Application.Commands.CreateDoctor;
 using Healthcare.Application.Commands.CreatePatient;
 using Healthcare.Application.Commands.DeactivateDoctor;
+using Healthcare.Application.Commands.UpdateDoctor;
+using Healthcare.Application.Commands.UpdatePatient;
 using Healthcare.Application.Commands.ForgotPassword;
 using Healthcare.Application.Commands.MarkNoShowAppointment;
 using Healthcare.Application.Commands.ProcessPayment;
@@ -68,7 +70,9 @@ try
     builder.Services.AddScoped<ICommandHandler<CompleteAppointmentCommand, Result>, CompleteAppointmentHandler>();
     builder.Services.AddScoped<ICommandHandler<MarkNoShowAppointmentCommand, Result>, MarkNoShowAppointmentHandler>();
     builder.Services.AddScoped<ICommandHandler<CreatePatientCommand, Result<int>>, CreatePatientHandler>();
+    builder.Services.AddScoped<ICommandHandler<UpdatePatientCommand, Result>, UpdatePatientHandler>();
     builder.Services.AddScoped<ICommandHandler<CreateDoctorCommand, Result<int>>, CreateDoctorHandler>();
+    builder.Services.AddScoped<ICommandHandler<UpdateDoctorCommand, Result>, UpdateDoctorHandler>();
     builder.Services.AddScoped<ICommandHandler<DeactivateDoctorCommand, Result>, DeactivateDoctorHandler>();
     builder.Services.AddScoped<ICommandHandler<ProcessPaymentCommand, Result<int>>, ProcessPaymentHandler>();
     builder.Services.AddScoped<ICommandHandler<RefundPaymentCommand, Result>, RefundPaymentHandler>();

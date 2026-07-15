@@ -56,14 +56,22 @@ public sealed class AuthController : ControllerBase
 
     private CookieOptions BuildRefreshCookieOptions(DateTimeOffset? expires = null)
     {
-        // Secure only when the request is HTTPS so production keeps HttpOnly+Secure cookies,
-        // while integration tests and local HTTP can still receive/send the refresh cookie.
+        // Prefer forwarded proto when the SPA reverse-proxies /api (Vite/nginx) so Secure
+        // matches what the browser actually used, not the hop from proxy → Kestrel.
+        var forwardedProto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault();
+        var isHttps = Request.IsHttps
+            || string.Equals(forwardedProto, "https", StringComparison.OrdinalIgnoreCase);
+
+        // Path must cover all API routes that need the cookie (/Auth/refresh, etc.).
+        // Use /api/v1 (not /api/v1/auth) so case differences in controller segments still match.
+        // Lax allows same-site credentialed XHR (localhost ports / same-origin proxy) while
+        // remaining safer than None for first-party apps.
         return new CookieOptions
         {
             HttpOnly = true,
-            Secure = Request.IsHttps,
-            SameSite = SameSiteMode.Strict,
-            Path = "/api/v1/auth",
+            Secure = isHttps,
+            SameSite = SameSiteMode.Lax,
+            Path = "/api/v1",
             Expires = expires,
         };
     }
@@ -79,19 +87,48 @@ public sealed class AuthController : ControllerBase
         Response.Cookies.Append("refreshToken", "", BuildRefreshCookieOptions(DateTime.UtcNow.AddDays(-1)));
     }
 
-    private static LoginResponse BuildLoginResponse(LoginResult result)
+    /// <summary>
+    /// Map auth service result to the SPA login payload.
+    /// Prefer domain identity on <see cref="LoginResult"/> — JWT outbound claim maps
+    /// rewrite ClaimTypes.Role → "role", ClaimTypes.Name → "unique_name", so reading
+    /// long ClaimTypes from ReadJwtToken historically returned empty role/username and
+    /// blanked the entire role-based UI after a successful login.
+    /// </summary>
+    public static LoginResponse BuildLoginResponse(LoginResult result)
     {
+        // Primary path: fields populated by JwtAuthenticationService from the User entity.
+        if (!string.IsNullOrWhiteSpace(result.Role) && !string.IsNullOrWhiteSpace(result.Username))
+        {
+            return new LoginResponse
+            {
+                Token = result.AccessToken,
+                ExpiresAt = result.ExpiresAt,
+                Username = result.Username,
+                Role = result.Role,
+                PatientId = result.PatientId is > 0 ? result.PatientId : null,
+                DoctorId = result.DoctorId is > 0 ? result.DoctorId : null,
+            };
+        }
+
+        // Defense in depth: short + long claim type names (never ClaimTypes.* alone).
         var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
         var jwtToken = handler.ReadJwtToken(result.AccessToken);
+
+        static string? Claim(System.IdentityModel.Tokens.Jwt.JwtSecurityToken jwt, params string[] types) =>
+            types.Select(t => jwt.Claims.FirstOrDefault(c => c.Type == t)?.Value)
+                .FirstOrDefault(v => !string.IsNullOrEmpty(v));
+
+        int? ParsePositiveId(string? raw) =>
+            int.TryParse(raw, out var id) && id > 0 ? id : null;
 
         return new LoginResponse
         {
             Token = result.AccessToken,
             ExpiresAt = result.ExpiresAt,
-            Username = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "",
-            Role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? "",
-            PatientId = int.TryParse(jwtToken.Claims.FirstOrDefault(c => c.Type == "patient_id")?.Value, out var pid) ? pid : null,
-            DoctorId = int.TryParse(jwtToken.Claims.FirstOrDefault(c => c.Type == "doctor_id")?.Value, out var did) ? did : null
+            Username = Claim(jwtToken, "unique_name", ClaimTypes.Name, "name") ?? result.Username ?? "",
+            Role = Claim(jwtToken, "role", ClaimTypes.Role) ?? result.Role ?? "",
+            PatientId = ParsePositiveId(Claim(jwtToken, "patient_id")) ?? result.PatientId,
+            DoctorId = ParsePositiveId(Claim(jwtToken, "doctor_id")) ?? result.DoctorId,
         };
     }
 
@@ -263,11 +300,8 @@ public sealed class AuthController : ControllerBase
             request.Username,
             CorrelationContext.Current);
 
-        var userIdClaim = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler()
-            .ReadJwtToken(result.Value.AccessToken)
-            .Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-
-        int? userId = int.TryParse(userIdClaim, out var parsedUserId) ? parsedUserId : null;
+        // Use domain UserId from LoginResult — do not re-parse JWT nameid claim maps.
+        var userId = result.Value.UserId > 0 ? result.Value.UserId : (int?)null;
 
         if (userId.HasValue)
         {
@@ -287,6 +321,7 @@ public sealed class AuthController : ControllerBase
                 details: new
                 {
                     username = request.Username,
+                    role = result.Value.Role,
                     familyId = result.Value.FamilyId,
                     ip = clientIp,
                     userAgent = Request.Headers.UserAgent.ToString()
@@ -305,7 +340,9 @@ public sealed class AuthController : ControllerBase
 
     [HttpPost("refresh")]
     [AllowAnonymous]
-    [EnableRateLimiting("AuthPolicy")]
+    // Separate higher bucket than login/register so SPA rehydration / multi-tab refresh
+    // is not starved by the strict credential-stuffing limit.
+    [EnableRateLimiting("AuthRefreshPolicy")]
     [ProducesResponseType(typeof(ApiResponse<LoginResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
@@ -333,12 +370,9 @@ public sealed class AuthController : ControllerBase
                 "Token refresh failed"));
         }
 
-        var userIdClaim = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler()
-            .ReadJwtToken(result.Value.AccessToken)
-            .Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-
-        if (int.TryParse(userIdClaim, out var userId))
+        if (result.Value.UserId > 0)
         {
+            var userId = result.Value.UserId;
             var sessions = await _unitOfWork.UserSessions.GetActiveByUserIdAsync(userId, cancellationToken);
             var session = sessions.FirstOrDefault(s => s.FamilyId == result.Value.FamilyId);
             if (session != null)

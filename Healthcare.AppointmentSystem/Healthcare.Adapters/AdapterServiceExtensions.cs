@@ -183,6 +183,7 @@ public static class AdapterServiceExtensions
         // Notification Adapters (Console)
         // Scoped: New instance per request
         services.AddScoped<INotificationService, ConsoleNotificationAdapter>();
+        services.AddScoped<IInAppNotificationService, InAppNotificationService>();
 
         // Event Infrastructure
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
@@ -259,6 +260,7 @@ public static class AdapterServiceExtensions
         // Email Notification Adapter
         services.AddSingleton(emailSettings);
         services.AddScoped<INotificationService, EmailNotificationAdapter>();
+        services.AddScoped<IInAppNotificationService, InAppNotificationService>();
 
         // Event Infrastructure
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
@@ -304,6 +306,7 @@ public static class AdapterServiceExtensions
                 new ConsoleNotificationAdapter(),
                 new EmailNotificationAdapter(emailSettings, emailLogger));
         });
+        services.AddScoped<IInAppNotificationService, InAppNotificationService>();
 
         // Event Infrastructure
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
@@ -342,6 +345,7 @@ public static class AdapterServiceExtensions
 
         // Notification Adapters (Console only for testing)
         services.AddScoped<INotificationService, ConsoleNotificationAdapter>();
+        services.AddScoped<IInAppNotificationService, InAppNotificationService>();
 
         // Event Infrastructure
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
@@ -471,6 +475,7 @@ public static class AdapterServiceExtensions
         services.AddScoped<IPaymentRepository, EFCorePaymentRepository>();
         services.AddScoped<IAuditLogRepository, EFCoreAuditLogRepository>();
         services.AddScoped<IUserSessionRepository, EFCoreUserSessionRepository>();
+        services.AddScoped<IUserNotificationRepository, EFCoreUserNotificationRepository>();
         services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
 
         // ✅ AUTHENTICATION SERVICES (Simplified - JWT registered in Program.cs)
@@ -488,8 +493,9 @@ public static class AdapterServiceExtensions
         // PAYMENT GATEWAY
         services.AddStripePaymentGateway(configuration);
 
-        // Notification Service
+        // Notification Service (email/SMS) + in-app inbox
         services.AddScoped<INotificationService, ConsoleNotificationAdapter>();
+        services.AddScoped<IInAppNotificationService, InAppNotificationService>();
 
         // Event Infrastructure
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
@@ -512,6 +518,7 @@ public static class AdapterServiceExtensions
         services.AddSingleton<IPatientRepository, InMemoryPatientRepository>();
         services.AddSingleton<IDoctorRepository, InMemoryDoctorRepository>();
         services.AddSingleton<IUserSessionRepository, InMemoryUserSessionRepository>();
+        services.AddSingleton<IUserNotificationRepository, InMemoryUserNotificationRepository>();
         services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
         return services;
     }

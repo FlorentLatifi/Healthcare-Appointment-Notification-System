@@ -1,0 +1,182 @@
+[
+    {
+        "Title":  "Admin login returns role Admin + token",
+        "Severity":  "Critical",
+        "Pass":  true,
+        "Actual":  "HTTP 200 role=Admin user=admin"
+    },
+    {
+        "Title":  "Refresh cookie set on login",
+        "Severity":  "Critical",
+        "Pass":  true,
+        "Actual":  "cookieFile=True"
+    },
+    {
+        "Title":  "GET /Auth/me as Admin",
+        "Severity":  "High",
+        "Pass":  true,
+        "Actual":  "HTTP 200 role=Admin"
+    },
+    {
+        "Title":  "Admin list doctors",
+        "Severity":  "High",
+        "Pass":  true,
+        "Actual":  "HTTP 200 n=5"
+    },
+    {
+        "Title":  "Admin list patients",
+        "Severity":  "High",
+        "Pass":  true,
+        "Actual":  "HTTP 200 n=1"
+    },
+    {
+        "Title":  "Admin feature /Analytics/revenue exists",
+        "Severity":  "High",
+        "Pass":  true,
+        "Actual":  "HTTP 200"
+    },
+    {
+        "Title":  "Admin feature /Analytics/no-show-rate exists",
+        "Severity":  "High",
+        "Pass":  true,
+        "Actual":  "HTTP 200"
+    },
+    {
+        "Title":  "Admin feature /Analytics/appointment-volume exists",
+        "Severity":  "High",
+        "Pass":  false,
+        "Actual":  "HTTP 404"
+    },
+    {
+        "Title":  "Admin feature /AuditLogs?pageSize=5 exists",
+        "Severity":  "High",
+        "Pass":  false,
+        "Actual":  "HTTP 500"
+    },
+    {
+        "Title":  "Admin create doctor Cardiology",
+        "Severity":  "Critical",
+        "Pass":  true,
+        "Actual":  "HTTP 201 id=1003 err="
+    },
+    {
+        "Title":  "Admin invalid specialty General rejected",
+        "Severity":  "High",
+        "Pass":  true,
+        "Actual":  "HTTP 400 {\"success\":false,\"data\":0,\"message\":\"Doctor already exists\",\"errors\":[\"Invalid specialty: General\"]}"
+    },
+    {
+        "Title":  "Refresh token works + returns role",
+        "Severity":  "Critical",
+        "Pass":  false,
+        "Actual":  "HTTP 400 role= user="
+    },
+    {
+        "Title":  "Logout succeeds",
+        "Severity":  "High",
+        "Pass":  true,
+        "Actual":  "HTTP 200"
+    },
+    {
+        "Title":  "Refresh after logout fails",
+        "Severity":  "High",
+        "Pass":  true,
+        "Actual":  "HTTP 400"
+    },
+    {
+        "Title":  "Register Patient",
+        "Severity":  "Critical",
+        "Pass":  false,
+        "Actual":  "HTTP 400 success=False err=Password has been exposed in a data breach and cannot be used. Please choose a different password."
+    },
+    {
+        "Title":  "Patient login role=Patient patientId null",
+        "Severity":  "Critical",
+        "Pass":  false,
+        "Actual":  "role= pid= user="
+    },
+    {
+        "Title":  "Doctors available for booking",
+        "Severity":  "High",
+        "Pass":  true,
+        "Actual":  "docId=1003 count=5"
+    },
+    {
+        "Title":  "Create patient profile",
+        "Severity":  "Critical",
+        "Pass":  false,
+        "Actual":  "HTTP 401 id= err= body="
+    },
+    {
+        "Title":  "Refresh links patientId",
+        "Severity":  "Critical",
+        "Pass":  false,
+        "Actual":  "patientId= role="
+    },
+    {
+        "Title":  "Register Doctor",
+        "Severity":  "Critical",
+        "Pass":  false,
+        "Actual":  "HTTP 429 success=False"
+    },
+    {
+        "Title":  "Doctor login",
+        "Severity":  "Critical",
+        "Pass":  false,
+        "Actual":  "role="
+    },
+    {
+        "Title":  "Create doctor profile",
+        "Severity":  "Critical",
+        "Pass":  false,
+        "Actual":  "HTTP 401 id= err="
+    },
+    {
+        "Title":  "Refresh links doctorId",
+        "Severity":  "Critical",
+        "Pass":  false,
+        "Actual":  "doctorId="
+    },
+    {
+        "Title":  "Unauth patients 401",
+        "Severity":  "Critical",
+        "Pass":  true,
+        "Actual":  "HTTP 401"
+    },
+    {
+        "Title":  "SQLi login fails safely",
+        "Severity":  "Critical",
+        "Pass":  false,
+        "Actual":  "HTTP 429"
+    },
+    {
+        "Title":  "Cannot self-register Admin",
+        "Severity":  "Critical",
+        "Pass":  true,
+        "Actual":  "HTTP 429"
+    },
+    {
+        "Title":  "SPA loads /login",
+        "Severity":  "Low",
+        "Pass":  true,
+        "Actual":  "HTTP 200"
+    },
+    {
+        "Title":  "SPA loads /register",
+        "Severity":  "Low",
+        "Pass":  true,
+        "Actual":  "HTTP 200"
+    },
+    {
+        "Title":  "SPA loads /dashboard",
+        "Severity":  "Low",
+        "Pass":  true,
+        "Actual":  "HTTP 200"
+    },
+    {
+        "Title":  "Frontend nginx proxies /api",
+        "Severity":  "High",
+        "Pass":  true,
+        "Actual":  "HTTP 200"
+    }
+]

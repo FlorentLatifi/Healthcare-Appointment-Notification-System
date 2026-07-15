@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui';
+import NotificationsMenu from './NotificationsMenu';
 import { LogOut, Menu, X } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, logout, patientId } = useAuth();
+  const { user, logout, patientId, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const loc = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -24,10 +25,23 @@ export default function Navbar() {
     links.push({ label: 'Doctor Dashboard', path: '/doctor-dashboard', show: true });
   }
   if (user?.role === 'Admin') {
-    links.push({ label: 'Admin', path: '/admin', show: true });
+    links.push(
+      { label: 'Analytics', path: '/admin/analytics', show: true },
+      { label: 'Audit Logs', path: '/admin/audit-logs', show: true },
+      { label: 'Doctors', path: '/admin', show: true },
+      { label: 'Patients', path: '/admin/patients', show: true },
+    );
   }
 
   const visibleLinks = links.filter((l) => l.show);
+
+  const isActivePath = (path) => {
+    if (path === '/admin') {
+      // Doctors catalog only — not analytics / patients / audit sub-routes.
+      return loc.pathname === '/admin' || loc.pathname === '/admin/doctors';
+    }
+    return loc.pathname === path || loc.pathname.startsWith(`${path}/`);
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-border-light shadow-card">
@@ -39,12 +53,12 @@ export default function Navbar() {
           Healthcare
         </div>
 
-        <div className="hidden sm:flex items-center gap-1">
+        <div className="hidden sm:flex items-center gap-1 flex-wrap justify-end">
           {visibleLinks.map((l) => (
             <button
               key={l.path}
               className={`text-sm px-2 py-1.5 transition-all duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-primary rounded-md ${
-                loc.pathname === l.path
+                isActivePath(l.path)
                   ? 'text-primary font-medium'
                   : 'text-text-muted hover:text-text'
               }`}
@@ -55,15 +69,18 @@ export default function Navbar() {
           ))}
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="ml-auto shrink-0"
-          leftIcon={<LogOut size={14} />}
-          onClick={() => { logout(); navigate('/login', { replace: true }); }}
-        >
-          <span className="hidden sm:inline">Logout</span>
-        </Button>
+        <div className="ml-auto flex items-center gap-1 shrink-0">
+          <NotificationsMenu enabled={!!isAuthenticated && !!user?.role} />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            leftIcon={<LogOut size={14} />}
+            onClick={() => { logout(); navigate('/login', { replace: true }); }}
+          >
+            <span className="hidden sm:inline">Logout</span>
+          </Button>
+        </div>
 
         <button
           type="button"
@@ -89,16 +106,29 @@ export default function Navbar() {
               type="button"
               key={l.path}
               className={`w-full text-left text-sm min-h-11 px-3 py-2.5 rounded-md transition-all duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                loc.pathname === l.path
+                isActivePath(l.path)
                   ? 'text-primary font-medium bg-surface'
                   : 'text-text-muted hover:text-text hover:bg-surface'
               }`}
-              aria-current={loc.pathname === l.path ? 'page' : undefined}
+              aria-current={isActivePath(l.path) ? 'page' : undefined}
               onClick={() => { navigate(l.path); setMenuOpen(false); }}
             >
               {l.label}
             </button>
           ))}
+          {isAuthenticated && user?.role && (
+            <button
+              type="button"
+              className={`w-full text-left text-sm min-h-11 px-3 py-2.5 rounded-md transition-all duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                isActivePath('/notifications')
+                  ? 'text-primary font-medium bg-surface'
+                  : 'text-text-muted hover:text-text hover:bg-surface'
+              }`}
+              onClick={() => { navigate('/notifications'); setMenuOpen(false); }}
+            >
+              Notifications
+            </button>
+          )}
           <button
             type="button"
             className="w-full text-left text-sm min-h-11 px-3 py-2.5 rounded-md text-text-muted hover:text-text hover:bg-surface transition-all duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary flex items-center gap-2"

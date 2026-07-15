@@ -8,7 +8,7 @@ import { Button, Input, Select, PageHeader } from '../components/ui';
 const GENDERS = ['Male', 'Female', 'Other'];
 
 export default function CreatePatientProfilePage() {
-  const { refreshSession } = useAuth();
+  const { applyProfileSession } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '',
@@ -28,10 +28,9 @@ export default function CreatePatientProfilePage() {
         dateOfBirth: new Date(form.dateOfBirth).toISOString(),
       });
       if (data.success) {
-        // Re-issue JWT so patient_id claim is present for subsequent API calls.
-        // Client-only setPatientId would leave the Bearer token without the claim.
-        // Refresh JWT so patient_id is present before Dashboard / booking APIs run.
-        await refreshSession();
+        // Prefer token embedded in create response (patient_id claim already set).
+        // Falls back to /Auth/refresh if server omitted the session payload.
+        await applyProfileSession(data.data);
         toast.success('Patient profile created!');
         navigate('/dashboard');
       } else {

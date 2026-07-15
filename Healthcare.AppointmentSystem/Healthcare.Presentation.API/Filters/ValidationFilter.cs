@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Healthcare.Presentation.API.Responses;
 
 namespace Healthcare.Presentation.API.Filters;
 
@@ -26,17 +25,14 @@ public sealed class ValidationFilter : IActionFilter
     {
         if (!context.ModelState.IsValid)
         {
-            var errors = context.ModelState
-                .Where(x => x.Value?.Errors.Count > 0)
-                .SelectMany(x => x.Value!.Errors)
-                .Select(x => x.ErrorMessage)
-                .ToList();
-
-            var response = ApiResponse.ErrorResponse(
-                errors,
-                "Validation failed");
-
-            context.Result = new BadRequestObjectResult(response);
+            // Prefer ValidationProblemDetails so SPA parseApiError can map field → messages.
+            // (Flat string[] errors force generic "HTTP 400" / banner-only UX.)
+            context.Result = new BadRequestObjectResult(
+                new ValidationProblemDetails(context.ModelState)
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = "One or more validation errors occurred.",
+                });
         }
     }
 

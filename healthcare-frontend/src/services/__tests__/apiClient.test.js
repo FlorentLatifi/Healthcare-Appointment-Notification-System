@@ -1,12 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import MockAdapter from 'axios-mock-adapter';
-import apiClient, { setTokenGetter, setTokenSetter, onAuthCleared } from '../apiClient';
+import apiClient, {
+  setTokenGetter,
+  setTokenSetter,
+  setSessionApplier,
+  onAuthCleared,
+} from '../apiClient';
 
 describe('apiClient response interceptor', () => {
   let mock;
   let currentToken;
   const getToken = vi.fn(() => currentToken);
   const setToken = vi.fn((token) => { currentToken = token; });
+  const applySession = vi.fn((payload) => { currentToken = payload.token; });
   const clearAuth = vi.fn();
 
   beforeEach(() => {
@@ -14,6 +20,7 @@ describe('apiClient response interceptor', () => {
     mock = new MockAdapter(apiClient);
     setTokenGetter(getToken);
     setTokenSetter(setToken);
+    setSessionApplier(applySession);
     onAuthCleared(clearAuth);
   });
 
@@ -40,7 +47,10 @@ describe('apiClient response interceptor', () => {
 
     mock.onPost('/Auth/refresh').reply(() => {
       refreshCount++;
-      return [200, { success: true, data: { token: newToken } }];
+      return [200, {
+        success: true,
+        data: { token: newToken, username: 'u', role: 'Patient', patientId: 1, doctorId: null },
+      }];
     });
 
     const [res1, res2] = await Promise.all([
@@ -51,7 +61,9 @@ describe('apiClient response interceptor', () => {
     expect(refreshCount).toBe(1);
     expect(res1.data).toEqual({ data: 'ok' });
     expect(res2.data).toEqual({ data: 'also-ok' });
-    expect(setToken).toHaveBeenCalledWith(newToken);
+    expect(applySession).toHaveBeenCalledWith(
+      expect.objectContaining({ token: newToken, role: 'Patient' }),
+    );
   });
 
   it('single 401 retries original request with new token on successful refresh', async () => {
@@ -65,13 +77,15 @@ describe('apiClient response interceptor', () => {
 
     mock.onPost('/Auth/refresh').reply(200, {
       success: true,
-      data: { token: newToken },
+      data: { token: newToken, username: 'u', role: 'Doctor', patientId: null, doctorId: 3 },
     });
 
     const response = await apiClient.get('/api/profile');
 
     expect(response.data).toEqual({ id: 1, name: 'test' });
-    expect(setToken).toHaveBeenCalledWith(newToken);
+    expect(applySession).toHaveBeenCalledWith(
+      expect.objectContaining({ token: newToken, role: 'Doctor', doctorId: 3 }),
+    );
   });
 
   it('failed refresh clears auth state instead of retrying indefinitely', async () => {

@@ -90,7 +90,10 @@ public static class SecurityServicesConfiguration
         }
 
         var globalRateLimit = configuration.GetValue<int>("RateLimiting:GlobalPermitLimit", 100);
-        var authRateLimit = configuration.GetValue<int>("RateLimiting:AuthPermitLimit", 5);
+        // Login/register only — keep strict (credential stuffing / spray).
+        var authRateLimit = configuration.GetValue<int>("RateLimiting:AuthPermitLimit", 10);
+        // Refresh/session restore — multi-tab + SPA rehydration need more headroom.
+        var authRefreshLimit = configuration.GetValue<int>("RateLimiting:AuthRefreshPermitLimit", 60);
         var passwordResetLimit = configuration.GetValue<int>("RateLimiting:PasswordResetPermitLimit", 3);
         var rateLimitWindowMinutes = configuration.GetValue<int>("RateLimiting:WindowMinutes", 1);
         var passwordResetWindowMinutes = configuration.GetValue<int>("RateLimiting:PasswordResetWindowMinutes", 15);
@@ -114,14 +117,27 @@ public static class SecurityServicesConfiguration
                         Window = window
                     }));
 
-            // Stricter bucket for login/register endpoints (IP-based).
+            // Login + register only (anonymous IP). Strict to limit brute force.
             options.AddPolicy("AuthPolicy", httpContext =>
                 RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: ClientIpResolver.GetAnonymousAuthPartitionKey(httpContext),
+                    partitionKey: "auth-login:" + ClientIpResolver.GetAnonymousAuthPartitionKey(httpContext),
                     factory: _ => new FixedWindowRateLimiterOptions
                     {
                         AutoReplenishment = true,
                         PermitLimit = authRateLimit,
+                        QueueLimit = 0,
+                        Window = window
+                    }));
+
+            // Token refresh / cookie session restore — separate higher bucket so multi-step
+            // SPA flows (login → refresh → profile → refresh) are not blocked by login limits.
+            options.AddPolicy("AuthRefreshPolicy", httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: "auth-refresh:" + ClientIpResolver.GetAnonymousAuthPartitionKey(httpContext),
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        AutoReplenishment = true,
+                        PermitLimit = authRefreshLimit,
                         QueueLimit = 0,
                         Window = window
                     }));
@@ -143,10 +159,28 @@ public static class SecurityServicesConfiguration
                 var response = context.HttpContext.Response;
                 response.StatusCode = StatusCodes.Status429TooManyRequests;
                 response.ContentType = "application/json";
-                response.Headers.RetryAfter = Math.Max(1, (int)window.TotalSeconds).ToString();
 
+                // Prefer limiter-provided RetryAfter when present; else fall back to policy windows.
+                var retryAfter = window;
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan leaseRetry)
+                    && leaseRetry > TimeSpan.Zero)
+                {
+                    retryAfter = leaseRetry;
+                }
+
+                var path = context.HttpContext.Request.Path.Value ?? string.Empty;
+                if (path.Contains("forgot-password", StringComparison.OrdinalIgnoreCase)
+                    || path.Contains("reset-password", StringComparison.OrdinalIgnoreCase))
+                {
+                    retryAfter = passwordResetWindow;
+                }
+
+                var seconds = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
+                response.Headers.RetryAfter = seconds.ToString();
+
+                var userMessage = $"Too many requests. Please try again in {seconds} seconds.";
                 var apiResponse = ApiResponse.ErrorResponse(
-                    "Too many requests. Please try again later.",
+                    userMessage,
                     "Rate limit exceeded");
 
                 var json = System.Text.Json.JsonSerializer.Serialize(apiResponse,

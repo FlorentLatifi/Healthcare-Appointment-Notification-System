@@ -210,7 +210,8 @@ public sealed class Doctor : Entity
     {
         Guard.AgainstNull(newFee, nameof(newFee));
 
-        if (newFee < ConsultationFee * 0.5m)
+        if (string.Equals(newFee.Currency, ConsultationFee.Currency, StringComparison.OrdinalIgnoreCase)
+            && newFee < ConsultationFee * 0.5m)
         {
             throw new InvalidOperationException("Consultation fee cannot be reduced by more than 50% at once.");
         }
@@ -229,6 +230,53 @@ public sealed class Doctor : Entity
 
         Email = email;
         PhoneNumber = phoneNumber;
+        MarkAsModified();
+    }
+
+    /// <summary>
+    /// Updates the doctor's display name.
+    /// </summary>
+    public void UpdatePersonalInformation(string firstName, string lastName)
+    {
+        Guard.AgainstNullOrWhiteSpace(firstName, nameof(firstName));
+        Guard.AgainstNullOrWhiteSpace(lastName, nameof(lastName));
+        FirstName = firstName.Trim();
+        LastName = lastName.Trim();
+        MarkAsModified();
+    }
+
+    /// <summary>
+    /// Updates the medical license number.
+    /// </summary>
+    public void UpdateLicenseNumber(string licenseNumber)
+    {
+        Guard.AgainstNullOrWhiteSpace(licenseNumber, nameof(licenseNumber));
+        if (licenseNumber.Trim().Length < 5)
+            throw new ArgumentException("License number must be at least 5 characters.", nameof(licenseNumber));
+        LicenseNumber = licenseNumber.Trim();
+        MarkAsModified();
+    }
+
+    /// <summary>
+    /// Updates years of clinical experience.
+    /// </summary>
+    public void UpdateYearsOfExperience(int yearsOfExperience)
+    {
+        if (yearsOfExperience < 0)
+            throw new ArgumentException("Years of experience cannot be negative.", nameof(yearsOfExperience));
+        if (yearsOfExperience > 70)
+            throw new ArgumentException("Years of experience cannot exceed 70.", nameof(yearsOfExperience));
+        YearsOfExperience = yearsOfExperience;
+        MarkAsModified();
+    }
+
+    /// <summary>
+    /// Replaces all specialties with a single primary specialty (self-service edit).
+    /// </summary>
+    public void ReplacePrimarySpecialty(Specialty specialty)
+    {
+        _specialtyEntries.Clear();
+        _specialtyEntries.Add(DoctorSpecialty.Create(specialty));
         MarkAsModified();
     }
 

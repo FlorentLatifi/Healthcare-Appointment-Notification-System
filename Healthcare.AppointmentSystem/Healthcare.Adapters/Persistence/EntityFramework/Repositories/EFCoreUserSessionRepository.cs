@@ -25,8 +25,10 @@ public sealed class EFCoreUserSessionRepository : IUserSessionRepository
 
     public Task<List<UserSession>> GetActiveByUserIdAsync(int userId, CancellationToken cancellationToken = default)
     {
+        // Use RevokedAt column — UserSession.IsRevoked is a computed domain property and
+        // cannot be translated by EF Core (breaks Auth refresh / session MarkUsed path).
         return _context.UserSessions
-            .Where(s => s.UserId == userId && !s.IsRevoked)
+            .Where(s => s.UserId == userId && s.RevokedAt == null)
             .OrderByDescending(s => s.LastUsedAt)
             .ToListAsync(cancellationToken);
     }

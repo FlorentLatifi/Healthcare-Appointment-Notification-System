@@ -166,8 +166,7 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
         };
         var docResponse = await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
         docResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var docResult = await DeserializeResponse<int>(docResponse);
-        var doctorId = docResult!.Data;
+        var doctorId = await ReadCreatedProfileIdAsync(docResponse);
 
         // 2. Register Doctor user
         await RegisterAndLoginAsync(docUsername, $"pay.doc.{suffix}@test.com", "SecurePass123!", "Doctor");
@@ -193,8 +192,7 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
         };
         var patResponse = await Client.PostAsJsonAsync("/api/v1/patients", patPayload);
         patResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var patResult = await DeserializeResponse<int>(patResponse);
-        var patientId = patResult!.Data;
+        var patientId = await ReadCreatedProfileIdAsync(patResponse);
 
         // 4. Re-login as patient, book appointment
         var patRelogin = await LoginAsync(patUsername, "SecurePass123!");

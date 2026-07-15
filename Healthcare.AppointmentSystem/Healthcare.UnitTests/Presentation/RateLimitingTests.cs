@@ -17,6 +17,7 @@ public sealed class RateLimitingTestWebApplicationFactory : AuthorizationTestWeb
     public RateLimitingTestWebApplicationFactory()
     {
         Environment.SetEnvironmentVariable("RateLimiting__AuthPermitLimit", "5");
+        Environment.SetEnvironmentVariable("RateLimiting__AuthRefreshPermitLimit", "60");
         Environment.SetEnvironmentVariable("RateLimiting__GlobalPermitLimit", "10000");
         Environment.SetEnvironmentVariable("RateLimiting__WindowMinutes", "1");
     }
@@ -64,11 +65,50 @@ public class RateLimitingTests : IClassFixture<RateLimitingTestWebApplicationFac
         rateLimitedResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests,
             await rateLimitedResponse.Content.ReadAsStringAsync());
 
+        rateLimitedResponse.Headers.Should().ContainKey("Retry-After");
+        var retryAfter = rateLimitedResponse.Headers.RetryAfter?.Delta
+            ?? (int.TryParse(rateLimitedResponse.Headers.GetValues("Retry-After").FirstOrDefault(), out var s)
+                ? TimeSpan.FromSeconds(s)
+                : (TimeSpan?)null);
+        retryAfter.Should().NotBeNull();
+        retryAfter!.Value.TotalSeconds.Should().BeGreaterThan(0);
+
         var apiResponse = await rateLimitedResponse.Content.ReadFromJsonAsync<ApiResponse>();
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeFalse();
         apiResponse.Message.Should().Be("Rate limit exceeded");
-        apiResponse.Errors.Should().ContainSingle().Which.Should().Contain("Too many requests");
+        apiResponse.Errors.Should().ContainSingle().Which.Should().MatchRegex(
+            @"Too many requests\. Please try again in \d+ seconds?\.");
+    }
+
+    [Fact]
+    public async Task RefreshEndpoint_UsesSeparateHigherBucket_ThanLogin()
+    {
+        // Auth login limit=5; refresh limit must not be exhausted by 6 login attempts.
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Development");
+            builder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["RateLimiting:AuthPermitLimit"] = "5",
+                    ["RateLimiting:AuthRefreshPermitLimit"] = "60",
+                    ["RateLimiting:GlobalPermitLimit"] = "10000",
+                    ["RateLimiting:WindowMinutes"] = "1",
+                });
+            });
+        }).CreateClient();
+
+        var loginPayload = new { Username = "nonexistentuser", Password = "wrongpassword" };
+        for (int i = 0; i < 6; i++)
+            await client.PostAsJsonAsync("/api/v1/auth/login", loginPayload);
+
+        // Refresh without cookie → 400 (validation), not 429 from the login bucket.
+        var refresh = await client.PostAsync("/api/v1/auth/refresh", content: null);
+        refresh.StatusCode.Should().NotBe(HttpStatusCode.TooManyRequests,
+            "refresh must use AuthRefreshPolicy, not AuthPolicy");
+        refresh.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]

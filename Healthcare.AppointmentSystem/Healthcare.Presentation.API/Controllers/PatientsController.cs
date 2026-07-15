@@ -1,9 +1,11 @@
 using Asp.Versioning;
 using Healthcare.Application.Commands.AnonymizePatient;
 using Healthcare.Application.Commands.CreatePatient;
+using Healthcare.Application.Commands.UpdatePatient;
 using Healthcare.Application.Common;
 using Healthcare.Application.DTOs;
 using Healthcare.Application.Ports.Audit;
+using Healthcare.Application.Ports.Authentication;
 using Healthcare.Application.Ports.Events;
 using Healthcare.Application.Ports.Repositories;
 using Healthcare.Domain.Audit;
@@ -40,42 +42,51 @@ namespace Healthcare.Presentation.API.Controllers;
 public sealed class PatientsController : ControllerBase
 {
     private readonly ICommandHandler<CreatePatientCommand, Result<int>> _createPatientHandler;
+    private readonly ICommandHandler<UpdatePatientCommand, Result> _updatePatientHandler;
     private readonly ICommandHandler<AnonymizePatientCommand, Result> _anonymizePatientHandler;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IStringLocalizer<Messages> _localizer;
     private readonly ILogger<PatientsController> _logger;
     private readonly IDomainEventDispatcher _eventDispatcher;
     private readonly IAuditLogService _auditLogService;
+    private readonly IAuthenticationService _authService;
 
     public PatientsController(
         ICommandHandler<CreatePatientCommand, Result<int>> createPatientHandler,
+        ICommandHandler<UpdatePatientCommand, Result> updatePatientHandler,
         ICommandHandler<AnonymizePatientCommand, Result> anonymizePatientHandler,
         IUnitOfWork unitOfWork,
         IStringLocalizer<Messages> localizer,
         ILogger<PatientsController> logger,
         IDomainEventDispatcher eventDispatcher,
-        IAuditLogService auditLogService)
+        IAuditLogService auditLogService,
+        IAuthenticationService authService)
     {
         _createPatientHandler = createPatientHandler;
+        _updatePatientHandler = updatePatientHandler;
         _anonymizePatientHandler = anonymizePatientHandler;
         _unitOfWork = unitOfWork;
         _localizer = localizer;
         _logger = logger;
         _eventDispatcher = eventDispatcher;
         _auditLogService = auditLogService;
+        _authService = authService;
     }
 
     /// <summary>
-    /// Creates a new patient.
+    /// Creates a new patient profile linked to the current user.
     /// </summary>
     /// <param name="request">The patient details.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The ID of the created patient.</returns>
+    /// <returns>
+    /// Profile id plus a re-issued access token with <c>patient_id</c> claim so the SPA
+    /// can continue without an extra <c>/Auth/refresh</c> round-trip.
+    /// </returns>
     /// <response code="201">Patient created successfully.</response>
     /// <response code="400">Invalid request data or patient already exists.</response>
     [HttpPost]
     [Authorize(Roles = AppRoles.Patient)]
-    [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<ProfileCreatedResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -85,6 +96,7 @@ public sealed class PatientsController : ControllerBase
     {
         _logger.LogInformation("Creating patient: {Email}", request.Email);
 
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var command = new CreatePatientCommand
         {
             FirstName = request.FirstName,
@@ -98,7 +110,7 @@ public sealed class PatientsController : ControllerBase
             State = request.State,
             PostalCode = request.PostalCode,
             Country = request.Country,
-            RequestingUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value)
+            RequestingUserId = userId
         };
 
         var result = await _createPatientHandler.HandleAsync(command, cancellationToken);
@@ -106,14 +118,46 @@ public sealed class PatientsController : ControllerBase
         if (result.IsFailure)
         {
             _logger.LogWarning("Failed to create patient: {Error}", result.Error);
-            return BadRequest(ApiResponse<int>.ErrorResponse(result.Error, "Failed to create patient"));
+            return BadRequest(ApiResponse<ProfileCreatedResponse>.ErrorResponse(
+                result.Error, "Failed to create patient"));
         }
 
         _logger.LogInformation("Patient {PatientId} created successfully", result.Value);
+
+        var payload = await BuildProfileCreatedResponseAsync(
+            result.Value, userId, cancellationToken);
+
         return CreatedAtAction(
             nameof(GetPatientById),
             new { id = result.Value },
-            ApiResponse<int>.SuccessResponse(result.Value, "Patient created successfully"));
+            ApiResponse<ProfileCreatedResponse>.SuccessResponse(
+                payload, "Patient created successfully"));
+    }
+
+    private async Task<ProfileCreatedResponse> BuildProfileCreatedResponseAsync(
+        int profileId,
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        var payload = new ProfileCreatedResponse { Id = profileId };
+
+        var session = await _authService.IssueAccessTokenForUserAsync(userId, cancellationToken);
+        if (session.IsFailure)
+        {
+            _logger.LogWarning(
+                "Profile {ProfileId} created but could not re-issue access token for user {UserId}: {Error}",
+                profileId, userId, session.Error);
+            return payload;
+        }
+
+        var login = session.Value;
+        payload.Token = login.AccessToken;
+        payload.ExpiresAt = login.ExpiresAt;
+        payload.Username = login.Username;
+        payload.Role = login.Role;
+        payload.PatientId = login.PatientId;
+        payload.DoctorId = login.DoctorId;
+        return payload;
     }
 
     /// <summary>
@@ -324,6 +368,56 @@ public sealed class PatientsController : ControllerBase
     }
 
     /// <summary>
+    /// Updates an existing patient profile (owner or admin).
+    /// </summary>
+    [HttpPut("{id}")]
+    [Authorize(Roles = AppRoles.PatientOrDoctorOrAdmin)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdatePatient(
+        int id,
+        [FromBody] UpdatePatientRequest request,
+        CancellationToken cancellationToken)
+    {
+        var role = User.GetRole();
+        if (role == AppRoles.Patient && User.GetPatientId() != id)
+            return Forbid();
+        // Doctors may not edit patient PII via this endpoint.
+        if (role == AppRoles.Doctor)
+            return Forbid();
+
+        _logger.LogInformation("Updating patient {PatientId}", id);
+
+        var command = new UpdatePatientCommand
+        {
+            PatientId = id,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            PhoneNumber = request.PhoneNumber,
+            DateOfBirth = request.DateOfBirth,
+            Gender = request.Gender,
+            Street = request.Street,
+            City = request.City,
+            State = request.State,
+            PostalCode = request.PostalCode,
+            Country = request.Country
+        };
+
+        var result = await _updatePatientHandler.HandleAsync(command, cancellationToken);
+        if (result.IsFailure)
+        {
+            if (result.Error.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                return NotFound(ApiResponse.ErrorResponse(result.Error, "Patient not found"));
+            return BadRequest(ApiResponse.ErrorResponse(result.Error, "Failed to update patient"));
+        }
+
+        return Ok(ApiResponse.SuccessResponse("Patient profile updated successfully"));
+    }
+
+    /// <summary>
     /// Updates the patient's notification preferences.
     /// </summary>
     [HttpPut("{id}/notification-preferences")]
@@ -358,18 +452,11 @@ public sealed class PatientsController : ControllerBase
     }
 
     /// <summary>
-    /// Deactivates a patient (soft-delete). The record remains in the database
-    /// but IsActive is set to false, preserving the historical/audit trail.
+    /// Deactivates a patient (soft-delete). Owner may delete their own profile;
+    /// admins may delete any. Unlinks the caller's User.PatientId when self-service.
     /// </summary>
-    /// <param name="id">The patient ID.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Success or failure result.</returns>
-    /// <response code="204">Patient deactivated successfully.</response>
-    /// <response code="400">Patient is already deactivated.</response>
-    /// <response code="403">Forbidden — Admin only.</response>
-    /// <response code="404">Patient not found.</response>
     [HttpDelete("{id}")]
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.Patient + "," + AppRoles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -377,6 +464,10 @@ public sealed class PatientsController : ControllerBase
     public async Task<IActionResult> DeletePatient(int id, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Deactivating patient {PatientId}", id);
+
+        var role = User.GetRole();
+        if (role == AppRoles.Patient && User.GetPatientId() != id)
+            return Forbid();
 
         var patient = await _unitOfWork.Patients.GetByIdAsync(id, cancellationToken);
         if (patient == null)
@@ -398,6 +489,19 @@ public sealed class PatientsController : ControllerBase
         }
 
         await _unitOfWork.Patients.UpdateAsync(patient, cancellationToken);
+
+        // Self-service: clear User.PatientId so JWT claims stop pointing at deactivated profile.
+        if (role == AppRoles.Patient)
+        {
+            var userId = User.GetUserId();
+            var user = await _unitOfWork.Users.GetByIdAsync(userId, cancellationToken);
+            if (user is not null && user.PatientId == id)
+            {
+                user.UnlinkPatient();
+                await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Patient {PatientId} deactivated successfully", id);
@@ -457,6 +561,11 @@ public sealed class PatientsController : ControllerBase
             Age = patient.Age,
             Gender = patient.Gender.ToString(),
             Address = patient.Address.GetFullAddress(),
+            Street = patient.Address.Street,
+            City = patient.Address.City,
+            State = patient.Address.State,
+            PostalCode = patient.Address.PostalCode,
+            Country = patient.Address.Country,
             IsActive = patient.IsActive,
             IsAnonymized = patient.IsAnonymized,
             EmailEnabled = patient.NotificationPreferences.EmailEnabled,

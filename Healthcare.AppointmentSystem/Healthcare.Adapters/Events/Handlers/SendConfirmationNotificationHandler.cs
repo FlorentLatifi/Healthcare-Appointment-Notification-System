@@ -26,15 +26,18 @@ public sealed class SendConfirmationNotificationHandler
     : IDomainEventHandler<AppointmentConfirmedEvent>
 {
     private readonly INotificationService _notificationService;
+    private readonly IInAppNotificationService _inAppNotifications;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<SendConfirmationNotificationHandler> _logger;
 
     public SendConfirmationNotificationHandler(
         INotificationService notificationService,
+        IInAppNotificationService inAppNotifications,
         IUnitOfWork unitOfWork,
         ILogger<SendConfirmationNotificationHandler> logger)
     {
         _notificationService = notificationService;
+        _inAppNotifications = inAppNotifications;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -63,12 +66,19 @@ public sealed class SendConfirmationNotificationHandler
                 return;
             }
 
-            // Check patient's notification preferences
+            await _inAppNotifications.NotifyUsersLinkedToAppointmentAsync(
+                domainEvent.AppointmentId,
+                "Appointment confirmed",
+                $"Your appointment {appointment.ReferenceCode} has been confirmed.",
+                "AppointmentConfirmed",
+                cancellationToken);
+
+            // Check patient's notification preferences for outbound email/SMS
             var prefs = appointment.Patient?.NotificationPreferences;
             if (prefs != null && !prefs.EmailEnabled)
             {
                 _logger.LogInformation(
-                    "Email notifications disabled for patient {PatientId}, skipping confirmation notification for appointment {AppointmentId}",
+                    "Email notifications disabled for patient {PatientId}, skipping email confirmation for appointment {AppointmentId}",
                     appointment.PatientId, domainEvent.AppointmentId);
                 return;
             }

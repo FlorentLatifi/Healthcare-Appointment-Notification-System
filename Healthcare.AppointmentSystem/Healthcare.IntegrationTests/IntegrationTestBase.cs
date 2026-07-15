@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Healthcare.Presentation.API.Responses;
+// JsonDocument used by ReadCreatedProfileIdAsync
 
 namespace Healthcare.IntegrationTests;
 
@@ -32,6 +33,22 @@ public abstract class IntegrationTestBase : IClassFixture<CustomWebApplicationFa
     {
         var content = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<ApiResponse<T>>(content, JsonOptions);
+    }
+
+    /// <summary>
+    /// Reads profile id from Create Patient/Doctor responses (supports legacy bare int and
+    /// <c>ProfileCreatedResponse</c> with <c>id</c> + optional session token).
+    /// </summary>
+    protected static async Task<int> ReadCreatedProfileIdAsync(HttpResponseMessage response)
+    {
+        var content = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(content);
+        var data = doc.RootElement.GetProperty("data");
+        if (data.ValueKind == JsonValueKind.Number)
+            return data.GetInt32();
+        if (data.ValueKind == JsonValueKind.Object && data.TryGetProperty("id", out var idEl))
+            return idEl.GetInt32();
+        throw new InvalidOperationException($"Could not parse created profile id from: {content}");
     }
 
     protected const string PreSeededAdminUsername = "testadmin";

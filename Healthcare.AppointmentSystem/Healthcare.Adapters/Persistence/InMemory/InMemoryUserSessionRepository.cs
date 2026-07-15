@@ -33,8 +33,9 @@ public sealed class InMemoryUserSessionRepository : IUserSessionRepository
     {
         lock (_lock)
         {
+            // Match EF repository: filter on RevokedAt column semantics (not IsRevoked alone).
             var active = _sessions
-                .Where(s => s.UserId == userId && !s.IsRevoked)
+                .Where(s => s.UserId == userId && s.RevokedAt == null)
                 .OrderByDescending(s => s.LastUsedAt)
                 .ToList();
             return Task.FromResult(active);

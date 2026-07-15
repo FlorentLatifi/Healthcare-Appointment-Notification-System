@@ -13,15 +13,18 @@ public sealed class SendCancellationNotificationHandler
     : IDomainEventHandler<AppointmentCancelledEvent>
 {
     private readonly INotificationService _notificationService;
+    private readonly IInAppNotificationService _inAppNotifications;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<SendCancellationNotificationHandler> _logger;
 
     public SendCancellationNotificationHandler(
         INotificationService notificationService,
+        IInAppNotificationService inAppNotifications,
         IUnitOfWork unitOfWork,
         ILogger<SendCancellationNotificationHandler> logger)
     {
         _notificationService = notificationService;
+        _inAppNotifications = inAppNotifications;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -49,12 +52,19 @@ public sealed class SendCancellationNotificationHandler
                 return;
             }
 
-            // Check patient's notification preferences
+            await _inAppNotifications.NotifyUsersLinkedToAppointmentAsync(
+                domainEvent.AppointmentId,
+                "Appointment cancelled",
+                $"Appointment {appointment.ReferenceCode} was cancelled.",
+                "AppointmentCancelled",
+                cancellationToken);
+
+            // Check patient's notification preferences for outbound email/SMS
             var prefs = appointment.Patient?.NotificationPreferences;
             if (prefs != null && !prefs.EmailEnabled)
             {
                 _logger.LogInformation(
-                    "Email notifications disabled for patient {PatientId}, skipping cancellation notification for appointment {AppointmentId}",
+                    "Email notifications disabled for patient {PatientId}, skipping email cancellation for appointment {AppointmentId}",
                     appointment.PatientId, domainEvent.AppointmentId);
                 return;
             }

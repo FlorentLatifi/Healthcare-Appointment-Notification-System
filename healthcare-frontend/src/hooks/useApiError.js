@@ -26,11 +26,52 @@ export function parseApiError(error) {
       generalError: error.apiError.generalError ?? (hasFieldErrors ? null : error.message) ?? null,
       hasFieldErrors,
       isValidationError: hasFieldErrors || !!error.apiError.isValidationError,
+      isRateLimited: !!error.apiError.isRateLimited,
+      retryAfterSeconds: error.apiError.retryAfterSeconds ?? null,
     };
   }
 
   const status = error?.response?.status;
   const data = error?.response?.data ?? error?.data ?? null;
+  const headers = error?.response?.headers;
+
+  // 429 Too Many Requests — prefer Retry-After + server message ("try again in N seconds")
+  if (status === 429) {
+    const retrySeconds = parseRetryAfterSeconds(headers, data);
+    const serverMsg =
+      (typeof data?.errors === 'object' && !Array.isArray(data.errors)
+        ? null
+        : Array.isArray(data?.errors)
+          ? data.errors.filter(Boolean).join(' ')
+          : null)
+      || (typeof data?.message === 'string' ? data.message : null)
+      || (typeof data?.title === 'string' ? data.title : null);
+
+    let generalError;
+    if (serverMsg && /try again in \d+/i.test(serverMsg)) {
+      generalError = serverMsg;
+    } else if (retrySeconds != null) {
+      if (retrySeconds >= 60) {
+        const mins = Math.ceil(retrySeconds / 60);
+        generalError = `Too many requests. Please try again in about ${mins} minute${mins === 1 ? '' : 's'}.`;
+      } else {
+        generalError = `Too many requests. Please try again in ${retrySeconds} second${retrySeconds === 1 ? '' : 's'}.`;
+      }
+    } else if (serverMsg && !/rate limit/i.test(serverMsg)) {
+      generalError = serverMsg;
+    } else {
+      generalError = 'Too many requests. Please wait a moment and try again.';
+    }
+
+    return {
+      fieldErrors: {},
+      generalError,
+      hasFieldErrors: false,
+      isValidationError: false,
+      isRateLimited: true,
+      retryAfterSeconds: retrySeconds,
+    };
+  }
 
   // Network / non-HTTP
   if (!data) {
@@ -136,6 +177,28 @@ export function parseApiError(error) {
     /** True when errors should be shown inline (not only as a toast). */
     isValidationError: hasFieldErrors || (isValidationError && !generalError),
   };
+}
+
+/**
+ * Parse Retry-After (seconds or HTTP-date) from Axios headers / body.
+ * @returns {number|null} whole seconds until retry, or null
+ */
+export function parseRetryAfterSeconds(headers, data) {
+  const raw =
+    headers?.['retry-after']
+    ?? headers?.['Retry-After']
+    ?? data?.retryAfter
+    ?? data?.retryAfterSeconds
+    ?? null;
+  if (raw == null || raw === '') return null;
+  const asNum = Number(raw);
+  if (Number.isFinite(asNum) && asNum >= 0) return Math.max(1, Math.ceil(asNum));
+  const asDate = Date.parse(String(raw));
+  if (!Number.isNaN(asDate)) {
+    const sec = Math.ceil((asDate - Date.now()) / 1000);
+    return sec > 0 ? sec : 1;
+  }
+  return null;
 }
 
 /**

@@ -72,6 +72,13 @@ function formatNextDate(appt) {
   });
 }
 
+function formatNextAppointmentLabel(appt) {
+  if (!appt) return '—';
+  const date = formatNextDate(appt);
+  const time = appt.scheduledTimeFormatted || '';
+  return time ? `${date} · ${time}` : date;
+}
+
 function DashboardSkeleton() {
   return (
     <div className="space-y-6" data-testid="dashboard-skeleton" aria-busy="true">
@@ -156,7 +163,7 @@ function AppointmentRow({ appt, role }) {
   );
 }
 
-function ProfileSummary({ profile, role }) {
+function ProfileSummary({ profile, role, onEdit }) {
   if (!profile) return null;
 
   const isDoctor = role === 'Doctor';
@@ -164,9 +171,16 @@ function ProfileSummary({ profile, role }) {
 
   return (
     <Card>
-      <h3 className="text-sm font-medium text-text-secondary uppercase tracking-wider mb-3">
-        Profile Summary
-      </h3>
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <h3 className="text-sm font-medium text-text-secondary uppercase tracking-wider m-0">
+          Profile Summary
+        </h3>
+        {onEdit && (
+          <Button variant="ghost" size="sm" className="shrink-0" onClick={onEdit}>
+            Edit Profile
+          </Button>
+        )}
+      </div>
       <div className="flex items-start gap-3 mb-4">
         <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center shrink-0">
           {isDoctor ? (
@@ -368,11 +382,14 @@ export default function DashboardPage() {
 
   const stats = useMemo(() => {
     const completed = appointments.filter((a) => a.status === APPOINTMENT_STATUS.COMPLETED).length;
+    const pending = appointments.filter((a) => a.status === APPOINTMENT_STATUS.PENDING).length;
     const next = upcoming[0] || null;
     return {
       upcoming: upcoming.length,
       completed,
-      nextDate: formatNextDate(next),
+      pending,
+      nextDate: formatNextAppointmentLabel(next),
+      nextAppt: next,
       total: appointments.length,
     };
   }, [appointments, upcoming]);
@@ -415,45 +432,72 @@ export default function DashboardPage() {
       } else {
         list.push(
           {
-            title: 'Book New Appointment',
+            title: 'Book Appointment',
             desc: 'Find a doctor and choose a time slot',
             path: '/doctors',
             needsPatientId: true,
             icon: <PlusCircle size={18} />,
           },
           {
-            title: 'View My Appointments',
-            desc: 'See history, pay, or cancel',
+            title: 'View Appointments',
+            desc: 'History, payments, and cancellations',
             path: '/my-appointments',
             needsPatientId: true,
             icon: <List size={18} />,
+          },
+          {
+            title: 'Edit Profile',
+            desc: 'Update your contact and personal details',
+            path: '/edit-patient',
+            icon: <UserCircle size={18} />,
           },
         );
       }
       return list;
     }
     if (role === 'Doctor') {
-      return [
+      const list = [
         {
-          title: 'Doctor Dashboard',
-          desc: 'Manage appointments, confirm, complete, mark no-show',
+          title: 'Manage Appointments',
+          desc: 'Confirm, complete, or mark no-shows',
           path: '/doctor-dashboard',
           icon: <Stethoscope size={18} />,
         },
       ];
+      if (hasLinkedId(doctorId)) {
+        list.push({
+          title: 'Edit Profile',
+          desc: 'Update fee, specialty, and contact info',
+          path: '/edit-doctor',
+          icon: <UserCircle size={18} />,
+        });
+      }
+      return list;
     }
     if (role === 'Admin') {
       return [
         {
-          title: 'Admin Dashboard',
-          desc: 'Manage doctors and patients',
+          title: 'Analytics',
+          desc: 'Revenue, no-show rate, and volume KPIs',
+          path: '/admin/analytics',
+          icon: <CalendarClock size={18} />,
+        },
+        {
+          title: 'Audit Logs',
+          desc: 'Security and PHI access trail',
+          path: '/admin/audit-logs',
+          icon: <List size={18} />,
+        },
+        {
+          title: 'Manage Catalog',
+          desc: 'Doctors and patients',
           path: '/admin',
           icon: <User size={18} />,
         },
       ];
     }
     return [];
-  }, [role, patientId]);
+  }, [role, patientId, doctorId]);
 
   const handleAction = (a) => {
     if (a.needsPatientId && !hasLinkedId(patientId)) {
@@ -517,34 +561,67 @@ export default function DashboardPage() {
                 data-testid="dashboard-stats"
               >
                 <StatCard
-                  label="Upcoming Appointments"
+                  label="Upcoming"
                   value={stats.upcoming}
                   icon={<CalendarClock size={18} />}
                   accent="text-primary"
                 />
                 <StatCard
-                  label="Completed"
-                  value={stats.completed}
+                  label={role === 'Doctor' ? 'Pending confirm' : 'Completed'}
+                  value={role === 'Doctor' ? stats.pending : stats.completed}
                   icon={<CheckCircle2 size={18} />}
                   accent="text-status-confirmed-text"
                 />
                 <StatCard
-                  label="Next Appointment"
+                  label="Next appointment"
                   value={stats.nextDate}
                   icon={<Calendar size={18} />}
                   accent="text-status-pending-text"
                 />
                 <StatCard
-                  label="Total Appointments"
+                  label="Total"
                   value={stats.total}
                   icon={<List size={18} />}
                   accent="text-text-muted"
                 />
               </div>
 
+              {stats.nextAppt && (
+                <Card className="!p-4 border-primary/20 bg-surface/40" data-testid="next-appointment-highlight">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-wider text-text-muted m-0 mb-1">Next up</p>
+                      <p className="text-sm font-semibold text-text m-0 break-words">
+                        {stats.nextDate}
+                        {role === 'Patient' && stats.nextAppt.doctor?.fullName
+                          ? ` with Dr. ${stats.nextAppt.doctor.fullName}`
+                          : ''}
+                        {role === 'Doctor' && stats.nextAppt.patient?.fullName
+                          ? ` — ${stats.nextAppt.patient.fullName}`
+                          : ''}
+                      </p>
+                      {stats.nextAppt.reason && (
+                        <p className="text-xs text-text-muted mt-1 m-0 line-clamp-2">{stats.nextAppt.reason}</p>
+                      )}
+                    </div>
+                    <Badge status={stats.nextAppt.status}>{stats.nextAppt.status}</Badge>
+                  </div>
+                </Card>
+              )}
+
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 <div className="lg:col-span-1 order-2 lg:order-1">
-                  <ProfileSummary profile={profile} role={role} />
+                  <ProfileSummary
+                    profile={profile}
+                    role={role}
+                    onEdit={
+                      role === 'Patient'
+                        ? () => navigate('/edit-patient')
+                        : role === 'Doctor'
+                          ? () => navigate('/edit-doctor')
+                          : undefined
+                    }
+                  />
                 </div>
                 <div className="lg:col-span-2 space-y-3 order-1 lg:order-2">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">

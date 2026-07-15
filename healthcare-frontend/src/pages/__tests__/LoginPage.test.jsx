@@ -57,8 +57,12 @@ describe('LoginPage', () => {
     expect(mockLogin).toHaveBeenCalledWith('myuser', 'mypass');
   });
 
-  it('navigates to dashboard on successful login', async () => {
-    mockLogin.mockResolvedValueOnce({});
+  it('navigates to dashboard on successful login for linked patient', async () => {
+    mockLogin.mockResolvedValueOnce({
+      user: { username: 'u', role: 'Patient' },
+      patientId: 1,
+      doctorId: null,
+    });
 
     const { usernameInput, passwordInput } = renderPage();
     await userEvent.type(usernameInput, 'u');
@@ -67,6 +71,40 @@ describe('LoginPage', () => {
 
     await vi.waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+    });
+  });
+
+  it('navigates to create-patient when patient has no profile', async () => {
+    mockLogin.mockResolvedValueOnce({
+      user: { username: 'u', role: 'Patient' },
+      patientId: null,
+      doctorId: null,
+    });
+
+    const { usernameInput, passwordInput } = renderPage();
+    await userEvent.type(usernameInput, 'u');
+    await userEvent.type(passwordInput, 'p');
+    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+    await vi.waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/create-patient', { replace: true });
+    });
+  });
+
+  it('navigates to admin for Admin role', async () => {
+    mockLogin.mockResolvedValueOnce({
+      user: { username: 'admin', role: 'Admin' },
+      patientId: null,
+      doctorId: null,
+    });
+
+    const { usernameInput, passwordInput } = renderPage();
+    await userEvent.type(usernameInput, 'admin');
+    await userEvent.type(passwordInput, 'p');
+    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+    await vi.waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/admin', { replace: true });
     });
   });
 });

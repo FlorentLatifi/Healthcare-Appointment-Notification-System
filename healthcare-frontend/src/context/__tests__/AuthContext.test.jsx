@@ -8,6 +8,7 @@ vi.mock('../../services/apiClient', () => ({
   default: { post: (...args) => mockPost(...args) },
   setTokenGetter: vi.fn(),
   setTokenSetter: vi.fn(),
+  setSessionApplier: vi.fn(),
   onAuthCleared: vi.fn(),
 }));
 
@@ -28,6 +29,29 @@ function TestConsumer() {
       <button data-testid="registerBtn" onClick={async () => { await auth.register('newuser', 'e@e.com', 'pass', 'Patient'); }}>Register</button>
       <button data-testid="logoutBtn" onClick={() => auth.logout()}>Logout</button>
       <button data-testid="refreshBtn" onClick={() => { auth.refreshSession().catch(() => {}); }}>Refresh</button>
+      <button
+        data-testid="applyProfileBtn"
+        onClick={() => {
+          auth.applyProfileSession({
+            id: 42,
+            token: 'profile-jwt',
+            username: 'testuser',
+            role: 'Patient',
+            patientId: 42,
+            doctorId: null,
+          }).catch(() => {});
+        }}
+      >
+        ApplyProfile
+      </button>
+      <button
+        data-testid="applyProfileFallbackBtn"
+        onClick={() => {
+          auth.applyProfileSession({ id: 55 }).catch(() => {});
+        }}
+      >
+        ApplyProfileFallback
+      </button>
     </div>
   );
 }
@@ -124,6 +148,24 @@ describe('AuthContext', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('isAuth')).toHaveTextContent('false');
+    });
+  });
+
+  it('login() rejects incomplete session when role is missing (blank-dashboard guard)', async () => {
+    mockNoSession();
+    mockPost.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: { token: 'abc123', username: 'testuser', role: '', patientId: null, doctorId: null },
+      },
+    });
+
+    renderWithProvider();
+    await userEvent.click(screen.getByTestId('loginBtn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('isAuth')).toHaveTextContent('false');
+      expect(screen.getByTestId('token')).toHaveTextContent('null');
     });
   });
 
@@ -282,6 +324,62 @@ describe('AuthContext', () => {
     await waitFor(() => {
       expect(screen.getByTestId('token')).toHaveTextContent('new-token-with-claim');
       expect(screen.getByTestId('patientId')).toHaveTextContent('77');
+    });
+    expect(mockPost).toHaveBeenCalledWith('/Auth/refresh');
+  });
+
+  it('applyProfileSession() applies token+claims from create response without calling /Auth/refresh', async () => {
+    mockNoSession();
+    mockPost.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: { token: 'old-token', username: 'testuser', role: 'Patient', patientId: null, doctorId: null },
+      },
+    });
+
+    renderWithProvider();
+    await userEvent.click(screen.getByTestId('loginBtn'));
+    await waitFor(() => {
+      expect(screen.getByTestId('token')).toHaveTextContent('old-token');
+      expect(screen.getByTestId('patientId')).toHaveTextContent('null');
+    });
+
+    const postsBefore = mockPost.mock.calls.length;
+    await userEvent.click(screen.getByTestId('applyProfileBtn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('token')).toHaveTextContent('profile-jwt');
+      expect(screen.getByTestId('patientId')).toHaveTextContent('42');
+    });
+    // No extra network call when create response already includes session.
+    expect(mockPost.mock.calls.length).toBe(postsBefore);
+  });
+
+  it('applyProfileSession() falls back to /Auth/refresh when create response has no token', async () => {
+    mockNoSession();
+    mockPost.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: { token: 'old-token', username: 'testuser', role: 'Patient', patientId: null, doctorId: null },
+      },
+    });
+
+    renderWithProvider();
+    await userEvent.click(screen.getByTestId('loginBtn'));
+    await waitFor(() => expect(screen.getByTestId('token')).toHaveTextContent('old-token'));
+
+    mockPost.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: { token: 'fallback-token', username: 'testuser', role: 'Patient', patientId: 55, doctorId: null },
+      },
+    });
+
+    await userEvent.click(screen.getByTestId('applyProfileFallbackBtn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('token')).toHaveTextContent('fallback-token');
+      expect(screen.getByTestId('patientId')).toHaveTextContent('55');
     });
     expect(mockPost).toHaveBeenCalledWith('/Auth/refresh');
   });

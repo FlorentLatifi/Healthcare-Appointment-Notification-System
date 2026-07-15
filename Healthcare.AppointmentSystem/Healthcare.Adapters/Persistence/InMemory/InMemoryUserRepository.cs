@@ -44,4 +44,16 @@ public sealed class InMemoryUserRepository : InMemoryRepository<User>, IUserRepo
     {
         return base.DeleteAsync(id);
     }
+
+    public async Task<IReadOnlyList<User>> FindByPatientIdAsync(int patientId, CancellationToken cancellationToken = default)
+    {
+        var users = await FindAsync(u => u.PatientId == patientId);
+        return users.ToList();
+    }
+
+    public async Task<IReadOnlyList<User>> FindByDoctorIdAsync(int doctorId, CancellationToken cancellationToken = default)
+    {
+        var users = await FindAsync(u => u.DoctorId == doctorId);
+        return users.ToList();
+    }
 }

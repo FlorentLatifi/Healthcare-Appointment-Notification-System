@@ -64,7 +64,9 @@ services:
       context: ./healthcare-frontend
       args:
         # Vite bakes env at *build* time (runtime env vars do not affect nginx static files).
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5171/api/v1}
+        # Relative URL so the browser talks to nginx on :5173 and /api is proxied same-origin
+        # (required for the httpOnly refresh cookie to work reliably).
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
         VITE_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
     depends_on:
       - api

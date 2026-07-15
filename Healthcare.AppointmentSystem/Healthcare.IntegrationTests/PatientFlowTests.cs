@@ -34,10 +34,15 @@ public sealed class PatientFlowTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/v1/patients", payload);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var result = await DeserializeResponse<int>(response);
+        var result = await DeserializeResponse<ProfileCreatedResponse>(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
-        result.Data.Should().BeGreaterThan(0);
+        result.Data.Should().NotBeNull();
+        result.Data!.Id.Should().BeGreaterThan(0);
+        // Self-service create re-issues JWT with patient_id so SPA need not call /Auth/refresh.
+        result.Data.Token.Should().NotBeNullOrEmpty();
+        result.Data.Role.Should().Be("Patient");
+        result.Data.PatientId.Should().Be(result.Data.Id);
     }
 
     [Fact]
@@ -90,8 +95,7 @@ public sealed class PatientFlowTests : IntegrationTestBase
         };
 
         var createResponse = await Client.PostAsJsonAsync("/api/v1/patients", createPayload);
-        var createResult = await DeserializeResponse<int>(createResponse);
-        var patientId = createResult!.Data;
+        var patientId = await ReadCreatedProfileIdAsync(createResponse);
 
         var getResponse = await Client.GetAsync($"/api/v1/patients/{patientId}");
 

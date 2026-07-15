@@ -2,7 +2,7 @@
 
 **System:** Healthcare Appointment Notification System  
 **Horizon:** next 2–3 months  
-**Last reviewed:** 2026-07-13 (patient dashboard fully functional)  
+**Last reviewed:** 2026-07-15 (AuditLogs compliance columns migration discoverable + admin query green)  
 
 Use this document as the **single progress tracker**. Check boxes as work ships; update **Status** columns on the roadmap.
 
@@ -51,7 +51,7 @@ Use this document as the **single progress tracker**. Check boxes as work ships;
 |---|------|--------|-------|
 | H1 | Complete MediatR migration (all commands/queries) | 🟡 | Pilots done; many `ICommandHandler` remain (ADR 0002) |
 | H2 | Application FluentValidation for every command | 🟡 | Pilots only; API validators exist |
-| H3 | Populate audit `UserId` from ambient current user | ✅ | `IAuditContext`/`HttpAuditContext` + `IAuditLogService`; actor/role/IP/correlation on rows; MediatR `AuditLoggingBehavior` |
+| H3 | Populate audit `UserId` from ambient current user | ✅ | `IAuditContext`/`HttpAuditContext` + `IAuditLogService`; actor/role/IP/correlation on rows; MediatR `AuditLoggingBehavior`; **DB columns applied** via EnrichAuditLogComplianceFields (was missing MigrationAttribute → 500 Invalid column name) |
 | H4 | Observability wired to real collector (OTLP) | 🟡 | Code ready; **need collector + dashboards + alerts** |
 | H5 | Alerts: DLQ, health ready, payment fail rate, auth fail spike | ⬜ | Metrics exist; alert rules not in repo |
 | H6 | Outbox DLQ runbook + optional requeue admin API | 🟡 | Logging/metrics; no admin requeue UI |
@@ -77,7 +77,7 @@ Use this document as the **single progress tracker**. Check boxes as work ships;
 | M1 | Finish ADRs as living process (new decisions get ADRs) | ✅ | `docs/adr/*` foundation |
 | M2 | Dedicated SQL login + connection string without SA | ⬜ | Related H7 |
 | M3 | Field-level encryption for clinical notes / DOB | ⬜ | Product/compliance decision |
-| M4 | SIEM export / immutable audit store | 🟡 | **Immutable store done:** enriched `AuditLogEntry` + append-only interceptor + admin query API; SIEM export still open (R3.6) |
+| M4 | SIEM export / immutable audit store | 🟡 | **Immutable store + query API green:** migration `20260713120000_EnrichAuditLogComplianceFields` (ActorRole/Outcome/ClientIp/CorrelationId/UserAgent) now has EF `[Migration]` attribute so `Database.MigrateAsync` applies it; admin `GET /api/v1/AuditLogs` integration tests; SIEM export still open (R3.6) |
 | M5 | Tighten `AllowedHosts` per environment | ⬜ | |
 | M6 | OpenAPI / client SDK generation for frontend | ⬜ | |
 | M7 | Frontend E2E (Playwright) critical paths | ⬜ | Vitest unit exists |

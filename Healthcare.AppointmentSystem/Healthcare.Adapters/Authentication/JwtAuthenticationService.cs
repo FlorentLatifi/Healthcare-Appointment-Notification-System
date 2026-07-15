@@ -146,17 +146,36 @@ public sealed class JwtAuthenticationService : IAuthenticationService
 
             _logger.LogInformation("User {Username} logged in successfully", username);
 
-            return Result<LoginResult>.Success(new LoginResult
-            {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken,
-                ExpiresAt = expiresAt,
-                FamilyId = familyId
-            });
+            return Result<LoginResult>.Success(ToLoginResult(user, accessToken, refreshToken, expiresAt, familyId));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Login failed for user {Username}", username);
+            throw;
+        }
+    }
+
+    public async Task<Result<LoginResult>> IssueAccessTokenForUserAsync(
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(userId, cancellationToken);
+            if (user == null || !user.IsActive)
+            {
+                return Result<LoginResult>.Failure("User account not found or deactivated.");
+            }
+
+            // Access token only — refresh cookie rotation stays on /Auth/refresh.
+            var accessToken = GenerateJwtToken(user);
+            var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationInMinutes);
+            return Result<LoginResult>.Success(
+                ToLoginResult(user, accessToken, refreshToken: string.Empty, expiresAt, familyId: Guid.Empty));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to issue access token for user {UserId}", userId);
             throw;
         }
     }
@@ -208,13 +227,7 @@ public sealed class JwtAuthenticationService : IAuthenticationService
 
             _logger.LogInformation("Token refreshed for user {Username}", user.Username);
 
-            return Result<LoginResult>.Success(new LoginResult
-            {
-                AccessToken = accessToken,
-                RefreshToken = newRefreshToken,
-                ExpiresAt = expiresAt,
-                FamilyId = familyId
-            });
+            return Result<LoginResult>.Success(ToLoginResult(user, accessToken, newRefreshToken, expiresAt, familyId));
         }
         catch (Exception ex)
         {
@@ -450,6 +463,34 @@ public sealed class JwtAuthenticationService : IAuthenticationService
         return Result.Failure("Invalid or expired reset token.");
     }
 
+    /// <summary>
+    /// Build login/refresh payload from the domain user. SPA session must not re-parse JWT claim maps.
+    /// </summary>
+    private static LoginResult ToLoginResult(
+        User user,
+        string accessToken,
+        string refreshToken,
+        DateTime expiresAt,
+        Guid familyId)
+    {
+        // Treat 0 as unlinked (historical identity bug / default int).
+        int? patientId = user.PatientId is > 0 ? user.PatientId : null;
+        int? doctorId = user.DoctorId is > 0 ? user.DoctorId : null;
+
+        return new LoginResult
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            ExpiresAt = expiresAt,
+            FamilyId = familyId,
+            UserId = user.Id,
+            Username = user.Username,
+            Role = user.Role.ToString(),
+            PatientId = patientId,
+            DoctorId = doctorId,
+        };
+    }
+
     private string GenerateJwtToken(User user)
     {
         var key = Encoding.UTF8.GetBytes(_jwtSettings.Secret);
@@ -466,9 +507,9 @@ public sealed class JwtAuthenticationService : IAuthenticationService
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))
         };
 
-        if (user.PatientId.HasValue)
+        if (user.PatientId is > 0)
             claims.Add(new Claim("patient_id", user.PatientId.Value.ToString()));
-        if (user.DoctorId.HasValue)
+        if (user.DoctorId is > 0)
             claims.Add(new Claim("doctor_id", user.DoctorId.Value.ToString()));
 
         var tokenDescriptor = new SecurityTokenDescriptor

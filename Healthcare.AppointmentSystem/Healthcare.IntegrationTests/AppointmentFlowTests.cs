@@ -45,8 +45,7 @@ public sealed class AppointmentFlowTests : IntegrationTestBase
         };
         var doctorResponse = await Client.PostAsJsonAsync("/api/v1/doctors", doctorPayload);
         doctorResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var doctorResult = await DeserializeResponse<int>(doctorResponse);
-        var doctorId = doctorResult!.Data;
+        var doctorId = await ReadCreatedProfileIdAsync(doctorResponse);
 
         // 2. Create patient
         var patientPayload = new
@@ -65,8 +64,7 @@ public sealed class AppointmentFlowTests : IntegrationTestBase
         };
         var patientResponse = await Client.PostAsJsonAsync("/api/v1/patients", patientPayload);
         patientResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var patientResult = await DeserializeResponse<int>(patientResponse);
-        var patientId = patientResult!.Data;
+        var patientId = await ReadCreatedProfileIdAsync(patientResponse);
 
         // 3. Register patient user and login
         var patientToken = await RegisterAndLoginAsync(

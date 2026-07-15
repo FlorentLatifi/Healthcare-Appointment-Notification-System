@@ -1,14 +1,25 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
-import { Button, Badge, Spinner, EmptyState, Modal, Input, Select, PageHeader } from '../components/ui';
+import { Button, Badge, Spinner, EmptyState, Modal, Input, Select, PageHeader, Card } from '../components/ui';
 import { Table, TableScroll, Th, Td, Tr } from '../components/ui';
-import { UserPlus, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  UserPlus, ChevronLeft, ChevronRight, DollarSign, Percent, CalendarRange,
+  BarChart3, ScrollText, Users, Stethoscope, ArrowRight,
+} from 'lucide-react';
+import { SPECIALTIES, DEFAULT_SPECIALTY } from '../constants/specialties';
+import { defaultDateRange, formatMoney, toApiDateBounds } from './admin/dateRange';
 
-const SPECIALTIES = ['General', 'Cardiology', 'Dermatology', 'Neurology', 'Pediatrics', 'Orthopedics', 'Radiology', 'Surgery', 'Ophthalmology', 'Psychiatry', 'Urology', 'Other'];
+function sectionFromPath(pathname) {
+  if (pathname.includes('/patients')) return 'patients';
+  return 'doctors';
+}
 
 export default function AdminDashboardPage() {
-  const [page, setPage] = useState('doctors');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const page = sectionFromPath(location.pathname);
   const [searchTerm, setSearchTerm] = useState('');
 
   const [doctors, setDoctors] = useState([]);
@@ -18,13 +29,15 @@ export default function AdminDashboardPage() {
   const [showDocForm, setShowDocForm] = useState(false);
   const [docForm, setDocForm] = useState({
     firstName: '', lastName: '', email: '', phoneNumber: '',
-    licenseNumber: '', specialty: 'General', consultationFeeAmount: '',
+    licenseNumber: '', specialty: DEFAULT_SPECIALTY, consultationFeeAmount: '',
     consultationFeeCurrency: 'USD', yearsOfExperience: '',
   });
   const [docSubmitting, setDocSubmitting] = useState(false);
 
   const [patients, setPatients] = useState([]);
   const [patsLoading, setPatsLoading] = useState(true);
+
+  const [kpis, setKpis] = useState({ revenue: null, noShow: null, volume: null, loading: true });
 
   const fetchDoctors = async (p = 1) => {
     setDocsLoading(true);
@@ -52,6 +65,36 @@ export default function AdminDashboardPage() {
   useEffect(() => { if (page === 'doctors') fetchDoctors(1); }, [page]);
   useEffect(() => { if (page === 'patients') fetchPatients(); }, [page, searchTerm]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const range = defaultDateRange(30);
+      const { dateFrom, dateTo } = toApiDateBounds(range.from, range.to);
+      try {
+        const [rev, ns, vol] = await Promise.all([
+          apiClient.get('/Analytics/revenue', { params: { dateFrom, dateTo } }),
+          apiClient.get('/Analytics/no-show-rate', { params: { dateFrom, dateTo } }),
+          apiClient.get('/Analytics/volume', { params: { dateFrom, dateTo, groupBy: 'day' } }),
+        ]);
+        if (cancelled) return;
+        const volumeItems = vol.data?.success ? (vol.data.data?.items || []) : [];
+        const volumeTotal = volumeItems.reduce(
+          (acc, row) => acc + (row.created || 0) + (row.confirmed || 0) + (row.cancelled || 0),
+          0,
+        );
+        setKpis({
+          revenue: rev.data?.success ? rev.data.data : null,
+          noShow: ns.data?.success ? ns.data.data : null,
+          volume: vol.data?.success ? { total: volumeTotal, groupBy: vol.data.data?.groupBy } : null,
+          loading: false,
+        });
+      } catch {
+        if (!cancelled) setKpis((prev) => ({ ...prev, loading: false }));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const handleCreateDoctor = async (e) => {
     e.preventDefault();
     setDocSubmitting(true);
@@ -64,7 +107,7 @@ export default function AdminDashboardPage() {
       if (data.success) {
         toast.success('Doctor created');
         setShowDocForm(false);
-        setDocForm({ firstName: '', lastName: '', email: '', phoneNumber: '', licenseNumber: '', specialty: 'General', consultationFeeAmount: '', consultationFeeCurrency: 'USD', yearsOfExperience: '' });
+        setDocForm({ firstName: '', lastName: '', email: '', phoneNumber: '', licenseNumber: '', specialty: DEFAULT_SPECIALTY, consultationFeeAmount: '', consultationFeeCurrency: 'USD', yearsOfExperience: '' });
         fetchDoctors(1);
       } else toast.error(data.errors?.join('. ') || data.message || 'Failed to create doctor');
     } catch (err) { toast.error(err.response?.data?.errors?.join('. ') || 'Failed'); }
@@ -73,22 +116,115 @@ export default function AdminDashboardPage() {
 
   const setF = (field) => (e) => setDocForm((p) => ({ ...p, [field]: e.target.value }));
 
-  return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
-      <PageHeader title="Admin Dashboard" />
+  const volumeValue = kpis.volume?.total != null ? String(kpis.volume.total) : '—';
+  const noShowValue = kpis.noShow == null
+    ? '—'
+    : `${Number(kpis.noShow.noShowRatePercent ?? 0).toFixed(1)}%`;
+  const revenueValue = kpis.revenue
+    ? formatMoney(kpis.revenue.totalRevenue, kpis.revenue.currency)
+    : '—';
 
-      <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
+  return (
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-12 w-full min-w-0">
+      <PageHeader
+        title="Admin catalog"
+        subtitle="Overview of system health, plus tools to manage doctors and patients."
+      />
+
+      <section className="mb-6 sm:mb-8" aria-labelledby="admin-kpis-heading">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+          <h2 id="admin-kpis-heading" className="text-sm font-medium text-text-secondary uppercase tracking-wider m-0">
+            Last 30 days
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full sm:w-auto justify-center"
+            rightIcon={<ArrowRight size={14} />}
+            onClick={() => navigate('/admin/analytics')}
+          >
+            Open analytics
+          </Button>
+        </div>
+        {kpis.loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Spinner />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" data-testid="admin-kpi-cards">
+            <Card className="!p-3 sm:!p-4" hover onClick={() => navigate('/admin/analytics')}>
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-surface p-2 text-primary shrink-0"><DollarSign size={18} /></div>
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-wider text-text-muted m-0">Revenue</p>
+                  <p className="text-xl font-semibold text-text m-0 mt-1 break-words">{revenueValue}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="!p-3 sm:!p-4" hover onClick={() => navigate('/admin/analytics')}>
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-surface p-2 text-primary shrink-0"><Percent size={18} /></div>
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-wider text-text-muted m-0">No-show rate</p>
+                  <p className="text-xl font-semibold text-text m-0 mt-1">{noShowValue}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="!p-3 sm:!p-4" hover onClick={() => navigate('/admin/analytics')}>
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-surface p-2 text-primary shrink-0"><CalendarRange size={18} /></div>
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-wider text-text-muted m-0">Volume activity</p>
+                  <p className="text-xl font-semibold text-text m-0 mt-1">{volumeValue}</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+      </section>
+
+      <section className="mb-6 sm:mb-8" aria-labelledby="admin-quick-links-heading">
+        <h2 id="admin-quick-links-heading" className="text-sm font-medium text-text-secondary uppercase tracking-wider mb-3">
+          Quick links
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { title: 'Analytics', desc: 'Full KPI reports', path: '/admin/analytics', icon: <BarChart3 size={18} /> },
+            { title: 'Audit logs', desc: 'Security & PHI trail', path: '/admin/audit-logs', icon: <ScrollText size={18} /> },
+            { title: 'Doctors', desc: 'Catalog & fees', path: '/admin', icon: <Stethoscope size={18} /> },
+            { title: 'Patients', desc: 'Search records', path: '/admin/patients', icon: <Users size={18} /> },
+          ].map((link) => (
+            <Card key={link.path + link.title} hover onClick={() => navigate(link.path)} className="!p-3 sm:!p-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="shrink-0 w-9 h-9 rounded-lg bg-surface flex items-center justify-center text-primary">
+                  {link.icon}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-text m-0">{link.title}</p>
+                  <p className="text-xs text-text-muted m-0 mt-0.5">{link.desc}</p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <div className="flex flex-wrap gap-2 mb-4 sm:mb-6" role="tablist" aria-label="Catalog sections">
         <Button
+          role="tab"
+          aria-selected={page === 'doctors'}
           variant={page === 'doctors' ? 'primary' : 'secondary'}
           className="flex-1 sm:flex-none"
-          onClick={() => setPage('doctors')}
+          onClick={() => navigate('/admin')}
         >
           Doctors
         </Button>
         <Button
+          role="tab"
+          aria-selected={page === 'patients'}
           variant={page === 'patients' ? 'primary' : 'secondary'}
           className="flex-1 sm:flex-none"
-          onClick={() => setPage('patients')}
+          onClick={() => navigate('/admin/patients')}
         >
           Patients
         </Button>
@@ -105,7 +241,7 @@ export default function AdminDashboardPage() {
 
           {docsLoading ? <Spinner /> : doctors.length === 0 ? <EmptyState message="No doctors found." /> : (
             <>
-              <TableScroll>
+              <TableScroll label="Doctors">
                 <Table>
                   <thead>
                     <tr>
@@ -167,7 +303,7 @@ export default function AdminDashboardPage() {
               <Input label="License Number" value={docForm.licenseNumber} onChange={setF('licenseNumber')} required />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
                 <Select label="Specialty" value={docForm.specialty} onChange={setF('specialty')}>
-                  {SPECIALTIES.map((sp) => <option key={sp}>{sp}</option>)}
+                  {SPECIALTIES.map((sp) => <option key={sp} value={sp}>{sp}</option>)}
                 </Select>
                 <Input label="Years Exp." type="number" min="0" value={docForm.yearsOfExperience} onChange={setF('yearsOfExperience')} required />
               </div>
@@ -196,7 +332,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {patsLoading ? <Spinner /> : patients.length === 0 ? <EmptyState message="No patients found." /> : (
-            <TableScroll>
+            <TableScroll label="Patients">
               <Table className="min-w-[40rem]">
                 <thead>
                   <tr>

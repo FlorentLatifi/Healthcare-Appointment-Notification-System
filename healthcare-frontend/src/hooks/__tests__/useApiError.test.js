@@ -76,9 +76,55 @@ describe('parseApiError', () => {
     expect(fieldErrors.role).toEqual(['Role must be Patient or Doctor']);
   });
 
+  it('formats 429 with Retry-After seconds', () => {
+    const err = {
+      response: {
+        status: 429,
+        headers: { 'retry-after': '15' },
+        data: { message: 'Rate limit exceeded' },
+      },
+    };
+    const parsed = parseApiError(err);
+    expect(parsed.isRateLimited).toBe(true);
+    expect(parsed.retryAfterSeconds).toBe(15);
+    expect(parsed.generalError).toMatch(/15 second/i);
+  });
+
   it('returns network message when no response body', () => {
     const { fieldErrors, generalError } = parseApiError(new Error('Network Error'));
     expect(fieldErrors).toEqual({});
     expect(generalError).toBe('Network Error');
+  });
+
+  it('builds friendly 429 message from Retry-After header', () => {
+    const err = {
+      response: {
+        status: 429,
+        headers: { 'retry-after': '60' },
+        data: {
+          success: false,
+          message: 'Rate limit exceeded',
+          errors: ['Too many requests. Please try again in 60 seconds.'],
+        },
+      },
+    };
+    const parsed = parseApiError(err);
+    expect(parsed.isRateLimited).toBe(true);
+    expect(parsed.retryAfterSeconds).toBe(60);
+    expect(parsed.generalError).toMatch(/try again in 60 second/i);
+    expect(parsed.hasFieldErrors).toBe(false);
+  });
+
+  it('uses Retry-After when body lacks countdown', () => {
+    const err = {
+      response: {
+        status: 429,
+        headers: { 'retry-after': '12' },
+        data: { success: false, message: 'Rate limit exceeded', errors: ['Too many requests.'] },
+      },
+    };
+    const { generalError, retryAfterSeconds } = parseApiError(err);
+    expect(retryAfterSeconds).toBe(12);
+    expect(generalError).toBe('Too many requests. Please try again in 12 seconds.');
   });
 });

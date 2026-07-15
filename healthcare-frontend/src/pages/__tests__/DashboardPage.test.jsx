@@ -143,7 +143,7 @@ describe('DashboardPage', () => {
       expect(screen.getByText(/no upcoming appointments/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('button', { name: /book appointment/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /book appointment/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows upcoming appointments and patient stats', async () => {
@@ -179,16 +179,17 @@ describe('DashboardPage', () => {
     expect(screen.queryByText('APT-20260715-003')).not.toBeInTheDocument();
 
     expect(screen.getByTestId('dashboard-stats')).toBeInTheDocument();
-    expect(screen.getAllByText('Upcoming Appointments').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Upcoming')).toBeInTheDocument();
     expect(screen.getByText('Completed')).toBeInTheDocument();
-    expect(screen.getByText('Next Appointment')).toBeInTheDocument();
-    expect(screen.getByText('Total Appointments')).toBeInTheDocument();
-    expect(screen.getAllByText('2099-07-15').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Next appointment')).toBeInTheDocument();
+    expect(screen.getByText('Total')).toBeInTheDocument();
+    expect(screen.getAllByText(/2099-07-15/).length).toBeGreaterThanOrEqual(1);
 
     expect(screen.getByText('Profile Summary')).toBeInTheDocument();
     expect(screen.getByText('jane@example.com')).toBeInTheDocument();
-    expect(screen.getByText(/Book New Appointment/i)).toBeInTheDocument();
-    expect(screen.getByText(/View My Appointments/i)).toBeInTheDocument();
+    expect(screen.getByText(/Book Appointment/i)).toBeInTheDocument();
+    expect(screen.getByText(/View Appointments/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Edit Profile/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows error state with working Retry button', async () => {
@@ -300,6 +301,8 @@ describe('DashboardPage', () => {
     });
 
     expect(mockApiClient.get).not.toHaveBeenCalled();
-    expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Analytics')).toBeInTheDocument();
+    expect(screen.getByText('Audit Logs')).toBeInTheDocument();
+    expect(screen.getByText('Manage Catalog')).toBeInTheDocument();
   });
 });

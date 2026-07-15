@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Healthcare.Presentation.API.Responses;
 
 namespace Healthcare.IntegrationTests;
 
@@ -51,8 +52,10 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task CreateDoctor_WithDoctorRole_Returns403()
+    public async Task CreateDoctor_WithDoctorRole_SelfService_Returns201WithSessionToken()
     {
+        // Doctors may create and link their own profile (AdminOrDoctor). Response includes
+        // a re-issued access token with doctor_id so the SPA need not call /Auth/refresh.
         var suffix = Guid.NewGuid().ToString("N")[..6];
         var token = await RegisterAndLoginAsync($"doc_create_doc_{suffix}", $"doc.create.doc.{suffix}@test.com", "SecurePass123!", "Doctor");
         SetAuthToken(token);
@@ -62,14 +65,21 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
             LastName = "CreateDoc",
             Email = $"doc.create.doc2.{suffix}@clinic.com",
             PhoneNumber = "+38348333333",
-            LicenseNumber = "MED-DC-001",
+            LicenseNumber = $"MED-DC-{suffix}",
             Specialty = "GeneralPractice",
             ConsultationFeeAmount = 50.00m,
             ConsultationFeeCurrency = "USD",
             YearsOfExperience = 5
         };
         var response = await Client.PostAsJsonAsync("/api/v1/doctors", payload);
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await DeserializeResponse<ProfileCreatedResponse>(response);
+        created!.Success.Should().BeTrue();
+        created.Data.Should().NotBeNull();
+        created.Data!.Id.Should().BeGreaterThan(0);
+        created.Data.Token.Should().NotBeNullOrEmpty();
+        created.Data.Role.Should().Be("Doctor");
+        created.Data.DoctorId.Should().Be(created.Data.Id);
     }
 
     [Fact]
@@ -77,6 +87,7 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
     {
         // Public /auth/register only allows Patient|Doctor (RegisterRequestValidator).
         // Admins are seeded (testadmin) or promoted — same pattern as AuthorizationFlowTests.
+        // Admin catalog create returns profile id without re-issuing the admin's session token.
         var suffix = Guid.NewGuid().ToString("N")[..6];
         var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
@@ -94,6 +105,10 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
         };
         var response = await Client.PostAsJsonAsync("/api/v1/doctors", payload);
         response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await DeserializeResponse<ProfileCreatedResponse>(response);
+        created!.Success.Should().BeTrue();
+        created.Data!.Id.Should().BeGreaterThan(0);
+        created.Data.Token.Should().BeNullOrEmpty("admin catalog create must not rotate admin JWT");
     }
 
     [Fact]

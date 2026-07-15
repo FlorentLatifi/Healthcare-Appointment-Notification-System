@@ -148,6 +148,30 @@ The frontend starts at `http://localhost:5173` and expects the API at `http://lo
 | `Seeding__SeedDemoData` | No | Seed sample doctors (blocked in Production) |
 | `Seeding__AllowDemoDataOutsideDevelopment` | No | Allow demo seed when env is not Development (e.g. local Docker) |
 | `Seeding__BootstrapAdmin__Enabled` | No | Bootstrap first Admin if none exists |
+| `RateLimiting__GlobalPermitLimit` | No | Default `100` requests / window per user (or IP if anonymous) |
+| `RateLimiting__AuthPermitLimit` | No | Default `10` / window — **login + register only** (strict, IP-based) |
+| `RateLimiting__AuthRefreshPermitLimit` | No | Default `60` / window — **token refresh / session restore** (separate bucket) |
+| `RateLimiting__WindowMinutes` | No | Fixed window size in minutes (default `1`) |
+| `RateLimiting__PasswordResetPermitLimit` | No | Default `3` / password-reset window |
+| `RateLimiting__PasswordResetWindowMinutes` | No | Default `15` minutes for forgot/reset password |
+
+### Rate limiting (auth)
+
+Auth endpoints use **two separate fixed-window policies** so multi-step SPA flows (login → cookie restore → profile → refresh) are not blocked by the login brute-force bucket:
+
+| Policy | Endpoints | Default | Partition |
+|--------|-----------|---------|-----------|
+| `AuthPolicy` | `POST /api/v1/Auth/login`, `POST /api/v1/Auth/register` | **10 / minute** per client IP | Strict — credential stuffing |
+| `AuthRefreshPolicy` | `POST /api/v1/Auth/refresh` | **60 / minute** per client IP | Higher — session rehydration, multi-tab |
+| `PasswordResetPolicy` | forgot/reset password | **3 / 15 minutes** per IP | Email / token abuse |
+| Global | all other API traffic | **100 / minute** per user id or IP | Fair multi-user NAT |
+
+On **HTTP 429** the API returns:
+
+- Header: `Retry-After: <seconds>`
+- Body: `{ "success": false, "message": "Rate limit exceeded", "errors": ["Too many requests. Please try again in N seconds."] }`
+
+The React client surfaces that message in form banners (login/register) or a toast (background calls such as refresh).
 | `Seeding__BootstrapAdmin__Username` | No | Admin username (default `admin`) |
 | `Seeding__BootstrapAdmin__Email` | When bootstrap enabled | Admin email |
 | `Seeding__BootstrapAdmin__Password` | Prod when bootstrap enabled | Strong password from secrets (never commit) |

@@ -59,6 +59,17 @@ public sealed class PatientDto
     /// </summary>
     public string Address { get; set; } = string.Empty;
 
+    /// <summary>Street line for profile edit forms.</summary>
+    public string Street { get; set; } = string.Empty;
+
+    public string City { get; set; } = string.Empty;
+
+    public string State { get; set; } = string.Empty;
+
+    public string PostalCode { get; set; } = string.Empty;
+
+    public string Country { get; set; } = string.Empty;
+
     /// <summary>
     /// Gets or sets whether the patient is active.
     /// </summary>

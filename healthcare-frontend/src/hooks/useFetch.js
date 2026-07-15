@@ -37,13 +37,20 @@ export function useFetch(url, options = {}) {
   const [error, setError] = useState(null);
   const { execute } = useApi();
 
+  // Stabilize options identity — inline {} from callers must not retrigger forever.
+  const optionsKey = JSON.stringify(options?.params ?? null);
+  const params = options?.params;
+
   const fetchData = useCallback(async (overrideUrl, overrideOptions) => {
     if (!(overrideUrl ?? url)) return;
     setLoading(true);
     setError(null);
     try {
       const result = await execute(() =>
-        apiClient.get(overrideUrl ?? url, overrideOptions ?? options),
+        apiClient.get(
+          overrideUrl ?? url,
+          overrideOptions ?? (params ? { params } : undefined),
+        ),
       );
       setData(result);
     } catch (err) {
@@ -51,7 +58,9 @@ export function useFetch(url, options = {}) {
     } finally {
       setLoading(false);
     }
-  }, [url, options, execute]);
+    // optionsKey captures params content without depending on object identity
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- optionsKey is the stable fingerprint
+  }, [url, optionsKey, params, execute]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

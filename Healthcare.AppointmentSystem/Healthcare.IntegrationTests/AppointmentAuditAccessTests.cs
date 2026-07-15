@@ -119,8 +119,7 @@ public sealed class AppointmentAuditAccessTests : IntegrationTestBase
         };
         var docResponse = await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
         docResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var docResult = await DeserializeResponse<int>(docResponse);
-        var doctorId = docResult!.Data;
+        var doctorId = await ReadCreatedProfileIdAsync(docResponse);
 
         await RegisterAndLoginAsync(docUsername, $"audit.doc.{suffix}@test.com", "SecurePass123!", "Doctor");
         ClearAuthToken();
@@ -144,8 +143,8 @@ public sealed class AppointmentAuditAccessTests : IntegrationTestBase
         };
         var patResponse = await Client.PostAsJsonAsync("/api/v1/patients", patPayload);
         patResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var patResult = await DeserializeResponse<int>(patResponse);
+        var patientId = await ReadCreatedProfileIdAsync(patResponse);
 
-        return new SeedContext(patResult!.Data, doctorId, patUsername, docUsername);
+        return new SeedContext(patientId, doctorId, patUsername, docUsername);
     }
 }

@@ -1,18 +1,37 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { Button, Card, Badge, Spinner, EmptyState, Modal, Input, Textarea, Select, PageHeader } from '../components/ui';
-import { Calendar, User, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, User, FileText, CheckCircle, XCircle, Clock, AlertCircle, UserCircle } from 'lucide-react';
 import { APPOINTMENT_STATUS } from '../constants/appointmentStatus';
+import { SPECIALTIES, DEFAULT_SPECIALTY } from '../constants/specialties';
 
 const TABS = ['All', APPOINTMENT_STATUS.PENDING, APPOINTMENT_STATUS.CONFIRMED, APPOINTMENT_STATUS.COMPLETED, APPOINTMENT_STATUS.CANCELLED, APPOINTMENT_STATUS.NO_SHOW];
 
-const SPECIALTIES = [
-  'GeneralPractice', 'Cardiology', 'Dermatology', 'Orthopedics', 'Pediatrics',
-  'Neurology', 'Psychiatry', 'Gynecology', 'Ophthalmology', 'Otorhinolaryngology',
-  'Oncology', 'Surgery',
-];
+function isSameLocalDay(dateValue, ref = new Date()) {
+  if (!dateValue) return false;
+  const d = dateValue instanceof Date ? dateValue : new Date(dateValue);
+  if (Number.isNaN(d.getTime())) return false;
+  return (
+    d.getFullYear() === ref.getFullYear()
+    && d.getMonth() === ref.getMonth()
+    && d.getDate() === ref.getDate()
+  );
+}
+
+function apptDate(appt) {
+  if (appt.scheduledTime) {
+    const d = new Date(appt.scheduledTime);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  if (appt.scheduledDate) {
+    const d = new Date(`${appt.scheduledDate}T12:00:00`);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return null;
+}
 
 const emptyDoctorForm = {
   firstName: '',
@@ -20,15 +39,16 @@ const emptyDoctorForm = {
   email: '',
   phoneNumber: '',
   licenseNumber: '',
-  specialty: 'GeneralPractice',
+  specialty: DEFAULT_SPECIALTY,
   consultationFeeAmount: '50',
   consultationFeeCurrency: 'USD',
   yearsOfExperience: '5',
 };
 
 export default function DoctorDashboardPage() {
-  // doctorId comes only from JWT claims (login / refreshSession) — never client-side spoofing.
-  const { doctorId, refreshSession } = useAuth();
+  // doctorId comes only from JWT claims (login / profile create / refresh) — never client-side spoofing.
+  const { doctorId, applyProfileSession } = useAuth();
+  const navigate = useNavigate();
   const [allAppts, setAllAppts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
@@ -67,6 +87,20 @@ export default function DoctorDashboardPage() {
     };
   }, [allAppts]);
 
+  const summary = useMemo(() => {
+    const today = allAppts.filter((a) => {
+      if ([APPOINTMENT_STATUS.CANCELLED, APPOINTMENT_STATUS.NO_SHOW].includes(a.status)) return false;
+      return isSameLocalDay(apptDate(a));
+    });
+    const pending = allAppts.filter((a) => a.status === APPOINTMENT_STATUS.PENDING);
+    const confirmed = allAppts.filter((a) => a.status === APPOINTMENT_STATUS.CONFIRMED);
+    return {
+      todayCount: today.length,
+      pendingCount: pending.length,
+      confirmedCount: confirmed.length,
+    };
+  }, [allAppts]);
+
   const createDoctorProfile = async (e) => {
     e.preventDefault();
     setCreatingProfile(true);
@@ -81,8 +115,8 @@ export default function DoctorDashboardPage() {
         toast.error(data.errors?.join('. ') || data.message || 'Failed to create doctor profile');
         return;
       }
-      // Re-issue JWT so doctor_id claim is present for subsequent API calls.
-      await refreshSession();
+      // Prefer token from create response (doctor_id claim); falls back to /Auth/refresh.
+      await applyProfileSession(data.data);
       toast.success('Doctor profile created and linked to your account');
     } catch (err) {
       toast.error(err.response?.data?.errors?.join('. ') || err.response?.data?.message || err.message || 'Failed to create doctor profile');
@@ -180,13 +214,68 @@ export default function DoctorDashboardPage() {
   const currentList = filtered[activeTab] || allAppts;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
-      <PageHeader title="Doctor Dashboard" />
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12 w-full min-w-0">
+      <PageHeader
+        title="Doctor Dashboard"
+        subtitle="Review today's schedule and act on pending requests."
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full sm:w-auto"
+            leftIcon={<UserCircle size={14} />}
+            onClick={() => navigate('/edit-doctor')}
+          >
+            Edit Profile
+          </Button>
+        }
+      />
 
-      <div className="flex flex-wrap gap-1.5 mb-4 sm:mb-6 -mx-1 px-1 overflow-x-auto pb-1">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 sm:mb-6" data-testid="doctor-summary-stats">
+        <Card className="!p-3 sm:!p-4">
+          <p className="text-xs uppercase tracking-wider text-text-muted m-0">Today</p>
+          <p className="text-2xl font-semibold text-text m-0 mt-1 tabular-nums">{summary.todayCount}</p>
+          <p className="text-xs text-text-muted m-0 mt-1 inline-flex items-center gap-1">
+            <Calendar size={12} /> scheduled visits
+          </p>
+        </Card>
+        <Card
+          className="!p-3 sm:!p-4"
+          hover={summary.pendingCount > 0}
+          onClick={summary.pendingCount > 0 ? () => setActiveTab(APPOINTMENT_STATUS.PENDING) : undefined}
+        >
+          <p className="text-xs uppercase tracking-wider text-text-muted m-0">Pending confirm</p>
+          <p className="text-2xl font-semibold text-status-pending-text m-0 mt-1 tabular-nums">{summary.pendingCount}</p>
+          <p className="text-xs text-text-muted m-0 mt-1 inline-flex items-center gap-1">
+            <AlertCircle size={12} /> needs your action
+          </p>
+        </Card>
+        <Card className="!p-3 sm:!p-4">
+          <p className="text-xs uppercase tracking-wider text-text-muted m-0">Confirmed</p>
+          <p className="text-2xl font-semibold text-status-confirmed-text m-0 mt-1 tabular-nums">{summary.confirmedCount}</p>
+          <p className="text-xs text-text-muted m-0 mt-1 inline-flex items-center gap-1">
+            <Clock size={12} /> ready to complete
+          </p>
+        </Card>
+      </div>
+
+      {summary.pendingCount > 0 && activeTab !== APPOINTMENT_STATUS.PENDING && (
+        <div className="mb-4 p-3 sm:p-4 rounded-xl border border-status-pending-text/25 bg-status-pending-bg/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <p className="text-sm text-text m-0">
+            You have <strong>{summary.pendingCount}</strong> appointment{summary.pendingCount === 1 ? '' : 's'} waiting for confirmation.
+          </p>
+          <Button size="sm" className="w-full sm:w-auto shrink-0" onClick={() => setActiveTab(APPOINTMENT_STATUS.PENDING)}>
+            Review pending
+          </Button>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-1.5 mb-4 sm:mb-6 -mx-1 px-1 overflow-x-auto pb-1" role="tablist" aria-label="Appointment status">
         {TABS.map((t) => (
           <Button
             key={t}
+            role="tab"
+            aria-selected={activeTab === t}
             variant={activeTab === t ? 'primary' : 'secondary'}
             size="sm"
             className="shrink-0"
@@ -199,40 +288,95 @@ export default function DoctorDashboardPage() {
       </div>
 
       {currentList.length === 0 ? (
-        <EmptyState message="No appointments in this status." />
+        <EmptyState
+          message={
+            activeTab === APPOINTMENT_STATUS.PENDING
+              ? 'No appointments waiting for confirmation.'
+              : 'No appointments in this status.'
+          }
+          actionLabel={activeTab !== 'All' ? 'Show all' : undefined}
+          onAction={activeTab !== 'All' ? () => setActiveTab('All') : undefined}
+        />
       ) : (
         <div className="space-y-3">
-          {currentList.map((appt) => (
-            <Card key={appt.id}>
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
-                <div className="flex flex-wrap items-center gap-2 min-w-0">
-                  <span className="text-sm font-semibold text-text break-all">{appt.referenceCode}</span>
-                  <Badge status={appt.status} />
+          {currentList.map((appt) => {
+            const isPending = appt.status === APPOINTMENT_STATUS.PENDING;
+            const isConfirmed = appt.status === APPOINTMENT_STATUS.CONFIRMED
+              || appt.status === 'Confirmed';
+            return (
+              <Card
+                key={appt.id}
+                className={isPending ? 'ring-1 ring-status-pending-text/30' : ''}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <span className="text-sm font-semibold text-text break-all">{appt.referenceCode}</span>
+                    <Badge status={appt.status} />
+                    {isSameLocalDay(apptDate(appt)) && (
+                      <span className="text-[10px] uppercase tracking-wide font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                        Today
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-text-muted shrink-0">{appt.scheduledDate}</span>
                 </div>
-                <span className="text-xs text-text-muted shrink-0">{appt.scheduledDate}</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mb-1">
-                <span className="inline-flex items-center gap-1"><User size={12} className="shrink-0" />{appt.patient?.fullName}</span>
-                <span className="inline-flex items-center gap-1"><Calendar size={12} className="shrink-0" />{appt.scheduledTimeFormatted}</span>
-              </div>
-              <p className="text-sm text-text mt-1 break-words">{appt.reason}</p>
-              {appt.doctorNotes && <p className="text-xs text-status-completed-text mt-2 inline-flex items-start gap-1 break-words"><FileText size={12} className="shrink-0 mt-0.5" />Notes: {appt.doctorNotes}</p>}
-              {appt.cancellationReason && <p className="text-xs text-status-cancelled-text mt-2 inline-flex items-start gap-1 break-words"><XCircle size={12} className="shrink-0 mt-0.5" />Cancel reason: {appt.cancellationReason}</p>}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted mb-1">
+                  <span className="inline-flex items-center gap-1"><User size={12} className="shrink-0" />{appt.patient?.fullName}</span>
+                  <span className="inline-flex items-center gap-1"><Calendar size={12} className="shrink-0" />{appt.scheduledTimeFormatted}</span>
+                </div>
+                <p className="text-sm text-text mt-1 break-words">{appt.reason}</p>
+                {appt.doctorNotes && <p className="text-xs text-status-completed-text mt-2 inline-flex items-start gap-1 break-words"><FileText size={12} className="shrink-0 mt-0.5" />Notes: {appt.doctorNotes}</p>}
+                {appt.cancellationReason && <p className="text-xs text-status-cancelled-text mt-2 inline-flex items-start gap-1 break-words"><XCircle size={12} className="shrink-0 mt-0.5" />Cancel reason: {appt.cancellationReason}</p>}
 
-              <div className="flex flex-col sm:flex-row flex-wrap gap-2 mt-3 pt-3 border-t border-border-light">
-                {appt.status === APPOINTMENT_STATUS.PENDING && (
-                  <>
-                    <Button variant="primary" size="sm" className="w-full sm:w-auto" leftIcon={<CheckCircle size={14} />} onClick={() => openConfirm(appt)}>Confirm</Button>
-                    <Button variant="secondary" size="sm" className="w-full sm:w-auto" onClick={() => openComplete(appt)}>Complete</Button>
-                    <Button variant="ghost" size="sm" className="w-full sm:w-auto" onClick={() => doNoShow(appt)}>No-Show</Button>
-                  </>
+                {(isPending || isConfirmed) && (
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-2 mt-3 pt-3 border-t border-border-light" aria-label="Appointment actions">
+                    {isPending && (
+                      <>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                          leftIcon={<CheckCircle size={14} />}
+                          onClick={() => openConfirm(appt)}
+                        >
+                          Confirm appointment
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                          leftIcon={<FileText size={14} />}
+                          onClick={() => openComplete(appt)}
+                        >
+                          Complete with notes
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full sm:w-auto text-status-noshow-text"
+                          leftIcon={<XCircle size={14} />}
+                          onClick={() => doNoShow(appt)}
+                        >
+                          Mark no-show
+                        </Button>
+                      </>
+                    )}
+                    {isConfirmed && !isPending && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                        leftIcon={<FileText size={14} />}
+                        onClick={() => openComplete(appt)}
+                      >
+                        Complete appointment
+                      </Button>
+                    )}
+                  </div>
                 )}
-                {appt.status === 'Confirmed' && (
-                  <Button variant="primary" size="sm" className="w-full sm:w-auto" onClick={() => openComplete(appt)}>Complete</Button>
-                )}
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
 

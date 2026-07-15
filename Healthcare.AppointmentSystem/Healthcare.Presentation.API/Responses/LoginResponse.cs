@@ -5,9 +5,9 @@
 /// </summary>
 /// <remarks>
 /// The refresh token is not included in the JSON body — it is set as an
-/// httpOnly, Secure, SameSite=Strict cookie by the controller, so it is
-/// never accessible to JavaScript and is sent automatically on subsequent
-/// requests (including the /refresh endpoint).
+/// httpOnly cookie (Secure when HTTPS, SameSite=Lax, Path=/api/v1) by the
+/// controller, so it is never accessible to JavaScript and is sent on
+/// same-site credentialed requests (including /Auth/refresh).
 /// </remarks>
 public sealed class LoginResponse
 {

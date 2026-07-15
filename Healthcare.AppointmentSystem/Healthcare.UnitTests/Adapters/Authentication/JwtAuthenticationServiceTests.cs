@@ -85,6 +85,12 @@ public sealed class JwtAuthenticationServiceTests
         result.Value.AccessToken.Should().NotBeNullOrWhiteSpace();
         result.Value.RefreshToken.Should().NotBeNullOrWhiteSpace();
         result.Value.ExpiresAt.Should().BeCloseTo(DateTime.UtcNow.AddMinutes(60), TimeSpan.FromMinutes(1));
+        // SPA session must receive identity from domain fields (not JWT claim remapping).
+        result.Value.UserId.Should().Be(1);
+        result.Value.Username.Should().Be("testuser");
+        result.Value.Role.Should().Be("Patient");
+        result.Value.PatientId.Should().BeNull();
+        result.Value.DoctorId.Should().BeNull();
     }
 
     [Fact]

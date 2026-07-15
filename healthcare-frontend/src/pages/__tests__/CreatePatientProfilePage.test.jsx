@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockNavigate, mockRefreshSession, mockApiClient } = vi.hoisted(() => ({
+const { mockNavigate, mockApplyProfileSession, mockApiClient } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
-  mockRefreshSession: vi.fn(),
+  mockApplyProfileSession: vi.fn(),
   mockApiClient: { post: vi.fn() },
 }));
 
@@ -21,7 +21,7 @@ vi.mock('../../services/apiClient', () => ({
 }));
 
 vi.mock('../../context/AuthContext', () => ({
-  useAuth: () => ({ refreshSession: mockRefreshSession }),
+  useAuth: () => ({ applyProfileSession: mockApplyProfileSession }),
 }));
 
 import CreatePatientProfilePage from '../CreatePatientProfilePage';
@@ -29,7 +29,7 @@ import CreatePatientProfilePage from '../CreatePatientProfilePage';
 describe('CreatePatientProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRefreshSession.mockResolvedValue({ patientId: 42 });
+    mockApplyProfileSession.mockResolvedValue({ patientId: 42 });
   });
 
   it('renders required fields', () => {
@@ -38,8 +38,16 @@ describe('CreatePatientProfilePage', () => {
     expect(screen.getByRole('button', { name: /create profile/i })).toBeInTheDocument();
   });
 
-  it('refreshes JWT then navigates to /dashboard on successful submission', async () => {
-    mockApiClient.post.mockResolvedValue({ data: { success: true, data: 42 } });
+  it('applies session from create response then navigates to /dashboard', async () => {
+    const sessionPayload = {
+      id: 42,
+      token: 'fresh-jwt',
+      username: 'jdoe',
+      role: 'Patient',
+      patientId: 42,
+      doctorId: null,
+    };
+    mockApiClient.post.mockResolvedValue({ data: { success: true, data: sessionPayload } });
 
     render(<CreatePatientProfilePage />);
 
@@ -60,7 +68,7 @@ describe('CreatePatientProfilePage', () => {
       }));
     });
 
-    expect(mockRefreshSession).toHaveBeenCalled();
+    expect(mockApplyProfileSession).toHaveBeenCalledWith(sessionPayload);
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
   });
 });

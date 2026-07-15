@@ -327,8 +327,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         };
         var docResponse = await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
         docResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var docResult = await DeserializeResponse<int>(docResponse);
-        var doctorId = docResult!.Data;
+        var doctorId = await ReadCreatedProfileIdAsync(docResponse);
 
         // Re-login so access token includes doctor_id
         await LoginAsync(docUsername, "SecurePass123!");
@@ -354,9 +353,9 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         };
         var patResponse = await Client.PostAsJsonAsync("/api/v1/patients", patPayload);
         patResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var patResult = await DeserializeResponse<int>(patResponse);
+        var patientId = await ReadCreatedProfileIdAsync(patResponse);
 
-        return new SeedContext(patResult!.Data, doctorId, patUsername, docUsername);
+        return new SeedContext(patientId, doctorId, patUsername, docUsername);
     }
 
     private async Task<(SeedContext Ctx, int AppointmentId)> SeedAndBookAsync()
@@ -415,10 +414,10 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
             PostalCode = "10000",
             Country = "Country"
         });
-        var result = await DeserializeResponse<int>(createResponse);
+        var patientId = await ReadCreatedProfileIdAsync(createResponse);
         var reloginToken = await LoginAsync(username, "SecurePass123!");
         SetAuthToken(reloginToken);
-        return (new SeedContext(result!.Data, 0, username, ""), result!.Data);
+        return (new SeedContext(patientId, 0, username, ""), patientId);
     }
 
     private async Task<(SeedContext Ctx, int DoctorId)> CreateOtherDoctorAsync()
@@ -441,10 +440,10 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
             YearsOfExperience = 5
         };
         var docResponse = await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
-        var docResult = await DeserializeResponse<int>(docResponse);
+        var doctorId = await ReadCreatedProfileIdAsync(docResponse);
         token = await LoginAsync(username, "SecurePass123!");
         SetAuthToken(token);
-        return (new SeedContext(0, docResult!.Data, "", username), docResult!.Data);
+        return (new SeedContext(0, doctorId, "", username), doctorId);
     }
 
     private async Task<string> CreateAdminAsync()

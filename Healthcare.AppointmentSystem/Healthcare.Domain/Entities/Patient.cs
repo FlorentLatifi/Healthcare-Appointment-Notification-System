@@ -193,6 +193,19 @@ public sealed class Patient : Entity
     }
 
     /// <summary>
+    /// Updates date of birth and gender (self-service profile edit).
+    /// </summary>
+    public void UpdateDemographics(DateTime dateOfBirth, Gender gender)
+    {
+        if (dateOfBirth.Date >= DateTime.UtcNow.Date)
+            throw new ArgumentException("Date of birth must be in the past.", nameof(dateOfBirth));
+
+        DateOfBirth = dateOfBirth.Date;
+        Gender = gender;
+        MarkAsModified();
+    }
+
+    /// <summary>
     /// Deactivates the patient account.
     /// </summary>
     public void Deactivate()
