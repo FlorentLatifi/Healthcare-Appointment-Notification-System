@@ -15,7 +15,9 @@ let stripePromise;
 function getStripe() {
   if (E2E_MOCK_STRIPE) return null;
   if (!stripePromise) {
-    const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+    // Vitest/CI unit tests may not load .env — allow a harmless placeholder in test mode only.
+    const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
+      || (import.meta.env.MODE === 'test' ? 'pk_test_vitest_placeholder' : '');
     if (!key) {
       console.error('VITE_STRIPE_PUBLISHABLE_KEY is not set');
       return null;
