@@ -81,6 +81,7 @@ public class AuthorizationTestWebApplicationFactory : WebApplicationFactory<Prog
             services.RemoveAll<IPaymentRepository>();
             services.RemoveAll<IAuditLogRepository>();
             services.RemoveAll<IUserSessionRepository>();
+            services.RemoveAll<IUserNotificationRepository>();
             services.RemoveAll<IUnitOfWork>();
 
             services.RemoveAll<IBreachedPasswordChecker>();
@@ -109,6 +110,8 @@ public class AuthorizationTestWebApplicationFactory : WebApplicationFactory<Prog
             services.AddSingleton<IPaymentRepository, InMemoryPaymentRepository>();
             services.AddSingleton<IAuditLogRepository, InMemoryAuditLogRepository>();
             services.AddSingleton<IUserSessionRepository, InMemoryUserSessionRepository>();
+            // In-app notifications: EF repo needs DbContext — use in-memory for authz / rate-limit suites.
+            services.AddSingleton<IUserNotificationRepository, InMemoryUserNotificationRepository>();
             services.AddSingleton<IUnitOfWork, InMemoryUnitOfWork>();
 
             services.AddSingleton<IDistributedLockService, InMemoryLockService>();
