@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { Button, Card, Badge, Spinner, EmptyState, Modal, Input, Textarea, Select, PageHeader } from '../components/ui';
+import AddToCalendarButton from '../components/AddToCalendarButton';
 import { Calendar, User, FileText, CheckCircle, XCircle, Clock, AlertCircle, UserCircle } from 'lucide-react';
 import { APPOINTMENT_STATUS } from '../constants/appointmentStatus';
 import { SPECIALTIES, DEFAULT_SPECIALTY } from '../constants/specialties';
@@ -328,52 +329,56 @@ export default function DoctorDashboardPage() {
                 {appt.doctorNotes && <p className="text-xs text-status-completed-text mt-2 inline-flex items-start gap-1 break-words"><FileText size={12} className="shrink-0 mt-0.5" />Notes: {appt.doctorNotes}</p>}
                 {appt.cancellationReason && <p className="text-xs text-status-cancelled-text mt-2 inline-flex items-start gap-1 break-words"><XCircle size={12} className="shrink-0 mt-0.5" />Cancel reason: {appt.cancellationReason}</p>}
 
-                {(isPending || isConfirmed) && (
-                  <div className="flex flex-col sm:flex-row flex-wrap gap-2 mt-3 pt-3 border-t border-border-light" aria-label="Appointment actions">
-                    {isPending && (
-                      <>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          className="w-full sm:w-auto"
-                          leftIcon={<CheckCircle size={14} />}
-                          onClick={() => openConfirm(appt)}
-                        >
-                          Confirm appointment
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="w-full sm:w-auto"
-                          leftIcon={<FileText size={14} />}
-                          onClick={() => openComplete(appt)}
-                        >
-                          Complete with notes
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full sm:w-auto text-status-noshow-text"
-                          leftIcon={<XCircle size={14} />}
-                          onClick={() => doNoShow(appt)}
-                        >
-                          Mark no-show
-                        </Button>
-                      </>
-                    )}
-                    {isConfirmed && !isPending && (
+                <div className="flex flex-col sm:flex-row flex-wrap gap-2 mt-3 pt-3 border-t border-border-light" aria-label="Appointment actions">
+                  {appt.status !== APPOINTMENT_STATUS.CANCELLED && (
+                    <AddToCalendarButton
+                      appointmentId={appt.id}
+                      referenceCode={appt.referenceCode}
+                    />
+                  )}
+                  {isPending && (
+                    <>
                       <Button
                         variant="primary"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                        leftIcon={<CheckCircle size={14} />}
+                        onClick={() => openConfirm(appt)}
+                      >
+                        Confirm appointment
+                      </Button>
+                      <Button
+                        variant="secondary"
                         size="sm"
                         className="w-full sm:w-auto"
                         leftIcon={<FileText size={14} />}
                         onClick={() => openComplete(appt)}
                       >
-                        Complete appointment
+                        Complete with notes
                       </Button>
-                    )}
-                  </div>
-                )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full sm:w-auto text-status-noshow-text"
+                        leftIcon={<XCircle size={14} />}
+                        onClick={() => doNoShow(appt)}
+                      >
+                        Mark no-show
+                      </Button>
+                    </>
+                  )}
+                  {isConfirmed && !isPending && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="w-full sm:w-auto"
+                      leftIcon={<FileText size={14} />}
+                      onClick={() => openComplete(appt)}
+                    >
+                      Complete appointment
+                    </Button>
+                  )}
+                </div>
               </Card>
             );
           })}
