@@ -146,7 +146,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=api
 
       - name: Trivy vulnerability scan (API)
-        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           image-ref: healthcare-api:scan
           format: sarif
@@ -166,7 +166,7 @@ jobs:
           category: trivy-api
 
       - name: Generate SBOM SPDX (API)
-        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           image-ref: healthcare-api:scan
           format: spdx-json
@@ -214,7 +214,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=frontend
 
       - name: Trivy vulnerability scan (Frontend)
-        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           image-ref: healthcare-frontend:scan
           format: sarif
@@ -234,7 +234,7 @@ jobs:
           category: trivy-frontend
 
       - name: Generate SBOM SPDX (Frontend)
-        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           image-ref: healthcare-frontend:scan
           format: spdx-json
