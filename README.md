@@ -1,6 +1,6 @@
 # Healthcare Appointment Notification System
 
-![Build Status](https://github.com/FlorentLatifi/Healthcare-Appointment-Notification-System/actions/workflows/build-and-test.yml/badge.svg)
+![Build Status](https://github.com/FlorentLatifi/Healthcare-Appointment-Notification-System/actions/workflows/ci.yml/badge.svg)
 
 ## Overview
 
