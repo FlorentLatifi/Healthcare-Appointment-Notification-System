@@ -358,6 +358,10 @@ public sealed class DoctorsController : ControllerBase
         if (result.IsFailure)
         {
             _logger.LogWarning("Failed to deactivate doctor {DoctorId}: {Error}", id, result.Error);
+
+            if (result.Error.Contains("not found"))
+                return NotFound(ApiResponse.ErrorResponse(result.Error, "Doctor not found"));
+
             return BadRequest(ApiResponse.ErrorResponse(result.Error, "Doctor already deactivated"));
         }
 
