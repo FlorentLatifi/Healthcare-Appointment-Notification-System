@@ -810,7 +810,7 @@ public sealed class AuthorizationTests : IClassFixture<AuthorizationTestWebAppli
         {
             PatientId = _seed.PatientB_PatientId,
             DoctorId = _seed.DoctorA_DoctorId,
-            ScheduledTime = NextWeekdayAt10Am().AddDays(21).ToString("o"),
+            ScheduledTime = NextUniqueWeekdayAt10Am().ToString("o"),
             Reason = "Forged patient ID test",
             AppointmentType = "Standard"
         });
