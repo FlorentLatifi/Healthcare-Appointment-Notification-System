@@ -29,7 +29,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             Country = "Country"
         };
         var response = await Client.PostAsJsonAsync("/api/v1/patients", payload);
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             Country = "Country"
         };
         var response = await Client.PostAsJsonAsync("/api/v1/patients", payload);
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             Country = "Country"
         };
         var response = await Client.PostAsJsonAsync("/api/v1/patients", payload);
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             PostalCode = "10000",
             Country = "Country"
         });
-        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        create.StatusCode.Should().Be(HttpStatusCode.Created, await create.Content.ReadAsStringAsync());
         var patientId = await ReadCreatedProfileIdAsync(create);
 
         // Same session: refresh (not full re-login) re-issues JWT with patient_id claim
@@ -105,7 +105,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
         session!.PatientId.Should().Be(patientId);
 
         var response = await Client.GetAsync($"/api/v1/patients/{patientId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     /// <summary>
@@ -132,7 +132,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             ConsultationFeeCurrency = "USD",
             YearsOfExperience = 8
         });
-        doctorResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        doctorResponse.StatusCode.Should().Be(HttpStatusCode.Created, await doctorResponse.Content.ReadAsStringAsync());
         var doctorId = await ReadCreatedProfileIdAsync(doctorResponse);
 
         // New patient registers + logs in (no patient_id claim yet)
@@ -154,7 +154,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
             PostalCode = "10000",
             Country = "Kosovo"
         });
-        createPatient.StatusCode.Should().Be(HttpStatusCode.Created);
+        createPatient.StatusCode.Should().Be(HttpStatusCode.Created, await createPatient.Content.ReadAsStringAsync());
         var created = await DeserializeResponse<ProfileCreatedResponse>(createPatient);
         var patientId = created!.Data!.Id;
         // Preferred path: create response includes re-issued token with patient_id claim.
@@ -198,7 +198,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
         var createA = await Client.PostAsJsonAsync("/api/v1/patients", new
         {
             FirstName = "Patient",
-            LastName = "A",
+            LastName = "Alpha",
             Email = "patient.a@test.com",
             PhoneNumber = "+38349555555",
             DateOfBirth = "1990-01-01",
@@ -217,7 +217,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
         var createB = await Client.PostAsJsonAsync("/api/v1/patients", new
         {
             FirstName = "Patient",
-            LastName = "B",
+            LastName = "Beta",
             Email = "patient.b@test.com",
             PhoneNumber = "+38349666666",
             DateOfBirth = "1990-01-01",
@@ -236,7 +236,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
 
         // Patient B tries to access Patient A's record
         var response = await Client.GetAsync($"/api/v1/patients/{patientIdA}");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -281,7 +281,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(docToken);
 
         var response = await Client.GetAsync($"/api/v1/patients/{patientId}");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -289,7 +289,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
     {
         ClearAuthToken();
         var response = await Client.GetAsync("/api/v1/patients");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -298,7 +298,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
         var token = await RegisterAndLoginAsync("pat_list", "pat.list@test.com", "SecurePass123!", "Patient");
         SetAuthToken(token);
         var response = await Client.GetAsync("/api/v1/patients");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -307,7 +307,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
         var token = await RegisterAndLoginAsync("doc_list", "doc.list@test.com", "SecurePass123!", "Doctor");
         SetAuthToken(token);
         var response = await Client.GetAsync("/api/v1/patients");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -315,7 +315,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
     {
         ClearAuthToken();
         var response = await Client.DeleteAsync("/api/v1/patients/1");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -324,7 +324,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
         var token = await RegisterAndLoginAsync("pat_delete", "pat.delete@test.com", "SecurePass123!", "Patient");
         SetAuthToken(token);
         var response = await Client.DeleteAsync("/api/v1/patients/1");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -333,7 +333,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
         var token = await RegisterAndLoginAsync("doc_delete", "doc.delete@test.com", "SecurePass123!", "Doctor");
         SetAuthToken(token);
         var response = await Client.DeleteAsync("/api/v1/patients/1");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -342,7 +342,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
         var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
         var response = await Client.DeleteAsync("/api/v1/patients/99999");
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -352,7 +352,7 @@ public sealed class AuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(patientToken);
 
         var response = await Client.PostAsync("/api/v1/users/1/promote-to-admin", null);
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]

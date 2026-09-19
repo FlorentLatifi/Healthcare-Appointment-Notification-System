@@ -22,7 +22,7 @@ public sealed class AuthFlowTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         var result = await DeserializeResponse<int>(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
@@ -41,10 +41,10 @@ public sealed class AuthFlowTests : IntegrationTestBase
         };
 
         var first = await Client.PostAsJsonAsync("/api/v1/auth/register", payload);
-        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        first.StatusCode.Should().Be(HttpStatusCode.Created, await first.Content.ReadAsStringAsync());
 
         var second = await Client.PostAsJsonAsync("/api/v1/auth/register", payload);
-        second.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        second.StatusCode.Should().Be(HttpStatusCode.BadRequest, await second.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class AuthFlowTests : IntegrationTestBase
             Password = password
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         var result = await DeserializeResponse<LoginResponse>(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
@@ -110,7 +110,7 @@ public sealed class AuthFlowTests : IntegrationTestBase
             Password = "WrongPassword!"
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -120,14 +120,14 @@ public sealed class AuthFlowTests : IntegrationTestBase
         SetAuthToken(token);
 
         var response = await Client.GetAsync("/api/v1/auth/me");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
     public async Task GetCurrentUser_WithoutToken_Returns401()
     {
         var response = await Client.GetAsync("/api/v1/auth/me");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -142,12 +142,12 @@ public sealed class AuthFlowTests : IntegrationTestBase
         };
 
         var response = await Client.PostAsJsonAsync("/api/v1/auth/register", payload);
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
 
         // Verify no user was created with that username
         var loginPayload = new { Username = "wannabe_admin", Password = "SecurePass123!" };
         var loginResponse = await Client.PostAsJsonAsync("/api/v1/auth/login", loginPayload);
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest, await loginResponse.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -158,14 +158,14 @@ public sealed class AuthFlowTests : IntegrationTestBase
             Username = PreSeededAdminUsername,
             Password = PreSeededAdminPassword
         });
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK, await loginResponse.Content.ReadAsStringAsync());
 
         var loginResult = await DeserializeResponse<LoginResponse>(loginResponse);
         loginResult!.Data!.Token.Should().NotBeNullOrEmpty();
         var currentToken = loginResult.Data.Token;
 
         var refreshResponse = await Client.PostAsync("/api/v1/auth/refresh", null);
-        refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK, await refreshResponse.Content.ReadAsStringAsync());
 
         var refreshResult = await DeserializeResponse<LoginResponse>(refreshResponse);
         refreshResult!.Success.Should().BeTrue();
@@ -203,7 +203,7 @@ public sealed class AuthFlowTests : IntegrationTestBase
             Username = username,
             Password = password
         });
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK, await loginResponse.Content.ReadAsStringAsync());
 
         var setCookie = Assert.Single(loginResponse.Headers.GetValues("Set-Cookie"));
         setCookie.Should().Contain("refreshToken");
@@ -252,7 +252,7 @@ public sealed class AuthFlowTests : IntegrationTestBase
             Username = username,
             Password = password
         });
-        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK, await loginResponse.Content.ReadAsStringAsync());
         var login = await DeserializeResponse<LoginResponse>(loginResponse);
         login!.Data!.PatientId.Should().BeNull();
         SetAuthToken(login.Data.Token);
@@ -271,7 +271,7 @@ public sealed class AuthFlowTests : IntegrationTestBase
             PostalCode = "10000",
             Country = "Kosovo"
         });
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created, await createResponse.Content.ReadAsStringAsync());
         var created = await DeserializeResponse<ProfileCreatedResponse>(createResponse);
         var patientId = created!.Data!.Id;
         patientId.Should().BeGreaterThan(0);
@@ -280,7 +280,7 @@ public sealed class AuthFlowTests : IntegrationTestBase
 
         // /Auth/refresh still works for normal rotation and returns the same claim.
         var refreshResponse = await Client.PostAsync("/api/v1/auth/refresh", null);
-        refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK, await refreshResponse.Content.ReadAsStringAsync());
 
         var refresh = await DeserializeResponse<LoginResponse>(refreshResponse);
         refresh!.Success.Should().BeTrue();

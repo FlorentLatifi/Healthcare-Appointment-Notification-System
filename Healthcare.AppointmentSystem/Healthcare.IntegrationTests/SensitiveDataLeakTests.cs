@@ -45,7 +45,7 @@ public sealed class SensitiveDataLeakTests
 
         var body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError, body);
         body.Should().NotContain("Secret");
         body.Should().NotContain("Server=prod");
         body.Should().NotContain("PWD=pass123");
@@ -118,7 +118,7 @@ public sealed class SensitiveDataLeakTests
 
         var body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError, body);
         body.Should().NotContain("Secret");
         body.Should().NotContain("Server=prod");
         body.Should().NotContain("PWD=pass123");

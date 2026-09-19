@@ -1,5 +1,7 @@
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Adapters.Persistence.EntityFramework;
+using Healthcare.Application.Ports.Payments;
+using Healthcare.IntegrationTests.Helpers;
 using Healthcare.Application.Ports.Authentication;
 using Healthcare.Domain.Entities;
 using Healthcare.Domain.Enums;
@@ -80,6 +82,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
         builder.ConfigureTestServices(services =>
         {
+            // Payments go through an in-memory gateway rather than Stripe's API.
+            services.RemoveAll<IPaymentGateway>();
+            services.AddSingleton<IPaymentGateway, FakePaymentGateway>();
+
             services.RemoveAll<IConnectionMultiplexer>();
             services.AddSingleton<IConnectionMultiplexer>(_ =>
                 ConnectionMultiplexer.Connect(new ConfigurationOptions

@@ -14,7 +14,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
     {
         ClearAuthToken();
         var response = await Client.GetAsync("/api/v1/appointments/1");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -25,8 +25,8 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
 
         var response = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/cancel",
-            new { CancellationReason = "Changed my mind" });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+            new { AppointmentId = appointmentId, CancellationReason = "Changed my mind" });
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -36,8 +36,8 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         var (otherCtx, _) = await CreateOtherPatientAsync();
 
         var response = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/cancel",
-            new { CancellationReason = "Not my appointment" });
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            new { AppointmentId = appointmentId, CancellationReason = "Not my appointment" });
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -48,8 +48,8 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
 
         var response = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/cancel",
-            new { CancellationReason = "Doctor rescheduled" });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+            new { AppointmentId = appointmentId, CancellationReason = "Doctor rescheduled" });
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -59,20 +59,20 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         var (otherCtx, _) = await CreateOtherDoctorAsync();
 
         var response = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/cancel",
-            new { CancellationReason = "Not my patient" });
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            new { AppointmentId = appointmentId, CancellationReason = "Not my patient" });
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
     public async Task CancelAppointment_AdminCancelsAny_Returns200()
     {
         var (ctx, appointmentId) = await SeedAndBookAsync();
-        var token = await CreateAdminAsync();
+        var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
 
         var response = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/cancel",
-            new { CancellationReason = "Admin override" });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+            new { AppointmentId = appointmentId, CancellationReason = "Admin override" });
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -83,8 +83,8 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
 
         var response = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/confirm",
-            new { OverridePaymentRequirement = true });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+            new { AppointmentId = appointmentId, OverridePaymentRequirement = true, OverrideReason = "Integration test: confirm before payment" });
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -94,20 +94,20 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         var (otherCtx, _) = await CreateOtherDoctorAsync();
 
         var response = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/confirm",
-            new { OverridePaymentRequirement = true });
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            new { AppointmentId = appointmentId, OverridePaymentRequirement = true, OverrideReason = "Integration test: confirm before payment" });
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
     public async Task ConfirmAppointment_AdminConfirmsAny_Returns200()
     {
         var (ctx, appointmentId) = await SeedAndBookAsync();
-        var token = await CreateAdminAsync();
+        var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
 
         var response = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/confirm",
-            new { OverridePaymentRequirement = true });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+            new { AppointmentId = appointmentId, OverridePaymentRequirement = true, OverrideReason = "Integration test: confirm before payment" });
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -118,8 +118,8 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
 
         var response = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/complete",
-            new { DoctorNotes = "Patient recovered well" });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+            new { AppointmentId = appointmentId, DoctorNotes = "Patient recovered well" });
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -129,20 +129,20 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         var (otherCtx, _) = await CreateOtherDoctorAsync();
 
         var response = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/complete",
-            new { DoctorNotes = "Not my patient" });
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            new { AppointmentId = appointmentId, DoctorNotes = "Not my patient" });
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
     public async Task CompleteAppointment_AdminCompletesAny_Returns200()
     {
         var (ctx, appointmentId) = await SeedBookAndConfirmAsync();
-        var token = await CreateAdminAsync();
+        var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
 
         var response = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/complete",
-            new { DoctorNotes = "Admin override complete" });
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+            new { AppointmentId = appointmentId, DoctorNotes = "Admin override complete" });
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
 
         var response = await Client.GetAsync($"/api/v1/appointments/{appointmentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         var (otherCtx, _) = await CreateOtherPatientAsync();
 
         var response = await Client.GetAsync($"/api/v1/appointments/{appointmentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
 
         var response = await Client.GetAsync($"/api/v1/appointments/{appointmentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         var (otherCtx, _) = await CreateOtherDoctorAsync();
 
         var response = await Client.GetAsync($"/api/v1/appointments/{appointmentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -192,7 +192,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
     {
         ClearAuthToken();
         var response = await Client.GetAsync("/api/v1/appointments");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -202,17 +202,16 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         var token = await RegisterAndLoginAsync($"list_all_pat_{suffix}", $"list.all.pat.{suffix}@test.com", "SecurePass123!", "Patient");
         SetAuthToken(token);
         var response = await Client.GetAsync("/api/v1/appointments");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
     public async Task GetAllAppointments_WithAdminRole_Returns200()
     {
-        var suffix = Guid.NewGuid().ToString("N")[..6];
-        var token = await RegisterAndLoginAsync($"list_all_admin_{suffix}", $"list.all.admin.{suffix}@test.com", "SecurePass123!", "Admin");
+        var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
         var response = await Client.GetAsync("/api/v1/appointments");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -223,7 +222,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
 
         var response = await Client.GetAsync($"/api/v1/appointments/patient/{ctx.PatientId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -233,7 +232,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         var (otherCtx, _) = await CreateOtherPatientAsync();
 
         var response = await Client.GetAsync($"/api/v1/appointments/patient/{ctx.PatientId}");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -247,7 +246,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
 
         var response = await Client.GetAsync($"/api/v1/appointments/patient/{otherPatientId}");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -258,7 +257,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
 
         var response = await Client.GetAsync($"/api/v1/appointments/patient/{ctx.PatientId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -269,7 +268,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         SetAuthToken(token);
 
         var response = await Client.GetAsync($"/api/v1/appointments/doctor/{ctx.DoctorId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -279,7 +278,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         var (otherCtx, _) = await CreateOtherDoctorAsync();
 
         var response = await Client.GetAsync($"/api/v1/appointments/doctor/{ctx.DoctorId}");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     private static DateTime GetNextWeekdayAt10Am()
@@ -318,7 +317,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
             FirstName = "AuthTest",
             LastName = $"Doctor_{suffix}",
             Email = $"auth.doctor.{suffix}@clinic.com",
-            PhoneNumber = $"+38348{suffix}00",
+            PhoneNumber = UniquePhoneNumber("+38348"),
             LicenseNumber = $"MED-AT-{suffix}",
             Specialty = "GeneralPractice",
             ConsultationFeeAmount = 50.00m,
@@ -326,7 +325,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
             YearsOfExperience = 10
         };
         var docResponse = await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
-        docResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        docResponse.StatusCode.Should().Be(HttpStatusCode.Created, await docResponse.Content.ReadAsStringAsync());
         var doctorId = await ReadCreatedProfileIdAsync(docResponse);
 
         // Re-login so access token includes doctor_id
@@ -342,7 +341,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
             FirstName = "AuthTest",
             LastName = $"Patient_{suffix}",
             Email = $"auth.patient.{suffix}@test.com",
-            PhoneNumber = $"+38349{suffix}00",
+            PhoneNumber = UniquePhoneNumber("+38349"),
             DateOfBirth = "1990-01-01",
             Gender = "Male",
             Street = "10 St",
@@ -352,7 +351,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
             Country = "Country"
         };
         var patResponse = await Client.PostAsJsonAsync("/api/v1/patients", patPayload);
-        patResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        patResponse.StatusCode.Should().Be(HttpStatusCode.Created, await patResponse.Content.ReadAsStringAsync());
         var patientId = await ReadCreatedProfileIdAsync(patResponse);
 
         return new SeedContext(patientId, doctorId, patUsername, docUsername);
@@ -375,7 +374,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
             AppointmentType = "Standard"
         };
         var bookResponse = await Client.PostAsJsonAsync("/api/v1/appointments", bookPayload);
-        bookResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        bookResponse.StatusCode.Should().Be(HttpStatusCode.Created, await bookResponse.Content.ReadAsStringAsync());
         var bookResult = await DeserializeResponse<AppointmentDto>(bookResponse);
 
         return (ctx, bookResult!.Data!.Id);
@@ -388,8 +387,8 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         var docToken = await LoginAsync(ctx.DoctorUsername, "SecurePass123!");
         SetAuthToken(docToken);
         var confirmResponse = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/confirm",
-            new { OverridePaymentRequirement = true });
-        confirmResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            new { AppointmentId = appointmentId, OverridePaymentRequirement = true, OverrideReason = "Integration test: confirm before payment" });
+        confirmResponse.StatusCode.Should().Be(HttpStatusCode.OK, await confirmResponse.Content.ReadAsStringAsync());
 
         return (ctx, appointmentId);
     }
@@ -405,7 +404,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
             FirstName = "Other",
             LastName = "Patient",
             Email = $"other.patient.{suffix}@test.com",
-            PhoneNumber = $"+38349{suffix}99",
+            PhoneNumber = UniquePhoneNumber("+38349"),
             DateOfBirth = "1990-01-01",
             Gender = "Male",
             Street = "99 St",
@@ -432,7 +431,7 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
             FirstName = "Other",
             LastName = "Doctor",
             Email = $"other.doc.{suffix}@clinic.com",
-            PhoneNumber = $"+38348{suffix}99",
+            PhoneNumber = UniquePhoneNumber("+38348"),
             LicenseNumber = $"MED-OT-{suffix}",
             Specialty = "GeneralPractice",
             ConsultationFeeAmount = 50.00m,
@@ -444,11 +443,5 @@ public sealed class AppointmentAuthorizationFlowTests : IntegrationTestBase
         token = await LoginAsync(username, "SecurePass123!");
         SetAuthToken(token);
         return (new SeedContext(0, doctorId, "", username), doctorId);
-    }
-
-    private async Task<string> CreateAdminAsync()
-    {
-        var suffix = Guid.NewGuid().ToString("N")[..6];
-        return await RegisterAndLoginAsync($"admin_{suffix}", $"admin.{suffix}@test.com", "SecurePass123!", "Admin");
     }
 }
