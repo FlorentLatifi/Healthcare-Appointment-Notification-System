@@ -33,7 +33,7 @@ public sealed class PatientFlowTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/v1/patients", payload);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         var result = await DeserializeResponse<ProfileCreatedResponse>(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
@@ -67,10 +67,10 @@ public sealed class PatientFlowTests : IntegrationTestBase
         };
 
         var first = await Client.PostAsJsonAsync("/api/v1/patients", payload);
-        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        first.StatusCode.Should().Be(HttpStatusCode.Created, await first.Content.ReadAsStringAsync());
 
         var second = await Client.PostAsJsonAsync("/api/v1/patients", payload);
-        second.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        second.StatusCode.Should().Be(HttpStatusCode.BadRequest, await second.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -95,11 +95,13 @@ public sealed class PatientFlowTests : IntegrationTestBase
         };
 
         var createResponse = await Client.PostAsJsonAsync("/api/v1/patients", createPayload);
-        var patientId = await ReadCreatedProfileIdAsync(createResponse);
+        var created = await DeserializeResponse<ProfileCreatedResponse>(createResponse);
+        var patientId = created!.Data!.Id;
+        SetAuthToken(created.Data.Token!);
 
         var getResponse = await Client.GetAsync($"/api/v1/patients/{patientId}");
 
-        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK, await getResponse.Content.ReadAsStringAsync());
         var getResult = await DeserializeResponse<PatientDto>(getResponse);
         getResult.Should().NotBeNull();
         getResult!.Success.Should().BeTrue();
@@ -110,11 +112,13 @@ public sealed class PatientFlowTests : IntegrationTestBase
     [Fact]
     public async Task GetPatientById_NonExisting_Returns404()
     {
-        var token = await RegisterAndLoginAsync("doc_get404", "doc.get404@test.com", "SecurePass123!", "Doctor");
+        // Record access is checked before existence, so only an admin can see a 404 here;
+        // anyone else gets 403 and learns nothing about which ids exist.
+        var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
 
         var response = await Client.GetAsync("/api/v1/patients/99999");
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -138,6 +142,6 @@ public sealed class PatientFlowTests : IntegrationTestBase
         };
 
         var response = await Client.PostAsJsonAsync("/api/v1/patients", payload);
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync());
     }
 }

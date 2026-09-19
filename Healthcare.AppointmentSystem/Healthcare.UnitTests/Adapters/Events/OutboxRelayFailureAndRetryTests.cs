@@ -76,16 +76,16 @@ public sealed class OutboxRelayFailureAndRetryTests
 
         var services = new ServiceCollection();
         services.AddSingleton(settings);
-        services.AddScoped(_ => new HealthcareDbContext(options, settings));
+        services.AddScoped<HealthcareDbContext>(_ => new SqliteCompatibleDbContext(options, settings));
         services.AddSingleton(dispatcher.Object);
         services.AddLogging();
         var sp = services.BuildServiceProvider();
 
-        await using (var ctx = new HealthcareDbContext(options, settings))
+        await using (var ctx = new SqliteCompatibleDbContext(options, settings))
             await ctx.Database.EnsureCreatedAsync();
 
         var (domainEvent, typeName, payload) = CreateEvent();
-        await using (var write = new HealthcareDbContext(options, settings))
+        await using (var write = new SqliteCompatibleDbContext(options, settings))
         {
             write.OutboxMessages.Add(new OutboxMessage(typeName, payload, domainEvent.OccurredOn, domainEvent.EventId));
             await write.SaveChangesAsync();
@@ -96,7 +96,7 @@ public sealed class OutboxRelayFailureAndRetryTests
         // Force NextAttemptAt to now between attempts so backoff doesn't hide the message.
         for (var i = 0; i < 3; i++)
         {
-            await using (var fix = new HealthcareDbContext(options, settings))
+            await using (var fix = new SqliteCompatibleDbContext(options, settings))
             {
                 var msg = await fix.OutboxMessages.FirstAsync();
                 // Reset due time via re-mark if pending with future next attempt
@@ -112,7 +112,7 @@ public sealed class OutboxRelayFailureAndRetryTests
             await relay.ProcessBatchAsync(CancellationToken.None);
         }
 
-        await using var read = new HealthcareDbContext(options, settings);
+        await using var read = new SqliteCompatibleDbContext(options, settings);
         var final = await read.OutboxMessages.FirstAsync();
         final.Status.Should().Be(OutboxMessageStatus.DeadLetter);
         final.RetryCount.Should().BeGreaterThanOrEqualTo(settings.MaxRetryAttempts);
@@ -135,16 +135,16 @@ public sealed class OutboxRelayFailureAndRetryTests
         var dispatcher = new Mock<IDomainEventDispatcher>();
         var services = new ServiceCollection();
         services.AddSingleton(settings);
-        services.AddScoped(_ => new HealthcareDbContext(options, settings));
+        services.AddScoped<HealthcareDbContext>(_ => new SqliteCompatibleDbContext(options, settings));
         services.AddSingleton(dispatcher.Object);
         services.AddLogging();
         var sp = services.BuildServiceProvider();
 
-        await using (var ctx = new HealthcareDbContext(options, settings))
+        await using (var ctx = new SqliteCompatibleDbContext(options, settings))
             await ctx.Database.EnsureCreatedAsync();
 
         var (domainEvent, typeName, payload) = CreateEvent();
-        await using (var write = new HealthcareDbContext(options, settings))
+        await using (var write = new SqliteCompatibleDbContext(options, settings))
         {
             write.OutboxMessages.Add(new OutboxMessage(typeName, payload, domainEvent.OccurredOn, domainEvent.EventId));
             await write.SaveChangesAsync();
@@ -161,7 +161,7 @@ public sealed class OutboxRelayFailureAndRetryTests
             d => d.DispatchStrictAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()),
             Times.Never);
 
-        await using var read = new HealthcareDbContext(options, settings);
+        await using var read = new SqliteCompatibleDbContext(options, settings);
         var msg = await read.OutboxMessages.FirstAsync();
         msg.Status.Should().Be(OutboxMessageStatus.Pending);
         msg.RetryCount.Should().Be(0);
@@ -184,18 +184,18 @@ public sealed class OutboxRelayFailureAndRetryTests
 
         var services = new ServiceCollection();
         services.AddSingleton(settings);
-        services.AddScoped(_ => new HealthcareDbContext(options, settings));
+        services.AddScoped<HealthcareDbContext>(_ => new SqliteCompatibleDbContext(options, settings));
         services.AddSingleton<IDomainEventDispatcher>(sp =>
             new DomainEventDispatcher(sp, sp.GetRequiredService<ILogger<DomainEventDispatcher>>()));
         services.AddLogging();
         var sp = services.BuildServiceProvider();
 
-        await using (var ctx = new HealthcareDbContext(options, settings))
+        await using (var ctx = new SqliteCompatibleDbContext(options, settings))
             await ctx.Database.EnsureCreatedAsync();
 
         var (domainEvent, typeName, payload) = CreateEvent();
         int id;
-        await using (var write = new HealthcareDbContext(options, settings))
+        await using (var write = new SqliteCompatibleDbContext(options, settings))
         {
             var msg = new OutboxMessage(typeName, payload, domainEvent.OccurredOn, domainEvent.EventId);
             write.OutboxMessages.Add(msg);
@@ -213,7 +213,7 @@ public sealed class OutboxRelayFailureAndRetryTests
             .ProcessBatchAsync(CancellationToken.None);
 
         handled.Should().Be(1);
-        await using var read = new HealthcareDbContext(options, settings);
+        await using var read = new SqliteCompatibleDbContext(options, settings);
         var final = await read.OutboxMessages.FirstAsync(m => m.Id == id);
         final.Status.Should().Be(OutboxMessageStatus.Processed);
         final.ProcessedAt.Should().NotBeNull();
@@ -228,7 +228,7 @@ public sealed class OutboxRelayFailureAndRetryTests
         var options = new DbContextOptionsBuilder<HealthcareDbContext>().UseSqlite(connection).Options;
         var settings = new OutboxSettings { UseOutboxForDomainEvents = true };
 
-        await using var ctx = new HealthcareDbContext(options, settings);
+        await using var ctx = new SqliteCompatibleDbContext(options, settings);
         await ctx.Database.EnsureCreatedAsync();
 
         var messageId = Guid.NewGuid();

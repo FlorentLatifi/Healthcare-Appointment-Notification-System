@@ -55,7 +55,7 @@ public sealed class AuditLogsFlowTests : IntegrationTestBase
     {
         ClearAuthToken();
         var response = await Client.GetAsync("/api/v1/AuditLogs?pageSize=5");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -69,6 +69,6 @@ public sealed class AuditLogsFlowTests : IntegrationTestBase
         SetAuthToken(token);
 
         var response = await Client.GetAsync("/api/v1/AuditLogs?pageSize=5");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 }

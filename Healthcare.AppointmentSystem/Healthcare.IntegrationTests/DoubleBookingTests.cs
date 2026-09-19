@@ -30,74 +30,41 @@ public sealed class DoubleBookingTests : IntegrationTestBase
     [Fact]
     public async Task ConcurrentBooking_SameSlot_OnlyOneSucceeds()
     {
-        // Arrange: create doctor, patient, and patient user
-        var doctorPayload = new
+        // Arrange: one doctor, two patients with their own accounts and profiles
+        var (_, doctorId) = await CreateDoctorAccountAsync("Cardiology");
+        var patient1 = await CreatePatientAccountAsync();
+        var patient2 = await CreatePatientAccountAsync();
+
+        var scheduledTime = GetNextWeekdayAt14().ToString("o");
+        object BookingFor(int patientId) => new
         {
-            FirstName = "Concurrent",
-            LastName = "Doctor",
-            Email = "concurrent.doc@clinic.com",
-            PhoneNumber = "+38349111111",
-            LicenseNumber = "MED-CON-01",
-            Specialty = "Cardiology",
-            ConsultationFeeAmount = 50.00m,
-            ConsultationFeeCurrency = "USD",
-            YearsOfExperience = 5
-        };
-        var doctorResponse = await Client.PostAsJsonAsync("/api/v1/doctors", doctorPayload);
-        var doctorId = await ReadCreatedProfileIdAsync(doctorResponse);
-
-        var patientPayload = new
-        {
-            FirstName = "Concurrent",
-            LastName = "Patient",
-            Email = "concurrent.patient@test.com",
-            PhoneNumber = "+38349222222",
-            DateOfBirth = "1990-01-01",
-            Gender = "Male",
-            Street = "1 Test St",
-            City = "Pristina",
-            State = "Kosovo",
-            PostalCode = "10000",
-            Country = "Kosovo"
-        };
-        var patientResponse = await Client.PostAsJsonAsync("/api/v1/patients", patientPayload);
-
-        var patientToken1 = await RegisterAndLoginAsync(
-            "concurrent_user1", "concurrent1@test.com", "SecurePass123!", "Patient");
-
-        var patientToken2 = await RegisterAndLoginAsync(
-            "concurrent_user2", "concurrent2@test.com", "SecurePass123!", "Patient");
-
-        var scheduledTime = GetNextWeekdayAt14();
-
-        var bookPayload = new
-        {
-            PatientId = 1,
+            PatientId = patientId,
             DoctorId = doctorId,
-            ScheduledTime = scheduledTime.ToString("o"),
+            ScheduledTime = scheduledTime,
             Reason = "Concurrent booking test with overlapping time slot",
             AppointmentType = "Standard"
         };
 
-        // Act: send two concurrent booking requests
         using var client1 = Factory.CreateClient();
         client1.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", patientToken1);
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", patient1.Token);
 
         using var client2 = Factory.CreateClient();
         client2.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", patientToken2);
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", patient2.Token);
 
-        var task1 = client1.PostAsJsonAsync("/api/v1/appointments", bookPayload);
-        var task2 = client2.PostAsJsonAsync("/api/v1/appointments", bookPayload);
+        // Act: both patients try to book the same doctor and slot at the same time
+        var responses = await Task.WhenAll(
+            client1.PostAsJsonAsync("/api/v1/appointments", BookingFor(patient1.PatientId)),
+            client2.PostAsJsonAsync("/api/v1/appointments", BookingFor(patient2.PatientId)));
 
-        var responses = await Task.WhenAll(task1, task2);
+        // Assert: the per-slot lock lets exactly one through
+        var bodies = await Task.WhenAll(responses.Select(r => r.Content.ReadAsStringAsync()));
+        var summary = string.Join(" | ", responses.Select((r, i) => $"{(int)r.StatusCode}: {bodies[i]}"));
 
-        // Assert: one should succeed (Created) and one should fail (BadRequest)
-        var successCount = responses.Count(r => r.StatusCode == HttpStatusCode.Created);
-        var failCount = responses.Count(r => r.StatusCode == HttpStatusCode.BadRequest);
-
-        successCount.Should().Be(1, "only one booking should succeed for the same time slot");
-        failCount.Should().Be(1, "the second concurrent booking should be rejected");
+        responses.Count(r => r.StatusCode == HttpStatusCode.Created)
+            .Should().Be(1, $"only one booking should succeed for the same time slot ({summary})");
+        responses.Count(r => r.StatusCode == HttpStatusCode.BadRequest)
+            .Should().Be(1, $"the second concurrent booking should be rejected ({summary})");
     }
 }

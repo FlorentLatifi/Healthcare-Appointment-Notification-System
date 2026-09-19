@@ -74,4 +74,9 @@ public sealed class DoctorDto
     /// Gets or sets when the doctor was created.
     /// </summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Weekly working hours (Mon–Sun). Used on public doctor cards and booking UI.
+    /// </summary>
+    public List<WorkingHoursDto> WeeklySchedule { get; set; } = new();
 }

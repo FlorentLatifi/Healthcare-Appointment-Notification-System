@@ -14,7 +14,7 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
     {
         ClearAuthToken();
         var response = await Client.GetAsync("/api/v1/payments/1");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -22,7 +22,7 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
     {
         ClearAuthToken();
         var response = await Client.GetAsync("/api/v1/payments/appointment/1");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -33,7 +33,7 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
         var token = await LoginAsync(ctx.PatientUsername, "SecurePass123!");
         SetAuthToken(token);
         var response = await Client.GetAsync($"/api/v1/payments/{ctx.PaymentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
 
         var other = await CreateOtherPatientAsync();
         var response = await Client.GetAsync($"/api/v1/payments/{ctx.PaymentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
         var token = await LoginAsync(ctx.DoctorUsername, "SecurePass123!");
         SetAuthToken(token);
         var response = await Client.GetAsync($"/api/v1/payments/{ctx.PaymentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -64,19 +64,18 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
 
         var other = await CreateOtherDoctorAsync();
         var response = await Client.GetAsync($"/api/v1/payments/{ctx.PaymentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
     public async Task GetPaymentById_AdminAccessesAny_Returns200()
     {
         var ctx = await SeedPaymentScenarioAsync();
-        var adminSuffix = Guid.NewGuid().ToString("N")[..6];
-        var token = await RegisterAndLoginAsync($"pay_admin_{adminSuffix}", $"pay.admin.{adminSuffix}@test.com", "SecurePass123!", "Admin");
+        var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
 
         var response = await Client.GetAsync($"/api/v1/payments/{ctx.PaymentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -87,7 +86,7 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
         var token = await LoginAsync(ctx.PatientUsername, "SecurePass123!");
         SetAuthToken(token);
         var response = await Client.GetAsync($"/api/v1/payments/appointment/{ctx.AppointmentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -97,7 +96,7 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
 
         var other = await CreateOtherPatientAsync();
         var response = await Client.GetAsync($"/api/v1/payments/appointment/{ctx.AppointmentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -108,7 +107,7 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
         var token = await LoginAsync(ctx.DoctorUsername, "SecurePass123!");
         SetAuthToken(token);
         var response = await Client.GetAsync($"/api/v1/payments/appointment/{ctx.AppointmentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -118,19 +117,18 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
 
         var other = await CreateOtherDoctorAsync();
         var response = await Client.GetAsync($"/api/v1/payments/appointment/{ctx.AppointmentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
     public async Task GetPaymentByAppointment_AdminAccessesAny_Returns200()
     {
         var ctx = await SeedPaymentScenarioAsync();
-        var adminSuffix = Guid.NewGuid().ToString("N")[..6];
-        var token = await RegisterAndLoginAsync($"pay_app_admin_{adminSuffix}", $"pay.app.admin.{adminSuffix}@test.com", "SecurePass123!", "Admin");
+        var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
 
         var response = await Client.GetAsync($"/api/v1/payments/appointment/{ctx.AppointmentId}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 
     private record PaymentScenarioContext(
@@ -143,60 +141,13 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
 
     private async Task<PaymentScenarioContext> SeedPaymentScenarioAsync()
     {
-        var suffix = Guid.NewGuid().ToString("N")[..6];
-        var patUsername = $"apat_{suffix}";
-        var docUsername = $"adoc_{suffix}";
+        // 1. A doctor and a patient, each with their own account and linked profile.
+        //    The doctor must create its own profile, or confirming below returns 403.
+        var (docUsername, doctorId) = await CreateDoctorAccountAsync();
+        var (patUsername, patientId, patToken) = await CreatePatientAccountAsync();
 
-        // 1. Register Admin, login, create doctor profile
-        var adminToken = await RegisterAndLoginAsync(
-            $"pay_admin_{suffix}", $"pay.admin.{suffix}@test.com", "SecurePass123!", "Admin");
-        SetAuthToken(adminToken);
-
-        var docPayload = new
-        {
-            FirstName = "Pay",
-            LastName = $"Doctor_{suffix}",
-            Email = $"pay.doctor.{suffix}@clinic.com",
-            PhoneNumber = $"+38348{suffix}10",
-            LicenseNumber = $"MED-PAY-{suffix}",
-            Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m,
-            ConsultationFeeCurrency = "USD",
-            YearsOfExperience = 10
-        };
-        var docResponse = await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
-        docResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var doctorId = await ReadCreatedProfileIdAsync(docResponse);
-
-        // 2. Register Doctor user
-        await RegisterAndLoginAsync(docUsername, $"pay.doc.{suffix}@test.com", "SecurePass123!", "Doctor");
-        ClearAuthToken();
-
-        // 3. Register Patient user, login, create patient profile
-        var patToken = await RegisterAndLoginAsync(patUsername, $"pay.pat.{suffix}@test.com", "SecurePass123!", "Patient");
+        // 2. Book the appointment as the patient
         SetAuthToken(patToken);
-
-        var patPayload = new
-        {
-            FirstName = "Pay",
-            LastName = $"Patient_{suffix}",
-            Email = $"pay.patient.{suffix}@test.com",
-            PhoneNumber = $"+38349{suffix}10",
-            DateOfBirth = "1990-01-01",
-            Gender = "Male",
-            Street = "20 St",
-            City = "City",
-            State = "State",
-            PostalCode = "10000",
-            Country = "Country"
-        };
-        var patResponse = await Client.PostAsJsonAsync("/api/v1/patients", patPayload);
-        patResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var patientId = await ReadCreatedProfileIdAsync(patResponse);
-
-        // 4. Re-login as patient, book appointment
-        var patRelogin = await LoginAsync(patUsername, "SecurePass123!");
-        SetAuthToken(patRelogin);
 
         var scheduledTime = GetNextWeekdayAt10Am();
         var bookPayload = new
@@ -208,33 +159,33 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
             AppointmentType = "Standard"
         };
         var bookResponse = await Client.PostAsJsonAsync("/api/v1/appointments", bookPayload);
-        bookResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        bookResponse.StatusCode.Should().Be(HttpStatusCode.Created, await bookResponse.Content.ReadAsStringAsync());
         var bookResult = await DeserializeResponse<AppointmentDto>(bookResponse);
         var appointmentId = bookResult!.Data!.Id;
 
-        // 5. Confirm as doctor
+        // 3. Confirm as doctor
         var docRelogin = await LoginAsync(docUsername, "SecurePass123!");
         SetAuthToken(docRelogin);
         var confirmResponse = await Client.PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/confirm",
-            new { OverridePaymentRequirement = true });
-        confirmResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            new { AppointmentId = appointmentId, OverridePaymentRequirement = true, OverrideReason = "Integration test: confirm before payment" });
+        confirmResponse.StatusCode.Should().Be(HttpStatusCode.OK, await confirmResponse.Content.ReadAsStringAsync());
 
-        // 6. Create payment intent + process as patient
+        // 4. Create payment intent + process as patient
         var patRelogin2 = await LoginAsync(patUsername, "SecurePass123!");
         SetAuthToken(patRelogin2);
 
         var createIntentPayload = new { AppointmentId = appointmentId };
         var intentResponse = await Client.PostAsJsonAsync("/api/v1/payments/create-intent", createIntentPayload);
-        intentResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        intentResponse.StatusCode.Should().Be(HttpStatusCode.OK, await intentResponse.Content.ReadAsStringAsync());
         var intentResult = await DeserializeResponse<object>(intentResponse);
 
-        // 7. Extract paymentIntentId from response using dynamic
+        // 5. Extract paymentIntentId from response using dynamic
         var intentData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(intentResponse.Content.ReadAsStringAsync().Result);
         var paymentIntentId = intentData.GetProperty("data").GetProperty("paymentIntentId").GetString()!;
 
         var processPayload = new { AppointmentId = appointmentId, PaymentIntentId = paymentIntentId };
         var processResponse = await Client.PostAsJsonAsync("/api/v1/payments/process", processPayload);
-        processResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        processResponse.StatusCode.Should().Be(HttpStatusCode.OK, await processResponse.Content.ReadAsStringAsync());
         var processResult = await DeserializeResponse<int>(processResponse);
 
         return new PaymentScenarioContext(processResult!.Data, appointmentId, patUsername, docUsername, patientId, doctorId);
@@ -251,7 +202,7 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
             FirstName = "Other",
             LastName = "PayPatient",
             Email = $"other.pay.patient.{suffix}@test.com",
-            PhoneNumber = $"+38349{suffix}99",
+            PhoneNumber = UniquePhoneNumber("+38349"),
             DateOfBirth = "1990-01-01",
             Gender = "Male",
             Street = "99 St",
@@ -267,26 +218,8 @@ public sealed class PaymentAuthorizationFlowTests : IntegrationTestBase
 
     private async Task<string> CreateOtherDoctorAsync()
     {
-        var suffix = Guid.NewGuid().ToString("N")[..6];
-        var username = $"other_doc_{suffix}";
-        var adminSuffix = Guid.NewGuid().ToString("N")[..6];
-        var adminToken = await RegisterAndLoginAsync(
-            $"od_admin_{adminSuffix}", $"od.admin.{adminSuffix}@test.com", "SecurePass123!", "Admin");
-        SetAuthToken(adminToken);
-        var docPayload = new
-        {
-            FirstName = "Other",
-            LastName = "PayDoctor",
-            Email = $"other.pay.doc.{suffix}@clinic.com",
-            PhoneNumber = $"+38348{suffix}99",
-            LicenseNumber = $"MED-OP-{suffix}",
-            Specialty = "GeneralPractice",
-            ConsultationFeeAmount = 50.00m,
-            ConsultationFeeCurrency = "USD",
-            YearsOfExperience = 5
-        };
-        await Client.PostAsJsonAsync("/api/v1/doctors", docPayload);
-        var token = await RegisterAndLoginAsync(username, $"other.pay.doc.user.{suffix}@test.com", "SecurePass123!", "Doctor");
+        var (username, _) = await CreateDoctorAccountAsync();
+        var token = await LoginAsync(username, TestPassword);
         SetAuthToken(token);
         return token;
     }

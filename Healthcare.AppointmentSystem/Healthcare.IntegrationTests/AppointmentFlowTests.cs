@@ -30,48 +30,12 @@ public sealed class AppointmentFlowTests : IntegrationTestBase
     [Fact]
     public async Task BookAndConfirmAppointment_FullFlow_Succeeds()
     {
-        // 1. Create doctor
-        var doctorPayload = new
-        {
-            FirstName = "Jane",
-            LastName = "Smith",
-            Email = "dr.smith@clinic.com",
-            PhoneNumber = "+38349987654",
-            LicenseNumber = "MED-12345",
-            Specialty = "Cardiology",
-            ConsultationFeeAmount = 50.00m,
-            ConsultationFeeCurrency = "USD",
-            YearsOfExperience = 10
-        };
-        var doctorResponse = await Client.PostAsJsonAsync("/api/v1/doctors", doctorPayload);
-        doctorResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var doctorId = await ReadCreatedProfileIdAsync(doctorResponse);
-
-        // 2. Create patient
-        var patientPayload = new
-        {
-            FirstName = "John",
-            LastName = "Doe",
-            Email = "john.doe@patient.com",
-            PhoneNumber = "+38349123456",
-            DateOfBirth = "1990-05-15",
-            Gender = "Male",
-            Street = "123 Main St",
-            City = "Pristina",
-            State = "Kosovo",
-            PostalCode = "10000",
-            Country = "Kosovo"
-        };
-        var patientResponse = await Client.PostAsJsonAsync("/api/v1/patients", patientPayload);
-        patientResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var patientId = await ReadCreatedProfileIdAsync(patientResponse);
-
-        // 3. Register patient user and login
-        var patientToken = await RegisterAndLoginAsync(
-            "appt_patient", "appt_patient@test.com", "SecurePass123!", "Patient");
+        // 1. A doctor and a patient, each with their own account and linked profile
+        var (_, doctorId) = await CreateDoctorAccountAsync("Cardiology");
+        var (_, patientId, patientToken) = await CreatePatientAccountAsync();
         SetAuthToken(patientToken);
 
-        // 4. Book appointment
+        // 2. Book appointment
         var scheduledTime = GetNextWeekdayAt10Am();
         var bookPayload = new
         {
@@ -82,7 +46,7 @@ public sealed class AppointmentFlowTests : IntegrationTestBase
             AppointmentType = "Standard"
         };
         var bookResponse = await Client.PostAsJsonAsync("/api/v1/appointments", bookPayload);
-        bookResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        bookResponse.StatusCode.Should().Be(HttpStatusCode.Created, await bookResponse.Content.ReadAsStringAsync());
         var bookResult = await DeserializeResponse<AppointmentDto>(bookResponse);
         bookResult.Should().NotBeNull();
         bookResult!.Success.Should().BeTrue();
@@ -91,30 +55,30 @@ public sealed class AppointmentFlowTests : IntegrationTestBase
 
         // Verify appointment via GET
         var getResponse = await Client.GetAsync($"/api/v1/appointments/{appointmentId}");
-        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK, await getResponse.Content.ReadAsStringAsync());
         var getResult = await DeserializeResponse<AppointmentDto>(getResponse);
         getResult!.Data!.Status.Should().Be("Pending");
 
-        // 5. Login as Admin and confirm
+        // 3. Login as Admin and confirm
         ClearAuthToken();
-        var adminToken = await RegisterAndLoginAsync(
-            "appt_admin", "appt_admin@test.com", "SecurePass123!", "Admin");
+        var adminToken = await LoginAsPreSeededAdminAsync();
         SetAuthToken(adminToken);
 
         var confirmPayload = new
         {
+            AppointmentId = appointmentId,
             OverridePaymentRequirement = true,
             OverrideReason = "Admin override for integration test verification."
         };
         var confirmResponse = await Client
             .PutAsJsonAsync($"/api/v1/appointments/{appointmentId}/confirm", confirmPayload);
-        confirmResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        confirmResponse.StatusCode.Should().Be(HttpStatusCode.OK, await confirmResponse.Content.ReadAsStringAsync());
 
         // Verify status changed to Confirmed
         ClearAuthToken();
         SetAuthToken(patientToken);
         var getConfirmedResponse = await Client.GetAsync($"/api/v1/appointments/{appointmentId}");
-        getConfirmedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        getConfirmedResponse.StatusCode.Should().Be(HttpStatusCode.OK, await getConfirmedResponse.Content.ReadAsStringAsync());
         var confirmedResult = await DeserializeResponse<AppointmentDto>(getConfirmedResponse);
         confirmedResult!.Data!.Status.Should().Be("Confirmed");
     }
@@ -135,6 +99,6 @@ public sealed class AppointmentFlowTests : IntegrationTestBase
             AppointmentType = "Standard"
         };
         var response = await Client.PostAsJsonAsync("/api/v1/appointments", bookPayload);
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
     }
 }

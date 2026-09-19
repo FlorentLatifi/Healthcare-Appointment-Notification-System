@@ -33,8 +33,9 @@ function normalizeProfileId(value) {
 /**
  * True when login/refresh payload can drive role-based UI.
  * Empty role was the root cause of the "blank dashboard after login" bug.
+ * (Not exported — keeps AuthContext a components/hooks module for react-refresh.)
  */
-export function isCompleteSessionPayload(data) {
+function isCompleteSessionPayload(data) {
   if (!data || typeof data !== 'object') return false;
   if (!data.token || typeof data.token !== 'string') return false;
   if (!data.role || typeof data.role !== 'string' || !data.role.trim()) return false;
@@ -260,6 +261,8 @@ export function AuthProvider({ children }) {
   );
 }
 
+// Context modules export the provider + consumer hook; HMR only cares about the provider tree.
+// eslint-disable-next-line react-refresh/only-export-components -- useAuth is the standard companion export
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');

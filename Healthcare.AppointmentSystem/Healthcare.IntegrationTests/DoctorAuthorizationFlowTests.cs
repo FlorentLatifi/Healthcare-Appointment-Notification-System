@@ -26,7 +26,7 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
             YearsOfExperience = 5
         };
         var response = await Client.PostAsJsonAsync("/api/v1/doctors", payload);
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
             YearsOfExperience = 5
         };
         var response = await Client.PostAsJsonAsync("/api/v1/doctors", payload);
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
             YearsOfExperience = 5
         };
         var response = await Client.PostAsJsonAsync("/api/v1/doctors", payload);
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         var created = await DeserializeResponse<ProfileCreatedResponse>(response);
         created!.Success.Should().BeTrue();
         created.Data.Should().NotBeNull();
@@ -104,7 +104,7 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
             YearsOfExperience = 5
         };
         var response = await Client.PostAsJsonAsync("/api/v1/doctors", payload);
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         var created = await DeserializeResponse<ProfileCreatedResponse>(response);
         created!.Success.Should().BeTrue();
         created.Data!.Id.Should().BeGreaterThan(0);
@@ -116,7 +116,7 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
     {
         ClearAuthToken();
         var response = await Client.DeleteAsync("/api/v1/doctors/1");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
         var token = await RegisterAndLoginAsync($"doc_delete_pat_{suffix}", $"doc.delete.pat.{suffix}@test.com", "SecurePass123!", "Patient");
         SetAuthToken(token);
         var response = await Client.DeleteAsync("/api/v1/doctors/1");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -135,14 +135,15 @@ public sealed class DoctorAuthorizationFlowTests : IntegrationTestBase
         var token = await LoginAsPreSeededAdminAsync();
         SetAuthToken(token);
         var response = await Client.DeleteAsync("/api/v1/doctors/99999");
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound, await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
     public async Task GetDoctorById_WithoutToken_Returns200()
     {
         ClearAuthToken();
+        // Public endpoint: a 401 would mean [AllowAnonymous] is missing. Doctor 1 comes from the seeder.
         var response = await Client.GetAsync("/api/v1/doctors/1");
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound); // no doctor seeded, but 401 would mean no AllowAnonymous
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 }

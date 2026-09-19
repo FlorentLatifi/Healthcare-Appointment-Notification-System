@@ -1,6 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import toast from 'react-hot-toast';
 
 const { mockNavigate, mockApiClient, mockLogout } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
@@ -39,10 +40,30 @@ const profile = {
   yearsOfExperience: 12,
 };
 
+const weeklySchedule = [
+  { dayOfWeek: 0, isWorkingDay: false, startTime: null, endTime: null },
+  { dayOfWeek: 1, isWorkingDay: true, startTime: '08:00', endTime: '18:00' },
+  { dayOfWeek: 2, isWorkingDay: true, startTime: '08:00', endTime: '18:00' },
+  { dayOfWeek: 3, isWorkingDay: true, startTime: '08:00', endTime: '18:00' },
+  { dayOfWeek: 4, isWorkingDay: true, startTime: '08:00', endTime: '18:00' },
+  { dayOfWeek: 5, isWorkingDay: true, startTime: '08:00', endTime: '18:00' },
+  { dayOfWeek: 6, isWorkingDay: false, startTime: null, endTime: null },
+];
+
 describe('EditDoctorProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockApiClient.get.mockResolvedValue({ data: { success: true, data: profile } });
+    mockApiClient.get.mockImplementation((url) => {
+      if (url === '/Doctors/7/schedule') {
+        return Promise.resolve({
+          data: {
+            success: true,
+            data: { doctorId: 7, weeklySchedule },
+          },
+        });
+      }
+      return Promise.resolve({ data: { success: true, data: profile } });
+    });
     mockApiClient.put.mockResolvedValue({ data: { success: true } });
     mockApiClient.delete.mockResolvedValue({ status: 204 });
   });
@@ -57,7 +78,7 @@ describe('EditDoctorProfilePage', () => {
     expect(await screen.findByDisplayValue('Ada')).toBeInTheDocument();
     expect(screen.getByDisplayValue('MED-12345')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    await userEvent.click(screen.getByRole('button', { name: /save profile/i }));
 
     await waitFor(() => {
       expect(mockApiClient.put).toHaveBeenCalledWith(
@@ -71,6 +92,35 @@ describe('EditDoctorProfilePage', () => {
       );
     });
     expect(mockNavigate).toHaveBeenCalledWith('/doctor-dashboard');
+  });
+
+  it('loads and saves working hours via PUT schedule', async () => {
+    render(<EditDoctorProfilePage />);
+
+    await waitFor(() => {
+      expect(mockApiClient.get).toHaveBeenCalledWith('/Doctors/7/schedule');
+    });
+
+    const editor = await screen.findByTestId('working-hours-editor');
+    expect(within(editor).getByText('Monday')).toBeInTheDocument();
+
+    // Turn Saturday into a working day
+    const satCheckbox = screen.getByRole('checkbox', { name: /saturday is a working day/i });
+    await userEvent.click(satCheckbox);
+
+    await userEvent.click(screen.getByTestId('save-working-hours'));
+
+    await waitFor(() => {
+      expect(mockApiClient.put).toHaveBeenCalledWith(
+        '/Doctors/7/schedule',
+        expect.objectContaining({
+          weeklySchedule: expect.arrayContaining([
+            expect.objectContaining({ dayOfWeek: 6, isWorkingDay: true }),
+          ]),
+        }),
+      );
+    });
+    expect(toast.success).toHaveBeenCalled();
   });
 
   it('deletes doctor profile and logs out', async () => {

@@ -400,13 +400,22 @@ public sealed class AppointmentsController : ControllerBase
                 $"Appointment with ID {id} not found", "Appointment not found"));
         }
 
-        // Authorize: only the patient or doctor of this appointment may export
+        // Authorize: appointment patient/doctor by profile claim, or matching profile email.
         var userEmail = User.FindFirstValue(ClaimTypes.Email);
-        var isOwner = (appointment.Patient?.Email?.Value?.Equals(userEmail, StringComparison.OrdinalIgnoreCase) == true)
-                   || (appointment.Doctor?.Email?.Value?.Equals(userEmail, StringComparison.OrdinalIgnoreCase) == true);
+        var patientIdClaim = User.GetPatientId();
+        var doctorIdClaim = User.GetDoctorId();
+        var isOwner =
+            (patientIdClaim is int pid && pid == appointment.PatientId)
+            || (doctorIdClaim is int did && did == appointment.DoctorId)
+            || (appointment.Patient?.Email?.Value?.Equals(userEmail, StringComparison.OrdinalIgnoreCase) == true)
+            || (appointment.Doctor?.Email?.Value?.Equals(userEmail, StringComparison.OrdinalIgnoreCase) == true)
+            || User.IsInRole(AppRoles.Admin);
+
         if (!isOwner)
         {
-            _logger.LogWarning("User {Email} not authorized to export ICS for appointment {AppointmentId}", userEmail, id);
+            _logger.LogWarning(
+                "User not authorized to export ICS for appointment {AppointmentId} (email={Email}, patientId={PatientId}, doctorId={DoctorId})",
+                id, userEmail, patientIdClaim, doctorIdClaim);
             return Forbid();
         }
 
